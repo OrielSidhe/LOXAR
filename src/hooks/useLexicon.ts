@@ -195,6 +195,7 @@ export const useLexicon = (
                 corpus: [],
                 metadata: { conlangName, mainLanguage }, wordsAddedSinceSave: 0,
                 customFunctions: [...DEFAULT_FUNCTIONS].sort(),
+                schemaVersion: 1,
             };
             return {
                 lexicons: { ...prevState.lexicons, [conlangName]: newLexiconData },

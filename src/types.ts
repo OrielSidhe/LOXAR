@@ -46,6 +46,7 @@ export interface LexiconData {
   metadata: LexiconMetadata;
   wordsAddedSinceSave: number;
   customFunctions: string[];
+  schemaVersion: number;
 }
 
 export type MissingWord = {

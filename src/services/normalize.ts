@@ -34,6 +34,7 @@ import type {
   NewLexiconEntry,
 } from '../types';
 import { resolveLexicalCategory, DEFAULT_CATEGORIES } from '../data/taxonomy';
+import { applyMigrations, CURRENT_SCHEMA_VERSION } from './schemaMigrations';
 
 // ── Default factories ────────────────────────────────────────────────────────
 /**
@@ -194,6 +195,8 @@ export const normalizeLexiconData = (
     },
     wordsAddedSinceSave: base.wordsAddedSinceSave,
     customFunctions: Array.from(existingFunctions).sort(),
+    schemaVersion: CURRENT_SCHEMA_VERSION,
   };
-  return result;
+
+  return applyMigrations(result);
 };
