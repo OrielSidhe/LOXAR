@@ -21,6 +21,24 @@ const normalizeText = (text: string) => {
   return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
+const HighlightText = ({ text, highlight }: { text: string; highlight?: string }) => {
+  if (!highlight || !highlight.trim()) return <>{text}</>;
+  const escaped = highlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${escaped})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, idx) =>
+        regex.test(part) ? (
+          <mark key={idx} className="bg-accent/30 text-text-primary rounded px-0.5">{part}</mark>
+        ) : (
+          <span key={idx}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
+
 // Categorías canónicas de "sin clasificar" → la entrada sigue incompleta.
 // Usamos el resolver de taxonomy para normalizar cualquier alias legacy.
 const INCOMPLETE_CATEGORY_CANONICAL = new Set(['desconocida']);
@@ -554,12 +572,12 @@ const LexiconTable = (props: LexiconTableProps) => {
                                     {visibleColumns.has('id') && <td className="p-3 text-sm text-text-secondary align-top">{entry.ID}</td>}
                                     {visibleColumns.has('raiz') && (
                                         <td className="p-3 font-mono text-accent align-top">
-                                            {isEditing ? <InlineInput value={editFormData!.Raíz} onChange={handleEditFormChange} name="Raíz" /> : entry.Raíz}
+                                            {isEditing ? <InlineInput value={editFormData!.Raíz} onChange={handleEditFormChange} name="Raíz" /> : <HighlightText text={entry.Raíz} highlight={ftsResults ? searchTerm : undefined} />}
                                         </td>
                                     )}
                                     {visibleColumns.has('lexema') && (
                                         <td className="p-3 text-sm text-text-primary align-top break-words">
-                                            {isEditing ? <InlineInput value={editFormData!.Léxema.join(', ')} onChange={handleEditFormChange} name="Léxema" /> : formatLexemeDisplay(entry)}
+                                            {isEditing ? <InlineInput value={editFormData!.Léxema.join(', ')} onChange={handleEditFormChange} name="Léxema" /> : <HighlightText text={formatLexemeDisplay(entry)} highlight={ftsResults ? searchTerm : undefined} />}
                                         </td>
                                     )}
                                     {visibleColumns.has('categoria') && (
@@ -574,7 +592,7 @@ const LexiconTable = (props: LexiconTableProps) => {
                                         <td className="p-3 text-sm text-text-primary align-top break-words">
                                             <div className="flex items-center gap-2">
                                                 <span>
-                                                {isEditing ? <InlineInput value={editFormData!.Significado.join(', ')} onChange={handleEditFormChange} name="Significado" /> : entry.Significado.join(' · ')}
+                                                {isEditing ? <InlineInput value={editFormData!.Significado.join(', ')} onChange={handleEditFormChange} name="Significado" /> : <HighlightText text={entry.Significado.join(' · ')} highlight={ftsResults ? searchTerm : undefined} />}
                                                 </span>
                                                 {hasExtraData && !isEditing && (
                                                     <button onClick={() => toggleExpand(entry.ID)} title="Mostrar datos extra" className="text-text-secondary hover:text-accent transition-colors">
