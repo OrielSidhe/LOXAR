@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-12T00:00:00.000Z",
+  "lastUpdated": "2026-08-12T15:15:00.000Z",
   "uiState": {
     "activeTab": "writing",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Ejecución continua A1-E3: git init, schemaVersion/migrations, backups .bak, interlinear gloss, sound changer, NeographyText, FTS5/transactions, tauri build y CI/CD.",
+    "lastPrompt": "Verificación completa de M1-M8, FTS5, InterlinearGlossViewer, SoundChangeWorkbench y builds. Actualización de LOXAR_AUTO_PILOT y TASKS.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "RELEASE v0.2.0. 1) Git init + v0.1.0. 2) Añadido schemaVersion y schemaMigrations; backups .bak automáticos con pruning. 3) Creados interlinearGlossService + Viewer, soundChanger + SoundChangeWorkbench, NeographyText enchufado en WritingAndNeographyTab. 4) FTS5 + triggers + transacciones atómicas en sqlStorage. 5) Corregido EBUSY dev con watcher Vite endurecido. 6) tauri:build OK con installers MSI/NSIS. 7) CI/CD básico en GitHub Actions."
+  "sessionSummary": "Ciclo de avance completado: Bloques A-E verificados como completos. Motor gramática M1-M8 con tests pasando. UI integrada: FTS5 en LexiconTable, InterlinearGlossViewer, SoundChangeWorkbench, NeographyText. Builds OK. Próximo: Bloque F validación runtime + pulido."
 }

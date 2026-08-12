@@ -30,6 +30,17 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-12] Checkpoint: Verificación completa de gramática, FTS5 y herramientas UI
+**Rama:** `main`. **Motivo:** ejecutar ciclo de avance de LOXAR según solicitud del usuario.
+**Verificaciones realizadas:**
+- Motor de gramática M1-M8: `textParser`, `inductFromText`, `normalizer`, `postImportValidator`, `strategyBridge`, fixture Quavanol y pipeline UI/E2E existen y sus tests pasan (83 tests en `src/services/grammar/__tests__`).
+- Integración UI: `GrammarImporterModal.tsx` y `SyntaxCanvas.tsx` consumen `inductFromText`; `App.tsx` tiene `activeToolView` para `InterlinearGlossViewer` y `SoundChangeWorkbench`; `LexiconTable.tsx` expone `onSearch` y `App.tsx` la cablea con `searchLexicon`.
+- Builds: `npm run typecheck` = 0 errores, `npm run lint` = OK, `npm run tauri:build` = OK (MSI + NSIS generados).
+- Git: tree commiteado y limpio; último commit `0402834`.
+
+**Próximo paso:** marcar en `LOXAR_AUTO_PILOT.md` los bloques A-E como completados y definir nuevas tareas ejecutables de validación runtime + polish UI.
+
+---
 ## [2026-07-16] Cierre de sesión: Plan de implementación de continuidad (6 tareas COMPLETADAS)
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
 
