@@ -6,6 +6,7 @@ import XCircleIcon from './icons/XCircleIcon';
 import WrenchIcon from './icons/WrenchIcon';
 import { isAiAvailable } from '../services/geminiService';
 import { inductFromText } from '../services/grammar/inductFromText';
+import { validatePostImport } from '../services/grammar/postImportValidator';
 import { convertToLegacy } from '../services/grammarParser';
 import type { DeclarativeManifest } from '../services/grammar/declarativeFormat';
 import type { ImportValidationReport, Problem } from '../services/grammar/declarativeFormat';
@@ -30,12 +31,21 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
     const [rawText, setRawText] = useState(existingNotes);
     const [isProcessing, setIsProcessing] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<FlexibleGrammar | null>(null);
+    const [validation, setValidation] = useState<ImportValidationReport | null>(null);
     const [activeTab, setActiveTab] = useState<'raw' | 'preview'>('raw');
     const [ai, setAi] = useState(true);
+
+    const DEMO_GRAMMAR = `§ Tipología: SOV, aglutinante, head-final\n\n§ Fonología: /p t k m n s l r/, /a e i o u/\n\n§ Sustantivos: plural por -k sufijo\n\n§ Verbos: pasado por -t sufijo, futuro por -lu sufijo\n\n§ Estrategias: Sufijo de plural: posición suffix, forma -k`;
 
     useEffect(() => {
         isAiAvailable().then(setAi);
     }, []);
+
+    useEffect(() => {
+        if (!existingNotes && !rawText) {
+            setRawText(DEMO_GRAMMAR);
+        }
+    }, [existingNotes, rawText]);
 
     function convertDeclarativeToFlexible(
       manifest: DeclarativeManifest,
@@ -107,8 +117,10 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         setIsProcessing(true);
         try {
             const result = await inductFromText(rawText, { llmAvailable: ai });
+            const validationReport = validatePostImport(result.manifest);
+            setValidation(validationReport);
             const fullGrammar: FlexibleGrammar = {
-                ...convertDeclarativeToFlexible(result.manifest, result.report),
+                ...convertDeclarativeToFlexible(result.manifest, validationReport),
                 id: crypto.randomUUID(),
                 name: "Gramática Importada",
                 storageMode: 'hybrid',
@@ -292,6 +304,41 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                                                 <span className="font-bold text-accent">{analysisResult.structured?.manifest.typology.headDirection}</span>
                                             </div>
                                         </div>
+
+                                        {validation && (
+                                            <div className="p-4 bg-surface rounded-lg border border-subtle">
+                                                <h4 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Reporte de validación</h4>
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`text-xs font-semibold px-2 py-1 rounded ${validation.ok ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'}`}>
+                                                        {validation.ok ? 'Importación válida' : 'Importación con problemas'}
+                                                    </span>
+                                                    <span className="text-sm font-mono text-text-primary">Score: {validation.score}/100</span>
+                                                </div>
+                                                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-text-secondary">
+                                                    {Object.entries(validation.sections).map(([key, value]) => (
+                                                        <div key={key} className="flex items-center gap-2">
+                                                            <span className="capitalize">{key}</span>
+                                                            <span className="font-mono">{value}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {validation.problems.length > 0 && (
+                                                    <div className="mt-3 space-y-1">
+                                                        {validation.problems.map((problem, idx) => (
+                                                            <div key={idx} className="text-xs text-text-secondary">
+                                                                <span className="font-semibold text-text-primary">{problem.location}:</span> {problem.message}
+                                                                {problem.fix && <span className="text-text-secondary/80"> — {problem.fix}</span>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                {validation.suggestions.length > 0 && (
+                                                    <div className="mt-2 text-xs text-text-secondary">
+                                                        <span className="font-semibold text-text-primary">Sugerencias:</span> {validation.suggestions.join(' ')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         {/* Rules */}
                                         <div>
