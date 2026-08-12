@@ -82,6 +82,15 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 ## [2026-07-16] Cierre de sesión: Plan de implementación de continuidad (6 tareas COMPLETADAS)
+---
+
+## [2026-08-12] Checkpoint: Bloque I3 completado (optimización de LexiconTable)
+**Rama:** `main`. **Motivo:** reducir rerenderizados innecesarios en tablas grandes de léxico.
+**Cambios:**
+- `src/components/LexiconTable.tsx`: componente envuelto en `React.memo` para evitar rerenderizados innecesarios cuando no cambian props relevantes.
+- Validaciones: `npm run typecheck` 0 errores.
+
+---
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
 
 **Tareas del plan (`docs/superpowers/plans/2026-07-16-loxar-continuity-implementation-plan.md`):**

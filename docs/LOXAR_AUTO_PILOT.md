@@ -70,9 +70,9 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] H3. Mejorar empty states en `InterlinearGlossViewer` y `SoundChangeWorkbench`
 - [x] H4. Añadir favicon y título dinámico de ventana según lexicón activo
 
-### Bloque I: Performance y optimización (en ejecución)
+### Bloque I: Performance y optimización (COMPLETADO)
 - [x] I2. Lazy loading de modales y componentes pesados (`GrammarImporterModal`, `ToolsDashboard`)
-- [ ] I3. Optimizar `LexiconTable` para léxicos grandes (virtualización si aplica)
+- [x] I3. Optimizar `LexiconTable` para léxicos grandes (virtualización si aplica)
 
 ---
 
@@ -86,7 +86,9 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**Bloque I — Performance y optimización**
-- I3. Optimizar `LexiconTable` para léxicos grandes (virtualización si aplica)
+**Validación runtime (usuario con `npm run tauri dev`)**
+- Validar visualmente que FTS5 search, InterlinearGlossViewer y SoundChangeWorkbench funcionan sin crashes.
+- Validar que la apertura de Herramientas y el importador de gramática se sientan más ágiles por lazy loading.
+- Validar que la tabla de léxico sigue siendo usable con léxicos grandes.
 
 ---

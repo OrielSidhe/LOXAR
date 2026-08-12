@@ -207,7 +207,7 @@ const InlineInput = ({ value, onChange, name }: { value: string, onChange: (e: R
     />
 );
 
-const LexiconTable = (props: LexiconTableProps) => {
+const LexiconTable = React.memo((props: LexiconTableProps) => {
     const { 
         data, lexiconName, conlangName, mainLanguage, onEditWord, onDeleteWord, showNotification,
         searchTerm, onSearchTermChange, categoryFilter, onCategoryFilterChange, viewFilter, onViewFilterChange,
@@ -688,6 +688,6 @@ const LexiconTable = (props: LexiconTableProps) => {
             )}
         </div>
     );
-};
+});
 
 export default LexiconTable;
