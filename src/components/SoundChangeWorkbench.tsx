@@ -7,6 +7,8 @@
 import React from 'react';
 import { applyRulesToText, previewSoundChange, type SoundChangeRule } from '../services/soundChanger';
 import type { LexiconData } from '../types';
+import ClipboardIcon from './icons/ClipboardIcon';
+import DownloadIcon from './icons/DownloadIcon';
 
 export interface SoundChangeWorkbenchProps {
   lexicon: LexiconData;
@@ -23,6 +25,23 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
   const handleApply = () => {
     const next = previewSoundChange(text, rules);
     setPreview(next);
+  };
+
+  const handleCopy = async () => {
+    if (!preview) return;
+    await navigator.clipboard.writeText(preview);
+    alert('Resultado copiado al portapapeles');
+  };
+
+  const handleDownload = () => {
+    if (!preview) return;
+    const blob = new Blob([preview], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sound-change-result.txt';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -85,6 +104,26 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
           >
             Aplicar cambios
           </button>
+          {preview && (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopy}
+                className="rounded border border-subtle px-3 py-1.5 text-xs text-text-secondary hover:text-white hover:border-accent transition-colors"
+                title="Copiar resultado"
+              >
+                <ClipboardIcon className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="rounded border border-subtle px-3 py-1.5 text-xs text-text-secondary hover:text-white hover:border-accent transition-colors"
+                title="Descargar resultado"
+              >
+                <DownloadIcon className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
       {preview && (
