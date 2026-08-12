@@ -270,24 +270,27 @@ const LexiconTable = (props: LexiconTableProps) => {
             return;
         }
         setFtsLoading(true);
-        let active = true;
-        (async () => {
+        const activeRef = { current: true };
+        const timeoutId = window.setTimeout(async () => {
             try {
                 const results = await onSearch(searchTerm);
-                if (active) {
+                if (activeRef.current) {
                     setFtsResults(results);
                     setFtsResultCount(results.length);
                     setFtsLoading(false);
                 }
             } catch (e) {
-                if (active) {
+                if (activeRef.current) {
                     setFtsResults(null);
                     setFtsResultCount(0);
                     setFtsLoading(false);
                 }
             }
-        })();
-        return () => { active = false; };
+        }, 250);
+        return () => {
+            activeRef.current = false;
+            window.clearTimeout(timeoutId);
+        };
     }, [onSearch, searchTerm, lexiconName]);
     
     const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);

@@ -30,6 +30,14 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-12] Checkpoint: GrammarImporterModal con ejemplo demo y reporte de validación
+**Rama:** `main`. **Motivo:** cumplir F5 y mejorar usabilidad del importador de gramática.
+**Cambios:**
+- `GrammarImporterModal.tsx`: texto de ejemplo precargado cuando no hay notas previas.
+- `GrammarImporterModal.tsx`: se muestra `ImportValidationReport` en la pestaña de preview con score, secciones y problemas.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npx vitest run src/services/grammar` 83 passed.
+
+---
 ## [2026-08-12] Checkpoint: Bloque G completado (QA + suite + builds)
 **Rama:** `main`. **Motivo:** cerrar ciclo de avance con estabilidad y QA.
 **Cambios:**
