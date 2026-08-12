@@ -251,6 +251,16 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
         }
     }, [activeLexiconName]);
 
+    useEffect(() => {
+        const baseTitle = 'LOXAR';
+        if (activeLexiconName) {
+            const conlang = activeMetadata?.conlangName?.trim();
+            document.title = conlang ? `${conlang} - ${baseTitle}` : `${activeLexiconName} - ${baseTitle}`;
+        } else {
+            document.title = baseTitle;
+        }
+    }, [activeLexiconName, activeMetadata?.conlangName]);
+
     // Handlers
     const handleOpenModal = (modal: any) => setActiveModal(modal);
     const handleCloseModal = () => setActiveModal('none');

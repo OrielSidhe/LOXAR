@@ -64,11 +64,11 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] G3. Probar flujo completo end-to-end: crear lexicón → agregar palabras → buscar por FTS5 → glosar interlineal → aplicar sound change → guardar
   - Estado: módulos implementados e integrados en UI; falta validación visual por el usuario en `npm run tauri dev`.
 
-### Bloque H: Usabilidad y pulido final (próximo en ejecutar)
-- [ ] H1. Añadir botón "Volver al ejemplo" en `InterlinearGlossViewer` y `SoundChangeWorkbench`
-- [ ] H2. Añadir tooltips informativos en tool cards de `ToolsDashboard`
-- [ ] H3. Mejorar empty states en `InterlinearGlossViewer` y `SoundChangeWorkbench`
-- [ ] H4. Añadir favicon y título dinámico de ventana según lexicón activo
+### Bloque H: Usabilidad y pulido final (COMPLETADO)
+- [x] H1. Añadir botón "Volver al ejemplo" en `InterlinearGlossViewer` y `SoundChangeWorkbench`
+- [x] H2. Añadir tooltips informativos en tool cards de `ToolsDashboard`
+- [x] H3. Mejorar empty states en `InterlinearGlossViewer` y `SoundChangeWorkbench`
+- [x] H4. Añadir favicon y título dinámico de ventana según lexicón activo
 
 ---
 
