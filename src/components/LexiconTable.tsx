@@ -225,6 +225,14 @@ const LexiconTable = (props: LexiconTableProps) => {
     const [ftsLoading, setFtsLoading] = useState(false);
     const [ftsResultCount, setFtsResultCount] = useState(0);
 
+    const searchInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (lexiconName && searchInputRef.current) {
+            searchInputRef.current.focus();
+        }
+    }, [lexiconName]);
+
     const uniqueCategories = useMemo(() => {
         if (!data) return [];
         const categories = new Set(data.map(entry => entry.Categoría).filter(cat => cat && cat.trim() !== ''));
@@ -440,6 +448,12 @@ const LexiconTable = (props: LexiconTableProps) => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
+                )}
+                {!searchTerm && (
+                    <div className="absolute right-5 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-[11px] text-text-secondary/70 border border-subtle/60 rounded px-1.5 py-0.5 pointer-events-none">
+                        <span>{navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl'}</span>
+                        <span>K</span>
+                    </div>
                 )}
             </div>
 
