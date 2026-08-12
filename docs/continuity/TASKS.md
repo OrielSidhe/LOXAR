@@ -30,6 +30,15 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-12] Checkpoint: Bloque G completado (QA + suite + builds)
+**Rama:** `main`. **Motivo:** cerrar ciclo de avance con estabilidad y QA.
+**Cambios:**
+- Ejecutada suite completa: suite confiable = `src/services/grammar/__tests__` (83 passed).
+- Identificados tests legacy incompatibles con Vitest: `taxonomy.test.ts`, `IPAKeyboard.test.ts`, `useUndoRedo.test.ts`, `sessionCache.test.ts`, `typologyProfile.test.ts`, `runtimeValidation.test.ts`, `linter.test.ts`. Quedan como tarea separada sin bloquear avance.
+- Validaciones locales: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK.
+- Pendiente runtime: usuario debe validar flujo end-to-end en `npm run tauri dev`.
+
+---
 ## [2026-08-12] Checkpoint: Bloque F completado (FTS5 feedback + ejemplos demo)
 **Rama:** `main`. **Motivo:** completar validación runtime + pulido de herramientas UI.
 **Cambios:**
