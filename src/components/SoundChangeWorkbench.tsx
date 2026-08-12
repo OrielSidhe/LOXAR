@@ -44,6 +44,15 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
     URL.revokeObjectURL(url);
   };
 
+  const handleResetExample = () => {
+    setRules([
+      { id: '1', name: 'Aspiración', find: 'p', replace: 'ph', scope: 'lexeme' },
+      { id: '2', name: 'Lenición', find: 't', replace: 'd', scope: 'root' },
+    ]);
+    setText('pata');
+    setPreview('');
+  };
+
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -103,6 +112,13 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
             className="w-full rounded bg-black px-3 py-1.5 text-sm text-white"
           >
             Aplicar cambios
+          </button>
+          <button
+            type="button"
+            onClick={handleResetExample}
+            className="w-full rounded border border-subtle px-3 py-1.5 text-xs text-text-secondary hover:text-white hover:border-accent transition-colors"
+          >
+            Volver al ejemplo
           </button>
           {preview && (
             <div className="flex items-center gap-2">

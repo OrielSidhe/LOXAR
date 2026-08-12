@@ -44,6 +44,11 @@ const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon
     URL.revokeObjectURL(url);
   };
 
+  const handleResetExample = () => {
+    setText('El gato come pescado');
+    setResult(null);
+  };
+
   React.useEffect(() => {
     if (!sentence && !result) {
       handleAnalyze();
@@ -66,6 +71,14 @@ const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon
           className="rounded bg-black px-3 py-1.5 text-sm text-white"
         >
           Glosar
+        </button>
+        <button
+          type="button"
+          onClick={handleResetExample}
+          className="rounded border border-subtle px-3 py-1.5 text-sm text-text-secondary hover:text-white hover:border-accent transition-colors"
+          title="Volver al ejemplo"
+        >
+          Volver al ejemplo
         </button>
         {result && (
           <>
