@@ -1,5 +1,5 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-08-01 
+**Última actualización:** 2026-08-12 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
@@ -496,6 +496,42 @@ selectivo; por ahora las listas integradas ya traen su categoría canónica.
 **Próximo paso:** el usuario debe validar en runtime con `npm run tauri dev` que al elegir "Comida y
 Cocina" → "Analizar" las sugerencias traigan categorías sensatas y que al hacer clic en una palabra se
 precargue la categoría en el editor.
+
+---
+
+## [2026-08-12] Checkpoint: GitHub-ready cleanup, persistence hardening, nuevos módulos y build CI
+**Rama:** `master`. Commits: `62ed11d` (v0.1.0), `22ec6d3`, `90c0e75`, `0dd9299` (v0.2.0).
+
+**Trabajo ejecutado:**
+- Repositorio profesionalizado: `.gitignore` limpio, `.env` excluidos, artifacts en `_ARTIFACTS_NO_GIT/`,
+  commit inicial + `v0.1.0`.
+- Estabilidad `tauri:dev`: fix de `EBUSY` endureciendo watcher de Vite (`server.watch.ignored` + polling)
+  sobre `src-tauri/target/**`.
+- Persistencia SQLite endurecida:
+  - `schemaVersion` agregado a `LexiconData`.
+  - `src/services/schemaMigrations.ts` con pipeline de migraciones + `createEmptyLexiconData`.
+  - Backups `.bak` automáticos en `saveLexicon` (`lexicon_backups`) con pruning a 5.
+  - Triggers FTS5 sobre `lexicons` para búsqueda full-text futura.
+  - Transacciones en `saveLexicon`/`deleteLexicon` para atomicidad backup + guardado/borrado.
+- Módulos nuevos enchufados:
+  - `src/services/interlinearGlossService.ts` + `InterlinearGlossViewer.tsx`.
+  - `src/services/soundChanger.ts` + `SoundChangeWorkbench.tsx`.
+  - `src/components/NeographyText.tsx` enchufado en `WritingAndNeographyTab.tsx`.
+- Build release funcionando:
+  - Bundle identifier corregido a `com.conlang.lexicon.manager`.
+  - `npm run tauri:build` genera instaladores **MSI** y **NSIS** en `src-tauri/target/release/bundle`.
+- CI/CD básico: `.github/workflows/ci.yml` para Windows (`windows-latest`) con `npm ci`, `typecheck`,
+  `tauri:build`.
+
+**Verificación:**
+- `tsc --noEmit` = **0 errores** en cortes posteriores.
+- Build de producción Tauri = OK.
+- Instaladores generados en `release/bundle/msi` y `release/bundle/nsis`.
+
+**Próximo paso sugerido:**
+- Etiquetar y empaquetar la release de GitHub desde `v0.2.0`.
+- Continuar con módulos faltantes de mayor peso: FTS5 real desde UI, sound changer batch sobre lexicón,
+  y export/import mejorado con verificación de integridad.
 
 ---
 

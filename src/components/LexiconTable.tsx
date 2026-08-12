@@ -175,6 +175,7 @@ interface LexiconTableProps {
     onToggleSelection: (id: string) => void;
     onToggleSelectAll: (ids: string[]) => void;
     onGenerateInflections: (entry: LexiconEntry) => void;
+    onSearch?: (term: string) => Promise<LexiconEntry[]>;
 }
 
 const InlineInput = ({ value, onChange, name }: { value: string, onChange: (e: React.ChangeEvent<HTMLInputElement>) => void, name: string }) => (
@@ -191,7 +192,8 @@ const LexiconTable = (props: LexiconTableProps) => {
     const { 
         data, lexiconName, conlangName, mainLanguage, onEditWord, onDeleteWord, showNotification,
         searchTerm, onSearchTermChange, categoryFilter, onCategoryFilterChange, viewFilter, onViewFilterChange,
-        showAffixFormatting, onShowAffixFormattingChange, selectedIds, onToggleSelection, onToggleSelectAll, onGenerateInflections
+        showAffixFormatting, onShowAffixFormattingChange, selectedIds, onToggleSelection, onToggleSelectAll, onGenerateInflections,
+        onSearch
     } = props;
     
     const [currentPage, setCurrentPage] = useState(1);
@@ -200,6 +202,7 @@ const LexiconTable = (props: LexiconTableProps) => {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(['id', 'raiz', 'lexema', 'categoria', 'significado', 'acciones']));
     const [showColumnMenu, setShowColumnMenu] = useState(false);
+    const [ftsResults, setFtsResults] = useState<LexiconEntry[] | null>(null);
 
     const uniqueCategories = useMemo(() => {
         if (!data) return [];
@@ -225,6 +228,15 @@ const LexiconTable = (props: LexiconTableProps) => {
 
         if (!searchTerm) return results;
 
+        // If FTS5 results are available, use them as the base set.
+        if (ftsResults) {
+            const ftsIds = new Set(ftsResults.map(entry => entry.ID));
+            results = results.filter(entry => ftsIds.has(entry.ID));
+            return results;
+        }
+
+        if (onSearch) return results;
+
         const lowercasedFilter = normalizeText(searchTerm);
         return results.filter(entry =>
             normalizeText(entry.ID).includes(lowercasedFilter) ||
@@ -235,7 +247,7 @@ const LexiconTable = (props: LexiconTableProps) => {
             normalizeText(entry.Significado.join(', ')).includes(lowercasedFilter) ||
             (entry.extraData && Object.values(entry.extraData).some(val => normalizeText(String(val)).includes(lowercasedFilter)))
         );
-    }, [data, searchTerm, categoryFilter, viewFilter]);
+    }, [data, searchTerm, categoryFilter, viewFilter, onSearch, ftsResults]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -246,6 +258,23 @@ const LexiconTable = (props: LexiconTableProps) => {
             setEditingId(null);
         }
     }, [filteredData, editingId]);
+
+    useEffect(() => {
+        if (!onSearch || !searchTerm || !lexiconName) {
+            setFtsResults(null);
+            return;
+        }
+        let active = true;
+        (async () => {
+            try {
+                const results = await onSearch(searchTerm);
+                if (active) setFtsResults(results);
+            } catch (e) {
+                if (active) setFtsResults(null);
+            }
+        })();
+        return () => { active = false; };
+    }, [onSearch, searchTerm, lexiconName]);
     
     const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
 

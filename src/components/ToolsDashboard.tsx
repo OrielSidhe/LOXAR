@@ -23,6 +23,8 @@ interface ToolsDashboardProps {
     onAnalyzeForSuggestions: (listName: string) => void;
     onOpenGrammar: () => void;
     onOpenTranslator: () => void;
+    onOpenInterlinearGloss: () => void;
+    onOpenSoundChangeWorkbench: () => void;
     stats: { needsFunction: number; totalIncomplete: number; };
     disabled: boolean;
     onStartTour: () => void;
@@ -46,7 +48,8 @@ const ToolCard = ({ icon, title, description, onClick, disabled, accentColor = '
 
 const ToolsDashboard = ({
     onOpenProfile, onOpenNeography, onOpenInflectionWorkshop, onManageFunctions, onManageHyphens,
-    onCompleteFunctions, onFillMissing, onAnalyzeForSuggestions, onOpenGrammar, onOpenTranslator, stats, disabled, onStartTour
+    onCompleteFunctions, onFillMissing, onAnalyzeForSuggestions, onOpenGrammar, onOpenTranslator,
+    onOpenInterlinearGloss, onOpenSoundChangeWorkbench, stats, disabled, onStartTour
 }: ToolsDashboardProps) => {
     return (
         <div className="space-y-8 animate-fade-in p-2 overflow-y-auto h-full custom-scrollbar">
@@ -131,6 +134,22 @@ const ToolsDashboard = ({
                         onClick={onOpenGrammar}
                         disabled={disabled}
                         accentColor="text-purple-400"
+                    />
+                    <ToolCard
+                        icon={<PenToolIcon className="w-6 h-6" />}
+                        title="Glosado Interlineal"
+                        description="Genera glosas estilo Leipzig a partir de oraciones y el léxico."
+                        onClick={onOpenInterlinearGloss}
+                        disabled={disabled}
+                        accentColor="text-teal-400"
+                    />
+                    <ToolCard
+                        icon={<WandIcon className="w-6 h-6" />}
+                        title="Sound Change Workbench"
+                        description="Aplica sound changes a lexemas y raíces."
+                        onClick={onOpenSoundChangeWorkbench}
+                        disabled={disabled}
+                        accentColor="text-amber-400"
                     />
 
                     <ToolCard

@@ -6,7 +6,10 @@ import LexiconSelector from './components/LexiconSelector';
 import { useLexicon } from './hooks/useLexicon';
 import { generateRootAndLexeme, normalizeText, completeEntry, correctSignificado } from './services/geminiService';
 import { filterParadigmsForFunction, generateInflectedForms } from './services/inflectionService';
+import { searchLexicon } from './services/ftsSearch';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode } from './types';
+import InterlinearGlossViewer from './components/InterlinearGlossViewer';
+import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
 import Papa from 'papaparse';
 
@@ -113,6 +116,9 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
     const [exportPath, setExportPath] = useState<string | null>(localStorage.getItem('conlang_lexicon_manager_export_path'));
     const [isTourActive, setIsTourActive] = useState(false);
     const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
+
+    // Tools sub-views
+    const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
 
     const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
         const id = Date.now();
@@ -659,6 +665,18 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
         localStorage.setItem('conlang_lexicon_manager_tour_completed', 'true');
     };
 
+    const handleOpenInterlinearGloss = useCallback(() => {
+        setActiveToolView('interlinear-gloss');
+    }, []);
+
+    const handleOpenSoundChangeWorkbench = useCallback(() => {
+        setActiveToolView('sound-change');
+    }, []);
+
+    const handleBackToToolDashboard = useCallback(() => {
+        setActiveToolView('dashboard');
+    }, []);
+
     useEffect(() => {
         let unlistenAddWord: (() => void) | undefined;
         let unlistenAddInflection: (() => void) | undefined;
@@ -892,6 +910,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
                                     setEntryToInflect(entry);
                                     handleOpenModal('inflection_generator');
                                 }}
+                                onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term)).map(r => r.entry) : undefined}
                             />
                         )}
                         {activeTab === 'workbench' && (
@@ -1020,37 +1039,55 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
                                     activeMetadata={activeMetadata}
                                 />
                             ) : (
-                                <ToolsDashboard
-                                    onStartTour={handleStartTour}
-                                    onOpenProfile={() => setActiveModal('profile')}
-                                    onOpenNeography={() => setActiveTab('writing')}
-                                    onOpenInflectionWorkshop={() => setActiveTab('grammar')}
-                                    onOpenGrammar={() => setActiveTab('grammar')}
-                                    onOpenTranslator={() => setActiveTab('translator')}
-                                    onManageFunctions={() => setActiveModal('functions')}
-                                    onManageHyphens={() => setActiveModal('hyphens')}
-                                    onCompleteFunctions={async () => {
-                                        setAiStatus('working');
-                                        setAiProgress(null);
-                                        try {
-                                            const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
-                                            setLastAiResult(res.count);
-                                            setAiStatus('complete'); showNotification('Funciones completadas', 'success');
-                                        } catch (e) { setAiStatus('error'); setAiProgress(null); }
-                                    }}
-                                    onFillMissing={async () => {
-                                        setAiStatus('working');
-                                        setAiProgress(null);
-                                        try {
-                                            const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
-                                            setLastAiResult(result);
-                                            setAiStatus('complete'); showNotification('Campos completados', 'success');
-                                        } catch (e) { setAiStatus('error'); setAiProgress(null); }
-                                    }}
-                                    onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
-                                    stats={completionStats}
-                                    disabled={!activeLexiconName}
-                                />
+                                <>
+                                    {activeToolView === 'dashboard' && (
+                                        <ToolsDashboard
+                                            onStartTour={handleStartTour}
+                                            onOpenProfile={() => setActiveModal('profile')}
+                                            onOpenNeography={() => setActiveTab('writing')}
+                                            onOpenInflectionWorkshop={() => setActiveTab('grammar')}
+                                            onOpenGrammar={() => setActiveTab('grammar')}
+                                            onOpenTranslator={() => setActiveTab('translator')}
+                                            onOpenInterlinearGloss={handleOpenInterlinearGloss}
+                                            onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
+                                            onManageFunctions={() => setActiveModal('functions')}
+                                            onManageHyphens={() => setActiveModal('hyphens')}
+                                            onCompleteFunctions={async () => {
+                                                setAiStatus('working');
+                                                setAiProgress(null);
+                                                try {
+                                                    const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
+                                                    setLastAiResult(res.count);
+                                                    setAiStatus('complete'); showNotification('Funciones completadas', 'success');
+                                                } catch (e) { setAiStatus('error'); setAiProgress(null); }
+                                            }}
+                                            onFillMissing={async () => {
+                                                setAiStatus('working');
+                                                setAiProgress(null);
+                                                try {
+                                                    const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
+                                                    setLastAiResult(result);
+                                                    setAiStatus('complete'); showNotification('Campos completados', 'success');
+                                                } catch (e) { setAiStatus('error'); setAiProgress(null); }
+                                            }}
+                                            onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
+                                            stats={completionStats}
+                                            disabled={!activeLexiconName}
+                                        />
+                                    )}
+                                    {activeToolView === 'interlinear-gloss' && (
+                                        <div className="space-y-3">
+                                            <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
+                                            <InterlinearGlossViewer lexicon={lexicons[activeLexiconName ?? '']} />
+                                        </div>
+                                    )}
+                                    {activeToolView === 'sound-change' && (
+                                        <div className="space-y-3">
+                                            <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
+                                            <SoundChangeWorkbench lexicon={lexicons[activeLexiconName ?? '']} />
+                                        </div>
+                                    )}
+                                </>
                             )
                         )}
                     </div>
