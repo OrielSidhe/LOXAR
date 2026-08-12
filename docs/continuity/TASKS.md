@@ -30,6 +30,19 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-12] Checkpoint: Bloque F completado (FTS5 feedback + ejemplos demo)
+**Rama:** `main`. **Motivo:** completar validación runtime + pulido de herramientas UI.
+**Cambios:**
+- `LexiconTable.tsx`: feedback visual de búsqueda FTS5 (`ftsLoading`, `ftsResultCount`) con loading spinner y mensajes de resultado/empty state.
+- `InterlinearGlossViewer.tsx`: oración de demostración precargada ("El gato come pescado") y auto-análisis al montar.
+- `SoundChangeWorkbench.tsx`: reglas y texto de ejemplo precargados para demostración inmediata.
+- `docs/LOXAR_AUTO_PILOT.md`: Bloques A-E marcados completos; Bloque F marcado completo; Bloque G definido como siguiente.
+- `docs/continuity/SESSION_CACHE.json`: actualizado resumen de sesión.
+
+**Verificación:** `npm run typecheck` = 0 errores, `npm run lint` = OK, `npx vitest run src/services/grammar` = 83 passed.
+**Pendiente runtime (usuario con `npm run tauri dev`):** validar visualmente que FTS5 search, InterlinearGlossViewer y SoundChangeWorkbench funcionan sin crashes en la app.
+
+---
 ## [2026-08-12] Checkpoint: Verificación completa de gramática, FTS5 y herramientas UI
 **Rama:** `main`. **Motivo:** ejecutar ciclo de avance de LOXAR según solicitud del usuario.
 **Verificaciones realizadas:**

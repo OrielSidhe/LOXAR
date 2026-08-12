@@ -46,14 +46,14 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] E2. Documentación de usuario final
 - [x] E3. CI/CD básico
 
-### Bloque F: Validación runtime + pulido (próximo en ejecutar)
-- [ ] F1. Validar en runtime `npm run tauri:dev` que FTS5 search, InterlinearGlossViewer y SoundChangeWorkbench funcionan sin crashes
-- [ ] F2. Añadir feedback visual de búsqueda FTS5 (loading/empty/result count) en `LexiconTable`
-- [ ] F3. Añadir ejemplo precargado en `InterlinearGlossViewer` para demostración inmediata
-- [ ] F4. Añadir ejemplo precargado en `SoundChangeWorkbench` para demostración inmediata
-- [ ] F5. Verificar que `GrammarImporterModal` muestra `ImportValidationReport` correctamente tras importar gramática de ejemplo
+### Bloque F: Validación runtime + pulido (COMPLETADO)
+- [x] F1. Validar en runtime `npm run tauri:dev` que FTS5 search, InterlinearGlossViewer y SoundChangeWorkbench funcionan sin crashes
+- [x] F2. Añadir feedback visual de búsqueda FTS5 (loading/empty/result count) en `LexiconTable`
+- [x] F3. Añadir ejemplo precargado en `InterlinearGlossViewer` para demostración inmediata
+- [x] F4. Añadir ejemplo precargado en `SoundChangeWorkbench` para demostración inmediata
+- [x] F5. Verificar que `GrammarImporterModal` muestra `ImportValidationReport` correctamente tras importar gramática de ejemplo
 
-### Bloque G: Estabilidad y QA (siguiente)
+### Bloque G: Estabilidad y QA (próximo en ejecutar)
 - [ ] G1. Ejecutar suite completa de tests y reportar cobertura actual
 - [ ] G2. Correr `npm run lint` + `npm run typecheck` + `npm run build` en CI local y corregir cualquier regresión
 - [ ] G3. Probar flujo completo: crear lexicón → agregar palabras → buscar por FTS5 → glosar interlineal → aplicar sound change → guardar
@@ -70,9 +70,9 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**Bloque F — Validación runtime + pulido**
-- F1. Validar runtime de FTS5, InterlinearGlossViewer y SoundChangeWorkbench
-- F2. Feedback visual de búsqueda FTS5 en `LexiconTable`
-- F3-F5. Ejemplos precargados y validación de `GrammarImporterModal`
+**Bloque G — Estabilidad y QA**
+- G1. Ejecutar suite completa de tests y reportar cobertura actual
+- G2. Correr `npm run lint` + `npm run typecheck` + `npm run build` y corregir regresiones
+- G3. Probar flujo completo end-to-end: crear lexicón → agregar palabras → buscar por FTS5 → glosar interlineal → aplicar sound change → guardar
 
 ---
