@@ -20,6 +20,15 @@ const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon
   const [text, setText] = React.useState(sentence || 'El gato come pescado');
   const [result, setResult] = React.useState<InterlinearGloss | null>(null);
 
+  if (!lexicon?.entries?.length) {
+    return (
+      <div className="space-y-3">
+        <h3 className="text-lg font-bold text-text-primary">Glosado Interlineal</h3>
+        <p className="text-sm text-text-secondary">Seleccioná o creá un léxico primero para usar esta herramienta.</p>
+      </div>
+    );
+  }
+
   const handleAnalyze = () => {
     const gloss = glossSentence(text, lexicon.entries, options);
     setResult(gloss);

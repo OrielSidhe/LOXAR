@@ -22,6 +22,15 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
   const [text, setText] = React.useState('pata');
   const [preview, setPreview] = React.useState('');
 
+  if (!lexicon?.entries?.length) {
+    return (
+      <div className="space-y-3">
+        <h3 className="text-lg font-bold text-text-primary">Sound Change Workbench</h3>
+        <p className="text-sm text-text-secondary">Seleccioná o creá un léxico primero para usar esta herramienta.</p>
+      </div>
+    );
+  }
+
   const handleApply = () => {
     const next = previewSoundChange(text, rules);
     setPreview(next);
