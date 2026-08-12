@@ -218,6 +218,22 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
         };
     }, [activeLexicon]);
 
+    // Global search shortcut: Ctrl/Cmd + K focuses lexicon search
+    useEffect(() => {
+        const handler = (event: KeyboardEvent) => {
+            if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+                event.preventDefault();
+                const searchInput = document.getElementById('lexicon-search');
+                if (searchInput && !searchInput.hasAttribute('disabled')) {
+                    searchInput.focus();
+                    searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
     // Widget Data emitter
     useEffect(() => {
         if (activeLexicon && lexiconHook.activeInflectionProfile && activeMetadata) {
