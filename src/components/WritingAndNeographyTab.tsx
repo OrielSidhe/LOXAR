@@ -6,6 +6,7 @@ import SaveIcon from './icons/SaveIcon';
 import BookOpenIcon from './icons/BookOpenIcon';
 import PenToolIcon from './icons/PenToolIcon';
 import NeographyView from './neography/NeographyView';
+import NeographyText from './NeographyText';
 
 interface WritingAndNeographyTabProps {
     corpus: CorpusEntry[];
@@ -301,7 +302,11 @@ const WritingAndNeographyTab = ({
                                             className="flex-1 w-full p-6 overflow-y-auto custom-scrollbar text-3xl leading-relaxed text-center break-words"
                                             style={{ fontFamily: fontName, fontFeatureSettings: '"liga" 1, "calt" 1, "dlig" 1' }}
                                         >
-                                            {localTranscription || <span className="text-text-secondary/20 text-sm font-sans block mt-10">(Vista previa aquí)</span>}
+                                            {localTranscription ? (
+                                                <NeographyText profile={neographyProfile} text={localTranscription} />
+                                            ) : (
+                                                <span className="text-text-secondary/20 text-sm font-sans block mt-10">(Vista previa aquí)</span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
