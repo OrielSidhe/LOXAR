@@ -91,6 +91,15 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - Validaciones: `npm run typecheck` 0 errores.
 
 ---
+---
+
+## [2026-08-12] Checkpoint: Bloque J2 completado (manualChunks para bundle)
+**Rama:** `main`. **Motivo:** reducir tamaño del bundle principal dividiendo dependencias en chunks separados.
+**Cambios:**
+- `vite.config.ts`: se añadió `build.rollupOptions.output.manualChunks` con separación de `react` y `tauri`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run build` OK.
+
+---
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
 
 **Tareas del plan (`docs/superpowers/plans/2026-07-16-loxar-continuity-implementation-plan.md`):**

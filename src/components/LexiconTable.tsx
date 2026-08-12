@@ -621,14 +621,14 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
                                             <div className="flex items-center justify-center gap-3">
                                                 {isEditing ? (
                                                     <>
-                                                        <button onClick={handleSaveClick} title="Guardar" className="text-success hover:text-green-400 transition-colors"><SaveIcon className="h-5 w-5"/></button>
-                                                        <button onClick={handleCancelClick} title="Cancelar" className="text-danger hover:text-red-400 transition-colors"><CancelIcon className="h-5 w-5"/></button>
+                                                        <button onClick={handleSaveClick} title="Guardar" aria-label="Guardar cambios" className="text-success hover:text-green-400 transition-colors"><SaveIcon className="h-5 w-5"/></button>
+                                                        <button onClick={handleCancelClick} title="Cancelar" aria-label="Cancelar edición" className="text-danger hover:text-red-400 transition-colors"><CancelIcon className="h-4 w-4"/></button>
                                                     </>
                                                 ) : (
                                                     <>
-                                                        <button onClick={() => handleEditClick(entry)} title="Editar" className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition-colors"><EditIcon className="h-4 w-4"/></button>
-                                                        <button onClick={() => onGenerateInflections(entry)} title="Flexionar" className="p-1.5 bg-purple-500/10 text-purple-400 rounded hover:bg-purple-500/20 transition-colors"><GitMergeIcon className="h-4 w-4"/></button>
-                                                        <button onClick={() => handleDeleteClick(entry.ID, entry.Léxema)} title="Eliminar" className="p-1.5 bg-danger/10 text-danger rounded hover:bg-danger/20 transition-colors"><TrashIcon className="h-4 w-4"/></button>
+                                                        <button onClick={() => handleEditClick(entry)} title="Editar" aria-label={`Editar entrada ${entry.Raíz}`} className="p-1.5 bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition-colors"><EditIcon className="h-4 w-4"/></button>
+                                                        <button onClick={() => onGenerateInflections(entry)} title="Flexionar" aria-label="Generar flexiones" className="p-1.5 bg-purple-500/10 text-purple-400 rounded hover:bg-purple-500/20 transition-colors"><GitMergeIcon className="h-4 w-4"/></button>
+                                                        <button onClick={() => handleDeleteClick(entry.ID, entry.Léxema)} title="Eliminar" aria-label={`Eliminar entrada ${entry.Raíz}`} className="p-1.5 bg-danger/10 text-danger rounded hover:bg-danger/20 transition-colors"><TrashIcon className="h-4 w-4"/></button>
                                                     </>
                                                 )}
                                             </div>

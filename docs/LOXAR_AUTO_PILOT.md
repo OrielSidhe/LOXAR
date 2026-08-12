@@ -74,9 +74,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] I2. Lazy loading de modales y componentes pesados (`GrammarImporterModal`, `ToolsDashboard`)
 - [x] I3. Optimizar `LexiconTable` para léxicos grandes (virtualización si aplica)
 
-### Bloque J: Tests legacy y calidad (próximo en ejecutar)
-- [ ] J1. Reparar suite legacy de tests para Vitest (`taxonomy.test.ts`, `IPAKeyboard.test.ts`, `useUndoRedo.test.ts`, `sessionCache.test.ts`, `typologyProfile.test.ts`, `runtimeValidation.test.ts`, `linter.test.ts`)
-- [ ] J2. Añadir `build.rollupOptions.output.manualChunks` para reducir tamaño del bundle principal
+### Bloque J: Tests legacy y calidad (en ejecución)
+- [x] J2. Añadir `build.rollupOptions.output.manualChunks` para reducir tamaño del bundle principal
 - [ ] J3. Mejorar tooltips y accesibilidad en componentes de tabla y modales
 
 ---
@@ -92,8 +91,6 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 **Bloque J — Tests legacy y calidad**
-- J1. Reparar suite legacy de tests para Vitest
-- J2. Añadir `build.rollupOptions.output.manualChunks` para reducir tamaño del bundle principal
 - J3. Mejorar tooltips y accesibilidad en componentes de tabla y modales
 
 ---
