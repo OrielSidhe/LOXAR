@@ -43,6 +43,12 @@ export default defineConfig({
         main: './index.html',
         widget: './widget.html',
       },
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          tauri: ['@tauri-apps/api'],
+        },
+      },
     },
   },
   server: {
