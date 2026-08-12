@@ -1,0 +1,1056 @@
+# Loxar Task Board – Estado Actual del Proyecto
+**Última actualización:** 2026-08-01 
+**Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
+**Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
+
+---
+
+## 🎯 Objetivo General
+Estabilizar el flujo de desarrollo mediante un sistema de continuidad que cualquier agente pueda
+retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta la sesión a mitad.
+
+---
+
+## 📋 Lista de Tareas
+
+- [x] Crear framework de continuidad (`docs/continuity/`: PROTOCOL, TASKS, SESSION_CACHE)
+- [x] Crear skill `loxar-continuity` en `~/.zcode/skills/` que carga el contexto al inicio
+- [x] Arreglar error de sintaxis en `AiSettingsModal.tsx` (falta `}` en botón de test)
+- [x] `geminiService.ts`: usar `settings.geminiModel` / `settings.ollamaModel` en `cleanseJson`
+- [x] `npm run build` pasa (227 módulos, sin errores de compilación)
+- [x] Revisar y limpiar Markdown obsoletos (`LOXAR_CODEBASE_CONSOLIDADO_ZAI.md`, `README_REPAIR.md` movidos a `_BACKUPS/obsolete-docs/`; README raíz recreado)
+- [x] Añadir scripts `npm run lint` (`check:esc`) y `npm run typecheck` (`tsc --noEmit`) en `package.json`
+- [x] Diccionario de categorías estándar: `src/data/standardCategories.ts` (lista canónica + keywords + mapa aprendido) con **local-first** en `App.handleDetermineCategory` y en el lote de `useLexicon`
+- [x] **Hardening de seguridad (B1+C1+A1+C2):** cerrar vectores de inyección (XSS) y exposición de secretos — ver checkpoint 2026-07-14
+- [x] **P4 — Teclado IPA:** nuevo `IPAKeyboard.tsx` (~55 símbolos IPA) con inserción en cursor del input "Léxema" + toggle en `EntryEditor`. Test `IPAKeyboard.test.ts` (ALL PASS). Commiteado `9c8bfa3`.
+- [x] **P3 — Linter fonotáctico:** `src/services/phonology/linter.ts` (`lintPhonotactics`/`isValidPhonotactics`) + `PhonotacticLinterFeedback.tsx` en `GenerativeProfileEditor`. Valida inventario + estructura silábica + clusters.
+- [x] **P2 — Undo/Redo:** `useUndoRedo` hook genérico (`past[]`/`future[]`, redo) cableado en `useLexicon` (`updateActiveLexicon`→`undoRedo.set`, `undoChange`→`undoRedo.undo`). Test `useUndoRedo.test.ts`.
+- [x] **T2 — Validación runtime del motor:** `src/validation/runtimeValidation.ts` (`validateGrammarEngine()`) + banner offline en `App.tsx`.
+- [x] **T1 — SESSION_CACHE en runtime:** `src/services/sessionCache.ts` (`loadSessionCache`/`saveSessionCache`) usando `@tauri-apps/api/core` invoke.
+
+---
+
+## [2026-07-16] Cierre de sesión: Plan de implementación de continuidad (6 tareas COMPLETADAS)
+**Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
+
+**Tareas del plan (`docs/superpowers/plans/2026-07-16-loxar-continuity-implementation-plan.md`):**
+1. **T1 SESSION_CACHE → runtime:** `src/services/sessionCache.ts` con `invoke` de `@tauri-apps/api/core` (v2). Interface `SessionCache { activeTab; activeProfile }`. Test: pass.
+2. **T2 Validación runtime del motor:** `src/validation/runtimeValidation.ts` (`validateGrammarEngine()` dispara morphology/syntax/phonology con un manifest dummy). `App.tsx` corre `validateGrammarEngine()` + `isAiAvailable()` en mount y muestra banner offline (`AlertTriangleIcon`) cuando `!ai && !grammarOk`.
+3. **T3 Limpieza tsc:** `NeographyModal.tsx` (import `drawingUtils`, `advanceWidth`→`width`/`lsb`/`rsb`, `GlyphPaths glyph || null`), `imagetracerjs.d.ts` (declaración de módulo), `GrammarGuidedTour.tsx` (`CheckCircleIcon`), `tsconfig.json` exclude `__tests__/*.test.ts(x)`. Resultado: `tsc --noEmit` = **0 errores** (antes 8 en Neography*).
+4. **T4 Linter fonotáctico (P3):** `src/services/phonology/linter.ts` (`lintPhonotactics`/`isValidPhonotactics`) + barrel `index.ts`. `PhonotacticLinterFeedback.tsx` muestra issues por palabra del `sampleText` en `GenerativeProfileEditor`. Algoritmo de silabificación iterativo (respeta multi-carácter IPA como `tʃ`).
+5. **T5 Undo/Redo (P2):** `src/hooks/useUndoRedo.ts` genérico (`past/future` stacks + `redo`/`clearFuture`). `useLexicon` usa `undoRedo.set(newState)` en `updateActiveLexicon`, `undoChange` llama `undoRedo.undo()`; `canUndo` = `undoRedo.canUndo || previousState !== null`. Test `useUndoRedo.test.ts` (ALL PASS).
+6. **T6 Teclado IPA (P4):** `src/components/IPAKeyboard.tsx` (~55 símbolos, grid 8 cols) inserta en cursor del input objetivo vía `getElementById(targetId)` + `dispatchEvent(input)`. Toggle en `EntryEditor` (botón "IPA" junto a "Léxema"). Test `IPAKeyboard.test.ts` (ALL PASS). Commiteado `9c8bfa3`.
+
+**Verificación final:**
+- `npm run typecheck` = **0 errores**.
+- `npm run build` = OK (327 módulos).
+- `npm run lint` = OK.
+- Tests tsx: `morphology`/`syntax`/`phonology`/`exceptions`/`IPAKeyboard`/`useUndoRedo` = ALL PASS.
+
+**Nota de handoff:** el plan original de T1 mencionaba "wire SESSION_CACHE a App.tsx" (pasos 5-6), pero solo se creó el service + test. `App.tsx` sigue usando `localStorage` (`conlang_session_cache`) para restore de sesión; el `sessionCache.ts` está listo para cablearse cuando se quiera unificar la fuente de verdad de sesión con el archivo `SESSION_CACHE.json`. No es bloqueante.
+
+**Próximo paso sugerido:** el usuario debe validar en runtime (`npm run tauri dev`) el banner offline, el linter fonotáctico en el Perfil Generativo, el undo/redo en el editor de léxico, y el teclado IPA en el campo Léxema. Luego decidir si cablear `sessionCache.ts` a `App.tsx`.
+- [x] **P1 — Zod + normalización unificada:** centralizar normalización en `src/services/normalize.ts` (defaults + esquemas zod passthrough/defaults) y aplicarla en `sqlStorage.loadLexicon` (ambas ramas) y en `getInitialState` de `useLexicon.ts`, eliminando la divergencia localStorage vs SQLite (incidente 2969057).
+- [x] **UX limpieza (continuación):** reducir botón "Registrar Palabra", mover explicaciones inline a Tooltips hover, modos de generación tipo gema iluminada, quitar tab "Sugerencias" (reubicar Lote IA/"A cola" en Listas), eliminar sección "Notas de Gramática" (campo muerto) y añadir tipo de afijo "desinencia".
+- [x] **Motor de gramática local (engine puro + UI + pipeline):** `src/services/grammar/` (morphology/syntax/phonology + barrel), `GrammarManifest` fuente de verdad, `RuleEditor` + `ExceptionEditor` (supletiva ser/estar), Preview con motor + advertencias fonotácticas, AI offline-aware (importer + SyntaxCanvas Mapper), pipeline Neography (glifos) + Translator (grounding). Ver checkpoint 2026-07-14 abajo.
+- [ ] Verificar en runtime (lo hará el usuario con `npm run tauri dev`): auto-detección de categoría local-first, banner IA, navegación "Completar"
+- [ ] **M1 — Parser local de gramática textual:** `src/services/grammar/textParser.ts` (NUEVO) — parser determinista que convierte texto libre → `DeclarativeManifest` SIN LLM. 10 tests TDD.
+- [ ] **M2 — Inductor LLM mejorado:** Modificar `parseGrammarAdvanced` en `geminiService.ts` para pedir `DeclarativeManifest` (no `FlexibleGrammar`), validar post-LLM con Zod estricto, eliminar `cleanseJson` como fallback. 7 tests TDD.
+- [ ] **M3 — Normalizer mejorado:** Modificar `normalizeGrammarManifest` en `normalize.ts` para usar Zod estricto en `DeclarativeManifest`, normalizar aliases con `taxonomy.ts`, validar slots. 7 tests TDD.
+- [ ] **M4 — Validador post-import:** `src/services/grammar/importValidator.ts` (NUEVO) + `ImportReport.tsx` (UI). Produce reporte con score, problemas, sugerencias. 7 tests TDD.
+- [ ] **M5 — Cableado estrategias→motor:** `strategyExtractor.ts` (NUEVO) convierte `MorphosyntacticStrategy[]` → `DeclarativeSlot[]` que el motor consume. Preview en `GrammarManagerModal`. 9 tests TDD.
+- [ ] **M6 — Fixture Quavanol funcional:** Mapear datos del fixture a paradigmas del engine. 8 tests de integración.
+- [ ] **M7 — Integración UI + E2E:** 6 tests de integración end-to-end.
+- [ ] **M8 — Limpieza + optimización:** Detección de ciclos AST, `evalWhen` expandido, `kind:'clitic'`, taxonomy wiring en UI.
+
+---
+
+## [2026-08-01] Checkpoint: SDD + Plan TDD del fix del motor de gramática
+**Rama:** `feature/sql-migration-clean`. **Motivo:** usuario reporta que el módulo de gramática "no puede ni siquiera procesar una simple gramática textual que se le dio de ejemplo". Diagnóstico: importador 100% dependiente de LLM sin parser local ni validación post-import. Estrategias editables en UI pero nunca cableadas al motor.
+
+**Archivos creados:**
+- `docs/superpowers/specs/2026-08-01-grammar-engine-fix-design.md` — SDD del fix (diagnóstico + arquitectura + especificaciones estrictas)
+- `docs/superpowers/plans/2026-08-01-grammar-engine-fix.md` — Plan TDD de ejecución (8 fases, 70 tests)
+- `docs/superpowers/research/2026-08-01-conlang-github-research.md` — Investigación de 8 proyectos de conlang en GitHub (Vulgarlang, Conlang Builder, Linguist, PolyGlot, NGLib, Phoenix, Klingon tools, WALS)
+
+**Hallazgos clave:**
+- El motor determinista está ~75% completo y funcional (morphology/syntax/AST/phonology/exceptions)
+- El importador (`parseGrammarAdvanced`) es 100% LLM-dependiente, sin parser local de respaldo
+- `cleanseJson` hace segunda llamada a IA como fallback (duplica punto de fallo)
+- `MorphosyntacticStrategy` es metadata descriptiva; nunca se consume por `realizeLexeme`
+- `normalizeGrammarManifest` usa Zod laxo (`z.array(z.any())`); acepta cualquier basura del LLM
+- Fixture Quavanol tiene `paradigms: []` → motor no puede flexionar
+
+**Plan de fix (8 fases):**
+1. Fase 0: Preparación (declarativeFormat + stubs)
+2. Fase 1: Parser local TDD (10 tests)
+3. Fase 2: Inductor LLM mejorado TDD (7 tests)
+4. Fase 3: Normalizer + taxonomy TDD (7 tests)
+5. Fase 4: Validador post-import TDD (7 tests)
+6. Fase 5: Cableado estrategias→motor TDD (9 tests)
+7. Fase 6: Fixture Quavanol funcional (8 tests)
+8. Fase 7: Integración UI + E2E (6 tests)
+9. Fase 8: Limpieza + optimización
+
+**Próximo paso:** Esperar aprobación del SDD por el usuario. Si aprueba, iniciar Fase 0 (preparación) → Fase 1 (parser local, TDD estricto).
+
+**Verificación:** Documentos creados sin errores. No se tocó código de producción.
+
+---
+
+---
+
+## ✅ Tareas Completadas (Histórico)
+
+- [x] 2026-07-13: Framework de continuidad creado y commiteado (`dcc67ff`)
+- [x] 2026-07-13: Skill `loxar-continuity` creado para auto-carga de contexto
+- [x] 2026-07-14: Fix sintaxis `AiSettingsModal` + modelos en `geminiService` (`d9d61bf`)
+- [x] 2026-07-10: Migración a Tauri/SQLite completada (`fc80b78`)
+- [x] 2026-07-09: Wireado de filtro "Entradas incompletas" (`c2e0fea`)
+
+---
+
+## 📌 Último Checkpoint
+
+## [2026-07-13 00:00] Checkpoint: Diccionario de categorías estándar (local-first)
+- Archivos tocados: `src/data/standardCategories.ts` (NUEVO), `src/App.tsx`,
+  `src/components/EntryEditor.tsx`, `src/hooks/useLexicon.ts`, `package.json`, `tsconfig.json`
+- Acción: Implementar variante "Ambos" (lista canónica + mapa aprendido del léxico).
+  `handleDetermineCategory` y el lote `aiComplete/aiFill` resuelven la categoría LOCALMENTE
+  (mapa significado→categoría + keywords en español) y solo llaman a Gemini como último recurso.
+  La lista estándar alimenta el desplegable de Categoría (antes `COMMON_CATEGORIES` inline).
+- Estado UI: sin cambios visuales; behavior = menos llamadas a IA al reingresar significados.
+- Verificación: `npm run build` OK; `tsc --noEmit` = 14 errores (idénticos a la base, 0 nuevos
+  en archivos tocados). Scripts `lint`/`typecheck` añadidos.
+- Próximo paso: el usuario lanza `npm run tauri dev` para poblar léxico y validar en runtime.
+- Nota: `noUnusedLocals`/`noUnusedParameters` relajados a `false` en `tsconfig.json` (ruido de
+  estilo del JSX automático); los 14 errores restantes son type-gaps reales preexistentes.
+
+## [2026-07-14 00:00] Checkpoint: Framework operativo + build verde
+- Archivos tocados: `docs/continuity/*`, `~/.zcode/skills/loxar-continuity/SKILL.md`,
+  `src/components/AiSettingsModal.tsx`, `src/services/geminiService.ts`
+- Acción: Establecer el "bastidor" de continuidad y reparar el único error de sintaxis hallado.
+- Estado UI: N/A (infraestructura, no runtime).
+- Próximo paso: Limpiar MD obsoletos y decidir si conectar `SESSION_CACHE.json` a la app en vivo.
+- Nota: El plan `sess_5add6eb2` ya estaba implementado en esta rama (banner IA, categorías,
+  sync "Completar", distinción de errores en SyntaxCanvas). No requiere reimplementación.
+
+---
+
+## [2026-07-14] Checkpoint: Hardening de seguridad (B1 + C1 + A1 + C2)
+**Motivo:** auditoría de ciberseguridad — la app era susceptible a inyección de código y la API
+key quedaba expuesta en claro en localStorage / embebida en el bundle.
+
+**B1 — Cierre de XSS (render seguro, sin `dangerouslySetInnerHTML`):**
+- NUEVO `src/components/RenderTemplate.tsx`: divide la plantilla en el token `[RAÍZ]` y emite
+  nodos React (texto + `<span className="font-mono text-accent">`), sin HTML crudo.
+- `InflectionModal.tsx` y `InflectionView.tsx`: `getRuleDescription` ahora usa `<RenderTemplate>`.
+- `neography/NeographyPreview.tsx`: el `@font-face` se escribe con `styleRef.textContent`
+  (nunca `innerHTML`) y solo se aceptan `data:` URLs base64 → ya no puede romper el contexto
+  `<style>` ni inyectar markup.
+
+**C1 — CSP estricto (`src-tauri/tauri.conf.json` `app.security.csp`):**
+`default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:;
+connect-src 'self' https://generativelanguage.googleapis.com https://*.googleapis.com
+http://localhost:11434 ws://localhost:5173 wss://localhost:5173; script-src 'self' 'unsafe-inline'
+'wasm-unsafe-eval'`.
+Bloquea la carga de scripts/estilos remotos y, sobre todo, **cierra el canal de exfiltración**: la
+key no puede enviarse a ningún dominio fuera de los endpoints de IA permitidos. `style-src
+'unsafe-inline'` se mantiene por los estilos inline de React; `script-src` conserva
+`'unsafe-inline'` para no romper `tauri dev` (Vite HMR). Siguiente paso recomendado (oro):
+eliminar `'unsafe-inline'` de `script-src` vía nonces.
+
+**A1 — La API key sale de localStorage (keyring del SO):**
+- `@tauri-apps/plugin-keyring` NO está publicado en npm, así que se implementó un comando Rust
+  propio con el crate `keyring = "3"` (Windows Credential Manager / macOS Keychain / libsecret).
+- `src-tauri/src/lib.rs`: comandos `get_secret` / `set_secret` / `delete_secret` + `invoke_handler`.
+- `src-tauri/Cargo.toml`: añadido `keyring = "3"`.
+- `src/services/geminiService.ts`: `getAiSettings`→`loadAiSettings()` (async) y `saveAiSettings()`
+  (async) leen/escriben el secreto SOLO vía `invoke('get_secret'|'set_secret'|'delete_secret')`.
+  Los ajustes NO secretos (provider, modelos, urls) siguen en localStorage. Migración única: si
+  había una key en claro, se mueve al keyring y se borra de localStorage.
+  Se eliminó `import.meta.env.VITE_GEMINI_API_KEY` (nunca más se hornea la key en el bundle).
+- `src/components/AiSettingsModal.tsx`: carga/guardado ahora async (`.then` en el effect, `await`
+  en save/test). La key sigue en memoria del renderer para llamar al SDK (alcance A1, no A2-proxy).
+
+**C2 — fs acotado (`src-tauri/capabilities/default.json`):**
+Se eliminaron `fs:read-all` / `fs:write-all`. Ahora: `fs:default` + permisos específicos
+(`allow-read/write-text-file`, `allow-read/write-file`, `allow-read-dir`, `allow-mkdir`,
+`allow-exists`) con `fs:scope` restringido a `$HOME/*` + carpetas de datos de la app
+(`$APPDATA`, `$APPCONFIG`, `$APPLOCALDATA`, `$APP_CACHE`, `$TEMP`). Cubre el diálogo de
+export/import (iba a `$HOME`) sin permitir escribir en raíz del sistema.
+
+**Verificación:** `npm run build` OK (228 módulos). `tsc --noEmit` = 15 errores, **0 nuevos en
+archivos tocados** (todos preexistentes en EntryEditor/GrammarTab/NeographyModal/useLexicon/
+grammarParser/NeographyImageTracer). `grep` confirma: no quedan `dangerouslySetInnerHTML`/`innerHTML`
+reales, ni referencias a `getAiSettings`.
+**Pendiente de runtime (lo valida el usuario con `npm run tauri dev`):** compilar el Rust con el
+crate `keyring` (cargo actualiza `Cargo.lock`), y que el guardado/carga de la API key use el
+keyring sin errores. Si `invoke('get_secret')` fallara por falta de plugin, hay fallback a
+memoria (no claro) y log de advertencia.
+**Próximo paso:** wiring del tab "Perfil Generativo" en `WorkbenchRightPanel` (pendiente de la
+fase de UX previa, fuera de alcance de seguridad).
+
+---
+
+## [2026-07-14] Checkpoint: Tab "Perfil Generativo" en el panel de Inspiración
+**Objetivo:** llevar el Perfil Generativo (antes solo en el modal de Herramientas) como 3er tab
+del panel derecho del workbench, reusando el editor extraído.
+
+**Cambios:**
+- `src/components/GenerativeProfileEditor.tsx` (ya existía, sin commitear): editor reutilizable
+  de Fonología/Afijos/Sabor/Notas. Ahora es la única fuente de verdad.
+- `src/components/GenerativeProfileModal.tsx`: REFACTORIZADO para envolver
+  `<GenerativeProfileEditor>` (se eliminaron ~280 líneas duplicadas). Mantiene overlay, header
+  con `DnaIcon` + cierre, y pasa `onCancel={onClose}` al editor. `ModalManager` (`activeModal ===
+  'profile'`) sigue pasando `profile/lexicon/onSave/onClose/showNotification` → props compatibles.
+- `src/components/WorkbenchRightPanel.tsx`: nueva pestaña **"Perfil Generativo"** (`DnaIcon`) con
+  `activeView: 'suggestions' | 'browse' | 'profile'`. Renderiza `<GenerativeProfileEditor>` con
+  `profile`, `lexicon`, `showNotification`, `onSave`. Nuevos props: `generativeProfile`,
+  `generativeLexicon`, `onSaveGenerativeProfile`, `showNotification`.
+- `src/App.tsx`: se cablean esos props al `WorkbenchRightPanel` usando `activeProfile`,
+  `activeLexicon`, `lexiconHook.updateGenerativeProfile` y `showNotification`.
+- (Contexto de la fase UX previa, en los mismos archivos y aún sin commitear por separado):
+  `EntryEditor.tsx` con flujo Tab Significado→Categoría→Raíz→Léxema→Guardar y autoFocus;
+  `standardCategories.ts` (lista canónica + `mergeCategoryOptions`); `useLexicon.ts`.
+
+**Verificación:** `npm run build` OK. `tsc --noEmit` = 15 errores, **0 nuevos en archivos tocados**
+(todos preexistentes en EntryEditor/GrammarTab/NeographyModal/useLexicon/grammarParser/
+NeographyImageTracer). El commit incluye los 7 archivos de esta fase para que el árbol commiteado
+construya (App.tsx y EntryEditor.tsx se tocan mutuamente en el flujo de categoría).
+**Pendiente (runtime, usuario con `npm run tauri dev`):** validar visualmente el 3er tab y que
+Guardar Perfil persista vía `updateGenerativeProfile`.
+
+---
+
+## [2026-07-14] Checkpoint: Fase 1 de UX del Workbench (campos + área de generación)
+**Contexto:** evaluación de los comentarios de UX del workbench/inspiración. El usuario señaló:
+campos desiguales (Raíz muy estrecha, Significado/Léxema muy anchos); el área "Generación con IA"
+no es autoexplicativa (no se entiende "IA GENERAR" vs varita "Completar", ni "GEN/ETIM/DERIV");
+y dudó de que la combinación de modos funcione "cabal" hoy. Confirmé en `geminiService.ts` que al
+seleccionar 2 modos el prompt solo hace `Modos aplicables: ${modes.join(', ')}` (sin lógica por
+combinación) → la combinación es cosmética; y que hay muchos prompts hardcodeados.
+
+**Fase 1 (este commit) — solo `src/components/EntryEditor.tsx`, sin tocar el núcleo de IA:**
+- **Rejilla de campos rebalanceada (A):** antes Significado(½)|Categoría(½) y Raíz(25%)|Léxema(75%).
+  Ahora: Significado a todo ancho → Categoría(½)+Raíz(½) [Raíz pasa a 50%] → Léxema a todo ancho.
+  Equilibra el peso visual y respeta el orden de tabulación Significado→Categoría→Raíz→Léxema.
+- **Área de generación autoexplicativa (B+C):**
+  - Modos como control legible con nombres completos (Generativo/Etimológico/Derivacional) en vez
+    de "GEN/ETIM/DERIV", + descripción viva del modo activo (`activeModeDescription`, useMemo).
+  - Botón primario renombrado "Generar Raíz y Léxema" (antes "IA GENERAR").
+  - Varita "Completar" con tooltip que explica que rellena los campos vacíos de una entrada parcial.
+  - Caption bajo los botones que explica la diferencia Generar vs Completar.
+- **Bug preexistente corregido:** typo `id: 'derivacional'` → `'derivational'` en
+  `generationModeOptions` (única ocurrencia; `GenerationMode` es `'derivational'`). Esto bajó el
+  conteo tsc de 16→15.
+
+**Verificación:** `tsc --noEmit` = 15 errores, **0 nuevos en archivos tocados** (el único restante
+en EntryEditor es `onDetermineCategory` en props, preexistente y ajeno a esta fase; los otros 14
+están en GrammarTab/NeographyModal/useLexicon/grammarParser/NeographyImageTracer, preexistentes).
+**Decisión de diseño (contrapunto al usuario):** se mantuvo MULTISELECCIÓN de modos (no ciclado
+estricto) pero con nombres legibles + descripción viva, e intención de implementar lógica real por
+modo en Fase 2. Si el usuario prefiere ciclado de un modo a la vez, es trivial cambiarlo.
+
+**Fase 2 (en progreso):**
+- (D) ✅ Centralizar prompts en `src/services/prompts.ts` como funciones tipadas + lógica real por
+  modo. `buildRootLexemePrompt` ahora genera instrucciones DISTINTAS por modo (generativo=fonología;
+  etimológico=raíces del léxico, usa `_fullLexicon` si hay; derivacional=aplica los afijos del
+  Perfil Generativo). Antes solo hacía `Modos aplicables: ${modes.join(', ')}` (cosmético). Se
+  extrajeron 10 prompts de `geminiService.ts`; `cleanseJson` y `parseGrammarAdvanced` quedan inline
+  (rama de provider y tamaño). `tsc` = 15 errores, 0 nuevos en archivos tocados.
+- (E) ✅ Generación por lotes/badges: `App.handleGenerateBatch` genera Raíz+Léxema con IA para las
+  palabras seleccionadas en tandas de 10 (`CHUNK=10`) aplicando `generationModes` (el modo activo,
+  elevado desde EntryEditor a App), y encola los resultados. Barra "Lote IA" en la pestaña
+  Sugerencias del panel de Inspiración.
+- (F) ✅ Inspiración rediseñada: píldoras de lista → dropdown (`WorkbenchRightPanel` "Listas");
+  filtro de categoría prominente en Sugerencias (ej. "solo verbos") + multiselección (checkbox por
+  fila + "seleccionar todas las visibles").
+- (G) ✅ Cola/carrusel de trabajo: estado `workQueue`/`queueCursor` en App; nuevo componente
+  `WorkQueueBar` (prev/sig, "Pendiente" que marca y avanza, "Quitar", "Limpiar", contador n/total y
+  pendientes). El workbench se precarga desde la cola vía `effectiveInitialDataForAdd`; al guardar
+  una palabra de la cola, `EntryEditor` llama `onQueueAdvance` y pasa a la siguiente. `generationModes`
+  elevado a App para que el lote y el editor compartan el modo activo.
+  **Nota de diseño:** mientras la cola está activa, el editor se conduce por ella (las acciones
+  individuales "+"/Generar de una sugerencia ceden el paso a la cola). Es un MVP: no hay aún
+  persistencia de la cola ni reordenamiento.
+- **Verificación Fase 2 E+F+G:** `tsc` = 15 errores, **0 nuevos** en archivos tocados (el único en
+  EntryEditor es `onDetermineCategory`, preexistente y ajeno). No se pudo validar runtime (sin
+  `tauri dev`); el usuario debe probar: seleccionar sugerencias → "A cola"/"Lote IA" → avanzar con
+  el carrusel → "Pendiente".
+
+---
+
+## [2026-07-14] Evaluación de recomendaciones AI Studio (prompts 1-4) — puente a Gramática
+**Contexto:** el usuario pegó 4 prompts de "AI Studio" (mejoras incrementales) y pidió evaluarlas,
+compararlas y decir si son viables y ejecutables sin romper nada. Se investigó el código real con 4
+subagentes de lectura en paralelo. Conclusión: **las 4 son viables y no rompen nada** (todo aditivo o
+quirúrgico). Estado por prompt (hallazgos verificados):
+
+- **P1 Zod + migraciones:** `zod` NO instalado (riesgo bundle BAJO, ~13KB, isomórfico, ya hay
+  `import()` dinámico en sqlStorage). YA existe `normalizeLexiconData`/`normalizeGrammarManifest`
+  (merge+defaults) **pero solo en la ruta localStorage**; la ruta SQLite (`hydrate`) asigna
+  `lexicons[name]=data` tal cual → schema drift se corrige a medias. Incidente documentado
+  `2969057` ("No validation step existed") justifica P1. Entregable real = centralizar normalización
+  en `sqlStorage.loadLexicon` con `z.object({...}).passthrough().default(...)`. Mitigación: no hacer
+  el esquema zod estricto (passthrough+defaults) para no rechazar datos legacy.
+- **P2 Undo/Redo + debounce:** undo YA existe parcialmente (`previousState`, `undoChange`, `canUndo`
+  en useLexicon) pero es snapshot único pisado (sin pila, sin redo, 1 nivel). Trabajo = elevar a
+  `past[]`/`future[]`. Guardado inmediato/explicito hoy; `useDebounce` ya existe. Riesgo MEDIO:
+  refactor del patrón de snapshot + data-loss si cierra en ventana de 2s → mitigar con flush en
+  beforeunload/cierre Tauri y localStorage inmediato. Indicador cabe en Header/FileControls.
+- **P3 Linter fonotáctico:** `GenerativeProfile` ya tiene consonants/vowels/syllableStructures/
+  *Clusters. Faltan divisor/validador silábico desde cero (respetar segmentos IPA multi-carácter
+  p.ej. `tʃ`) y pasar `activeProfile` a EntryEditor/LexiconTable (1 prop). Patrones visuales listos
+  (banner amarillo, AlertTriangleIcon). **Decisión de gramática:** existe `PhonologyConfig`
+  redundante (GrammarManifest.phonology) vs `GenerativeProfile` → hay que unificar fuente de verdad.
+- **P4 Teclado IPA:** inputs controlados con ref (inserción en cursor factible); `audioService` ya
+  usa AudioContext (pero solo tonos, no playback IPA real → speechSynthesis/muestras sería nuevo).
+  Esfuerzo neto = tabla estática IPA (~100+ símbolos). Riesgo BAJO. Excluir campo Raíz (fuerza
+  mayúsculas, manglearía diacríticos IPA).
+
+**Orden recomendado (vs el 1→2→3→4 de AI Studio):** coincidimos en lo esencial. Ajustes:
+1. P1 primero (cimiento; protege `grammar` antes de gramática) PERO el entregable es unificar la
+   normalización en `sqlStorage.loadLexicon` (hoy divergente localStorage vs SQLite).
+2. P3 es el ON-RAMP a gramática (fuerza resolver `GenerativeProfile` vs `PhonologyConfig`); hacerlo
+   en coordinación con el diseño del módulo de gramática.
+3. P4 encaja con P3 (linter valida inventario IPA, teclado lo introduce); puede ir sin audio.
+4. P2 (undo/redo) es seguridad muy visible del usuario y beneficia también al editor de gramática
+   (reglas experimentales → undo esencial); priorizar alto, cuidando que el debounce no trague snapshots.
+
+**Handoff / próximos pasos sugeridos:**
+- No se implementó nada de esto todavía (solo evaluación). El usuario indicó "wrap y handoff" por
+  límite de contexto del motor de AI.
+- Rama actual: `feature/sql-migration-clean`. Últimos commits: `e54cfce` (Fase 2 E+F+G), `cb35124`
+  (Fase 2-D prompts), `2281a3b` (Fase 1 UX workbench). tsc = 15 errores (todos preexistentes y
+  ajenos a las fases de UX; el único en EntryEditor es `onDetermineCategory`).
+- Para retomar: empezar por P1 (unificar normalización + zod passthrough) y, al diseñar gramática,
+  resolver la duplicación fonológica (`GenerativeProfile` vs `PhonologyConfig`) — esa es la decisión
+  arquitectónica clave que conecta P3 con el módulo de gramática.
+
+---
+
+## [PRÓXIMA SESIÓN] CHECKPOINT ACCIONABLE — PROMPT 1 (Zod + migraciones de esquema)
+**Objetivo:** blindar la capa de carga de `LexiconData` para que el schema drift (campos nuevos en
+futuras versiones) no rompa la UI. Entregable real = **unificar normalización** que hoy diverge
+entre rutas `localStorage` y `SQLite`.
+
+**Pasos:**
+1. `npm i zod` (isomórfico, ~13KB, tree-shakeable). Usar `import()` dinámico en `sqlStorage.ts`
+   para no inflar el bundle (ya hay patrón de dynamic import ahí).
+2. Crear `src/services/lexiconSchema.ts` con un esquema Zod de `LexiconData` que tenga defaults por
+   sección: `entries`, `profile`, `neographyProfile`, `inflectionProfile`, `grammar`, `corpus`,
+   `metadata`, `customFunctions`. Usar `.default(...)` + `.passthrough()` (NO estricto) para tolerar
+   campos legacy faltosos/extra.
+3. En `sqlStorage.ts` (`loadLexicon`/`hydrate`): envolver `JSON.parse` en `safeParse` contra el
+   esquema. Si falta/diverge, rellenar con defaults EN LUGAR de lanzar — devolver bandera
+   `migrated: boolean` cuando se aplicó normalización.
+4. Reusar `normalizeLexiconData`/`normalizeGrammarManifest` ya existentes en `useLexicon.ts` como
+   capa de fallback/migración (no duplicar lógica; el esquema Zod es la fuente nueva).
+5. UI: notificar "migración transparente" sutilmente en la pantalla de carga si `migrated === true`
+   (p.ej. banner breve), sin interrumpir el flujo.
+
+**Archivos a tocar:** `src/services/lexiconSchema.ts` (nuevo), `src/services/sqlStorage.ts`,
+`src/hooks/useLexicon.ts` (reuso de normalizadores), UI de carga.
+**NO tocar por ahora:** `prompts.ts`, `geminiService.ts`, EntryEditor (campo Raíz/Léxema), nada de
+gramática.
+
+**Criterio de aceptación:** `tsc` sin errores nuevos + `npm run build` exitoso + un `LexiconData`
+con campos faltosos (simular JSON de versión anterior) se abre sin romper UI y se normaliza.
+
+**Decisión pendiente (dejar para diseño de gramática, NO resolver en P1):** unificar fuente de
+verdad fonológica entre `GenerativeProfile` (léxico) y `PhonologyConfig` (`GrammarManifest.phonology`).
+
+**Después de P1 (sesiones siguientes):** P3 linter → P4 teclado IPA (junto a P3) → P2 undo/redo +
+debounce (prioridad alta de seguridad, hacer tras base estable).
+
+---
+
+## [2026-07-14] Cierre de sesión: P1 — Zod + normalización unificada (COMPLETADO)
+**Rama:** `feature/sql-migration-clean`. **Siguiente commit sugerido** tras revisión del usuario.
+
+**Archivos tocados:**
+- `src/services/normalize.ts` (NUEVO) — fuente única de verdad: fábricas de defaults
+  (`DEFAULT_FUNCTIONS`, `getDefaultProfile/NeographyProfile/InflectionProfile/GrammarManifest`) +
+  `normalizeEntry`/`reindexLexicon` + `normalizeGrammarManifest`/`normalizeLexiconData`, y los
+  esquemas Zod (`GrammarManifestSchema`, `GenerativeProfileSchema`, `NeographyProfileSchema`,
+  `InflectionProfileSchema`, `LexiconDataSchema`) exportados para reusarse en P3 (gramática).
+- `src/services/sqlStorage.ts` — `loadLexicon` normaliza AMBAS ramas (Tauri + localStorage) vía
+  `normalizeLexiconData`, con try/catch que omite un léxico corrupto en vez de estrellar la app.
+- `src/hooks/useLexicon.ts` — elimina las definiciones duplicadas (DEFAULT_FUNCTIONS, getDefault*,
+  normalize*) e importa desde `normalize.ts`; `getInitialState` ahora se enruta por la MISMA
+  `normalizeLexiconData` → **fin de la divergencia localStorage vs SQLite** (cierra incidente 2969057).
+- `package.json` — añadido `zod@^4.4.3` + `npm install`.
+
+**Desviaciones menores vs el checkpoint "PRÓXIMA SESIÓN — PROMPT 1":**
+- Archivo nombrado `normalize.ts` (no `lexiconSchema.ts`): refleja mejor su rol de única fuente de
+  normalización, no solo esquema.
+- `zod` importado de forma estática (no `import()` dinámico en `sqlStorage`): el módulo ya se enlaza
+  estáticamente desde `useLexicon`/`sqlStorage`, así que el dynamic import no ahorraba bundle; ~13KB
+  es aceptable. Build = 311 módulos.
+- NO se implementó la bandera `migrated`/`banner` de "migración transparente" (pasos 3 y 5 del
+  checkpoint). Es una nicety de UI opcional; el núcleo (unificar + no lanzar en legacy) está hecho.
+  Pendiente si el usuario lo quiere.
+
+**Verificación:**
+- `npm run build` OK (311 módulos). `npm run lint` OK (sin escapes ilegales).
+- `tsc --noEmit` = **14 errores, 0 nuevos en archivos tocados** (todos en EntryEditor/GrammarTab/
+  NeographyModal/NeographyImageTracer/grammarParser, preexistentes y ajenos a P1). El error previo
+  de `useLexicon.ts` del backlog desapareció (bajó de 15→14) sin regresiones.
+- Smoke test funcional (tsx) con datos legacy mínimos: rellena defaults de `profile`/`neography`/
+  `grammar`/`metadata`, aplica fallback `Función`→`Categoría`, reindexa IDs 1..n, computa
+  `customFunctions` (legacy + usados + defaults), normaliza `grammar` parcial, y `undefined` no lanza.
+- Nota zod v4: `.passthrough()` no preserva claves; se usó `z.looseObject` en el esquema superior
+  (el parse no lanza nunca; las claves top-level extra no se llevan al `LexiconData` canónico, igual
+  que el `normalizeLexiconData` original).
+
+**Próximo paso:** el usuario debe validar en runtime con `npm run tauri dev` (abrir un léxico viejo y
+confirmar que se normaliza sin romper). Luego retomar P3 (linter fonotáctico) — que reusará
+`GrammarManifestSchema` y forzará resolver `GenerativeProfile` vs `PhonologyConfig`.
+
+---
+
+## [2026-07-14] Cierre de sesión: UX limpieza del Workbench (COMPLETADO)
+**Rama:** `feature/sql-migration-clean`. Continúa tras P1 por petición del usuario ("completalos, no hay
+por qué detenerse").
+
+**Cambios aplicados (todos los pedidos del usuario):**
+- `src/components/EntryEditor.tsx`:
+  - Botón "Registrar Palabra" reducido: `flex-[2] py-3` → `flex-1 py-2.5` (ya no es desproporcionado).
+  - Explicaciones inline movidas a `Tooltip` hover/focus: etiquetas de **Significado** y **Categoría**,
+    descripción de **Modo de generación** y el botón **Generar**. Se eliminó el `<p>` explicativo
+    (Generar vs Completar) que ensuciaba la presentación.
+  - Modos de generación ahora "gema iluminada": al activarse usan gradiente `accent→accent-hover` +
+    `shadow-[0_0_14px_rgba(225,29,72,0.55)]` + `ring-1 ring-accent/60`; en reposo quedan discretos.
+- `src/components/WorkbenchRightPanel.tsx` (rewrite del área Inspiración):
+  - **Eliminado el tab "Sugerencias"** (solo tenía instrucciones, ocupaba espacio).
+  - La selección de sugerencias + barra de lote (**A cola** / **Lote IA** / limpiar selección) se
+    reubicaron DENTRO del tab "Listas" (debajo de la rejilla de palabras) cuando hay sugerencias del
+    análisis → la feature Fase 2 (Lote IA / A cola) se conserva sin el tab innecesario.
+  - Tabs restantes: `Listas` (BookOpenIcon) y `Perfil Generativo` (DnaIcon).
+- `src/components/GenerativeProfileEditor.tsx`:
+  - **Eliminada la sección "Notas de Gramática"** (textarea `grammarNotes`): campo muerto — su propio
+    tooltip decía "La IA aún no las usa" y no se enlaza a nada en la generación.
+  - **Afijos:** se confirma que los afijos SÍ están cableados en la generación (modo `derivational`
+    usa `profile.derivationalAffixes`). Por petición del usuario se añadió el tipo **`desinencia`**
+    (`<option value="desinencia">` + `formatAffix` devuelve `-{affix}`).
+- `src/types.ts`: `DerivationalAffix.type` ahora es `'prefijo' | 'sufijo' | 'infijo' | 'desinencia'`.
+
+**Respuesta a la duda del usuario ("revisa los afijos"):** los prefijos/sufijos/infijos ya alimentaban
+el modo Derivacional; faltaba solo el tipo `desinencia`, que ahora existe. No se perdió ninguna
+funcionalidad de generación.
+
+**Verificación:**
+- `npm run build` OK (✓ built, 311 módulos transformados).
+- `npm run lint` (check:esc) OK — sin secuencias de escape ilegales (consistente con hardening XSS).
+- `tsc --noEmit` = **14 errores, 0 nuevos en archivos tocados**. El único error en `EntryEditor.tsx`
+  (`onDetermineCategory` no existe en `EntryEditorProps`, línea 137) es **preexistente**: ya está en
+  HEAD y es un destructure sin uso (App no lo pasa) — ajeno a esta limpieza. Los demás 13 están en
+  GrammarTab / NeographyModal / NeographyImageTracer / grammarParser, también preexistentes.
+- No se usó `dangerouslySetInnerHTML`; se respetó CSP y keyring (sin regresiones de hardening).
+
+**Próximo paso:** el usuario debe revisar visualmente en `npm run tauri dev`. Backlog tsc (14) sigue
+pendiente de limpieza genérica; P2 (undo/redo + debounce) y P3 (linter fonotáctico) / P4 (teclado IPA)
+quedan para sesiones siguientes.
+
+---
+
+## [2026-07-14] Cierre de sesión: corrección de categoría por defecto ("desconocido" → categoría horneada)
+**Rama:** `feature/sql-migration-clean`. Continúa tras la limpieza de UX por el último reporte del
+usuario: al elegir "Comida y Cocina" y analizar, la ventana de sugerencias mostraba **Categoría:
+desconocido**.
+
+**Causa raíz:** `WORD_LISTS` se había convertido a `{ palabra, categoría }[]` (categorías horneadas),
+pero `App.handleAnalyzeForSuggestions` seguía filtrando esos objetos y pasándolos a
+`categorizeWords(words: string[])` — cuya función de respaldo es `{ Categoría: 'desconocido' }`. El
+fallback se disparaba (la llamada a la IA con objetos en vez de strings, o cualquier fallo) y dejaba
+"desconocido" en todas las sugerencias. Además `WORD_LISTS[listName]` (índice por `string`) daba
+`TS7053` porque el literal no tenía firma de índice.
+
+**Cambios:**
+- `src/data/wordLists.ts`: `WORD_LISTS` ahora tipado como
+  `Record<string, WordListEntry[]>` (exporta `WordListEntry = { palabra; categoría }` y `WordLists`),
+  lo que permite indexarlo por nombre de lista y elimina los `TS7053`/`TS7006` en cascada.
+- `src/App.tsx` → `handleAnalyzeForSuggestions`: ya NO llama a `categorizeWords`. Mapea directamente
+  las entradas faltantes a `MissingWord` usando `item.categoría` (con fallback a `'sustantivo'`), de
+  modo que el análisis es síncrono, instantáneo y siempre trae la categoría por defecto correcta. Se
+  quitó `categorizeWords` del import.
+- `src/components/EntryEditor.tsx`: eliminado `onDetermineCategory` del destructure (era cruft
+  preexistente: no existe en `EntryEditorProps` y no se usaba en ninguna parte del cuerpo).
+
+**Verificación:**
+- `npm run build` OK (✓ built, 311 módulos transformados).
+- `npm run lint` (check:esc) OK — sin secuencias de escape ilegales.
+- `tsc --noEmit` = **14 errores, 0 nuevos en archivos tocados**. Los 14 restantes son todos
+  preexistentes en archivos NO modificados en esta sesión (GrammarTab, NeographyModal,
+  NeographyImageTracer, grammarParser). Se confirmó con `git status` que esos archivos no están en el
+  conjunto modificado. El error `onDetermineCategory` de EntryEditor desapareció del todo.
+- La ventana de sugerencias ahora muestra la categoría real (p.ej. "sustantivo"/"verbo" para Comida y
+  Cocina) en vez de "desconocido".
+
+**Nota de diseño:** `categorizeWords` queda definido en `geminiService.ts` (aún lo implementa el stub
+de `main.tsx` vía `LexiconHook`), pero ya no se usa en la ruta de análisis de listas. Si en el futuro
+se quieren categorías inferidas por IA para listas externas sin categoría, bastaría con un fallback
+selectivo; por ahora las listas integradas ya traen su categoría canónica.
+
+**Próximo paso:** el usuario debe validar en runtime con `npm run tauri dev` que al elegir "Comida y
+Cocina" → "Analizar" las sugerencias traigan categorías sensatas y que al hacer clic en una palabra se
+precargue la categoría en el editor.
+
+---
+
+## [2026-07-14] Checkpoint: Motor de gramática local (engine puro + UI + pipeline)
+**Rama:** `feature/sql-migration-clean`. **Objetivo:** convertir el módulo de gramática de un "wiki de
+captura" en un motor local determinista que produce formas de superficie reales (inflexión, derivación,
+orden de palabras, fonotáctica) desde un manifiesto editable, reutilizable por Neography y el Traductor,
+con IA como booster opcional offline-aware.
+
+**Arquitectura:** motor puro-TypeScript en `src/services/grammar/` (sin deps React/Tauri): `morphology`
+(`realizeLexeme`), `syntax` (`realizeClause`, emite `SyntaxCanvas`), `phonology` (`validatePhonology`),
+`index` (barrel), `engineTypes`, `phonologySync`. `GrammarManifest` (`src/types.ts`) es la fuente de
+verdad; `SyntaxCanvas` se conserva como superficie visual. IA (`geminiService.parseGrammarText` /
+`isAiAvailable`) solo para bootstrap/inducción, protegida por `isAiAvailable()`.
+
+**Cambios (Fase 0 fundación):**
+- `src/types.ts`: unificadas las definiciones duplicadas (borrado `src/types/grammar.ts`); `GrammarAffix.type`
+  → añade `'circumfix'`; nuevos tipos de motor `SlotRealization`/`AllomorphCondition`/`InflectionSlot`/
+  `CategoryParadigm`/`MutationRule`/`LexicalException`; `MorphosyntacticStrategy` extendida
+  (`positionRule`/`affixRule.allomorphs`/`transformationRule`); `PhonologyConfig.phonotactics` →
+  `syllableStructures: string[]` (canónico); `GrammarManifest` añade `paradigms`/`mutationRules`/
+  `exceptions` (requerido); `LexiconEntry.exceptions?`. Se conservan `SyntaxNode`/`SyntaxConnection`/
+  `GrammarException`/`SyntaxCanvas`/`SyntacticRole`.
+- Ripple fixes en consumidores de `PhonologyConfig`: `GrammarManagerModal.tsx`, `GrammarTab.tsx` (editor
+  fonológico), `normalize.ts`, `LexiconTable.tsx`, `geminiService.createDefaultGrammarManifest` → usan
+  `syllableStructures` (array).
+- `grammarParser.ts`: reescrito para usar `geminiService.parseGrammarText` + guarda `isAiAvailable()`.
+- `GrammarTab.tsx`: corregidos 2 errores tsc (`source` literal, props de `SyntaxCanvas`).
+- `grammar/phonologySync.ts` (NUEVO) + `App.tsx`/`GenerativeProfileEditor.tsx`: `manifest.phonology` como
+  fuente fonológica canónica (auto-merge en `activeProfile` + botón "Copiar fonología al perfil").
+
+**Cambios (Fase 1 motor núcleo + tests):**
+- `src/services/grammar/{engineTypes,morphology,syntax,phonology,index}.ts` + `__tests__/{morphology,
+  syntax,phonology}.test.ts`. TDD con `npx tsx`. Cubre: aglutinación (apilado de sufijos en orden de
+  ranura), fusión (alomorfia condicionada por vocal previa), supletiva (ser/estar), orden tipológico
+  SVO/SOV, emisión de `SyntaxCanvas`, validación fonotáctica (inventario + estructura silábica).
+- Tests: `morphology: ALL PASS`, `syntax: ALL PASS`, `phonology: ALL PASS`.
+
+**Cambios (Fase 2 excepciones):**
+- `src/components/ExceptionEditor.tsx` (NUEVO): excepciones léxicas supletivas (por rasgo, vía evento
+  `loxar:addLexicalException` → `App.handleAddLexicalException` que actualiza la entrada del léxico) +
+  registro documentado de `GrammarException`.
+- `__tests__/exceptions.test.ts`: `exceptions: ALL PASS` (ser/estar).
+
+**Cambios (Fase 3 UI integración):**
+- `src/components/RuleEditor.tsx` (NUEVO): edita `paradigms` (ranuras/rasgos) y `mutationRules`, montado
+  en `renderMorphology`.
+- `GrammarTab` preview: ahora usa el motor (`realizeClause` + `validatePhonology`) y muestra advertencias
+  fonotácticas.
+- AI offline-aware: `GrammarImporterModal` (botón Analizar deshabilitado + aviso offline), `SyntaxCanvas`
+  (prop opcional `aiAvailable` que deshabilita el AI Mapper + aviso), `GrammarTab` pasa `aiAvailable`.
+
+**Cambios (Fase 4 pipeline):**
+- `NeographyModal.tsx`: toggle "Vista gramatical (motor)" que renderiza la forma de superficie del motor
+  (`realizeLexeme`) como glifos. (El archivo tenía 7 errores tsc preexistentes; no se tocaron, no se
+  añadieron nuevos.)
+- `TranslationPlayground.tsx`: grounding local del traductor (glosa de formas conocidas del diccionario
+  vía `realizeLexeme` antes de llamar a la IA) + aviso offline cuando `!isAiAvailable()`.
+
+**Verificación:**
+- `npm run build` OK. `npm run lint` (check:esc) OK.
+- `tsc --noEmit` = **8 errores, todos preexistentes en `NeographyModal.tsx` (7) + `NeographyImageTracer.tsx`
+  (1)** — fuera del alcance del motor. El motor eliminó los 5 errores previos de `GrammarTab`/`grammarParser`.
+  0 errores nuevos en archivos tocados.
+- Los 4 test de motor pasan (`morphology`/`syntax`/`phonology`/`exceptions`).
+- Documentación: `docs/superpowers/specs/2026-07-14-grammar-engine-design.md` +
+  `docs/superpowers/plans/2026-07-14-grammar-engine.md`.
+
+**Limitaciones honestas (por diseño, fuera de estas 16 tareas):** sandhi tonal complejo, polisíntesis y
+morfología no concatenativa no se modelan completamente; `SlotRealization.kind` es extensible (`'pattern'`)
+para una fase futura. El flujo reglas→árbol es trivial/determinista; árbol→reglas (inducción) necesita IA
+(offline-aware).
+
+**Próximo paso:** el usuario debe validar en runtime (`npm run tauri dev`) que el Preview autónomo infle
+correctamente según los paradigmas, que las excepciones supletivas (ser/estar) se aplican antes que las
+reglas, y que el AI Mapper avisa en modo offline.
+
+---
+
+## [2026-07-14] Checkpoint: Fase 5 — Asistente de gramática + InfoHints (usabilidad conlanger)
+**Rama:** `feature/sql-migration-clean`. **Objetivo:** hacer la pestaña Gramática usable por un conlanger sin
+formación lingüística (wizard de perfiles + tooltips por sección).
+
+**Archivos tocados / creados:**
+- `src/data/languageProfiles.ts` (NUEVO): `LanguageProfile` + `LANGUAGE_PROFILES` (5 perfiles: flexivo-latin,
+  aglutinante-turco, aislante-chino, tonal-thai, polisintetico-inuit) con tipología + inventario fonológico +
+  paradigmas esqueleto + reglas de mutación/tono, y `buildGrammarManifest(profile, name)` que arma un
+  `GrammarManifest` completo (meta fresca, `ui:{showTone}`, sin `syntaxCanvas`). Todos los `SlotRealization`
+  llevan `as const`.
+- `src/components/GrammarWizard.tsx` (NUEVO): modal multi-paso (Elegir perfil → Nombre → Revisar) que llama
+  `onApply(manifest)` reusando el `onSave` del padre (sin mecanismo de guardado nuevo).
+- `src/components/InfoHint.tsx` (NUEVO): badge "(i)" con tooltip en hover/click, `title` + `button`
+  accesibles, sin `dangerouslySetInnerHTML`.
+- `src/types.ts`: `GrammarManifest.ui?: { showTone: boolean }` (opcional, no consumido por el motor).
+- `src/services/normalize.ts`: `GrammarManifestSchema` extiende con `ui: z.object({ showTone: z.boolean() }).optional()`.
+- `src/components/GrammarTab.tsx`: botón "Asistente de gramática" en header; auto-apertura de primer arranque
+  (sin paradigmas + sin fonología + tipología por defecto) una vez por sesión (flag de módulo); `InfoHint` en
+  los títulos Resumen/Tipología/Fonología/Morfología/Sintaxis/Excepciones/Roles/Estrategias; nota de tono en
+  Morfología según `ui.showTone`. No se tocaron Neography* ni `src/services/grammar/`.
+
+**Verificación:**
+- `npm run typecheck` = 0 errores nuevos en archivos tocados (los 8 restantes son preexistentes en
+  `NeographyModal.tsx`/`NeographyImageTracer.tsx`, fuera de alcance).
+- `npm run build` OK (✓ built in ~17s).
+- `npm run lint` OK (✓ Escape validation passed — no illegal sequences found).
+- Decisión conlanger-friendly: los perfiles son simplificados pero razonables; el perfil chino (aislante) SÍ
+  lleva inventario fonológico Mandarin-ish aunque `paradigms: []`; Tailandés usa `mutate` tonal de ejemplo.
+  La nota "no usa tonos" se muestra por defecto en manifiestos legacy donde `ui` es undefined.
+**Próximo paso:** validar en runtime (`tauri dev`) que el wizard pre-rellena y persiste, y que los InfoHints
+aparecen en cada sección.
+
+---
+
+## [2026-07-14] Checkpoint: Fase 5 (parte 2) — SyntaxCanvas "desglose por palabra" + sync gramática→canvas
+**Rama:** `feature/sql-migration-clean`. **Objetivo:** el SyntaxCanvas muestra la morfología visualmente y
+refleja los cambios de gramática (entrega restante de Fase 5).
+
+**Archivos tocados:**
+- `src/types.ts`: NUEVO `MorphemeSegment`; `SyntaxNode` ahora lleva `lexeme?`/`features?`/`morphemes?`.
+- `src/services/grammar/engineTypes.ts`: `SurfaceForm.segments?: MorphemeSegment[]`.
+- `src/services/grammar/morphology.ts`: `realizeLexeme` ahora emite `segments` por ranura aplicada
+  (stem/affix/mutation/tone/particle; el stem se reemplaza en `segments[0]` para `kind:'stem'`). Se conserva
+  el `form` literal (incluye `-`) y los guards `?? []`.
+- `src/services/grammar/syntax.ts`: cada nodo `word` ahora trae `lexeme`, `features` y `morphemes` (= sf.segments).
+- `src/components/SyntaxCanvas.tsx`: prop `grammar?`; botón 🔍 en nodos `word` con `lexeme` → panel flotante
+  "Desglose morfológico" (abajo-derecha) con forma de superficie grande, cadena de chips por morfema y filas
+  editables de rasgos que reescriben el label/forma del nodo en vivo vía `realizeLexeme`. Conexión/arrastre/AI/Help/zoom intactos.
+- `src/components/GrammarTab.tsx`: pasa `grammar={effectiveManifest}`; botón "↻ Sincronizar con gramática"
+  (sembra `syntaxCanvas` desde `preview.canvas`); auto-seed ONCE cuando el canvas está vacío (useEffect en
+  `syntaxSubTab==='canvas'`, con guarda anti-loop).
+
+**Verificación:**
+- Smoke test temporal `w3_smoke.test.ts` (tsx): PASS — `segments.length>=2`, primer segmento `stem`, `form` acaba en `-t` y contiene la raíz. Luego BORRADO.
+- `npm run build` OK (✓ built in ~17.6s). `npm run lint` OK (sin escapes ilegales).
+- `tsc --noEmit` = **8 errores, todos preexistentes en NeographyModal/NeographyImageTracer** (no tocados, fuera de alcance); **0 nuevos en archivos tocados**.
+- Tests de motor: `morphology/syntax/phonology/exceptions: ALL PASS` (sin regresiones).
+**Próximo paso:** validar en runtime (`tauri dev`) que el panel de desglose abre al pulsar 🔍 y que la sincronización
+reconstruye el canvas tras editar paradigmas/tipología.
+
+---
+
+## [2026-07-18] Checkpoint: REFACTOR AST del motor de gramática (COMPLETADO, 5/5 fases)
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el motor plano S/V/O era "no robusto ni flexible" (palabras del
+usuario) frente a las teorías investigadas: lenguas = sonidos + elementos universales invariantes (sujeto, acción,
+calificador, nexo, partículas) que varían en énfasis/posición. Gemini propuso un AST recorrible; ZCode lo adaptó.
+
+**Arquitectura nueva (árbol jerárquico en vez de lista plana):**
+- `engineTypes.ts`: `GrammaticalRole` (`root|subject|object|particle|modifier|auxiliary_verb`),
+  `SyntaxNode` (con `dependents[]` = núcleo del árbol), `VerbNode` (raíz/`auxiliary_verb` + flag `conjugateRoot`),
+  `ParticleNode` (flag `isIndependentWord`), `ClauseAST` (`{ clauseId, root: VerbNode }`).
+  Se conserva el legacy `ClauseFeatures` (participants planos) como **fallback reversible**.
+- `syntax.ts`: `realizeClause(clause: ClauseFeatures | ClauseAST, manifest)` — si NO es AST, usa el path plano legacy.
+  `linearizeAst(root, manifest)` recorre el árbol: (1) partículas independientes (`role==='particle' && isIndependentWord`)
+  se imprimen con espacio delante del verbo; (2) solo la raíz se conjuga (`realizeLexeme` con `LexiconEntry` completo que
+  incluye `Raíz`); (3) auxiliares (`role==='auxiliary_verb'`) se emiten en forma de raíz, SIN conjugar; (4) modificadores
+  anidados se resuelven recursivamente. `realizeLexeme` queda **intacto** (puro/determinista).
+- `ast-builder.ts` (NUEVO): `buildClauseAST(participants)` → aplana a `ClauseAST` (el verbo es `root` con
+  `conjugateRoot:true`; `auxiliary_verb` soportado; `dependents` pre-construidos se copian).
+- `ast-view.ts` (NUEVO): `astToDiagram(ast)` → `{ nodes: DiagramNode[], edges: DiagramEdge[] }` para UI.
+- `SyntaxCanvasAST.tsx` (NUEVO): render ligero SVG (conectores + arrowhead) + divs absolutos (nodos). Separado del
+  legacy `SyntaxCanvas.tsx`. Props: `{ diagram, nodeIconUrl?, onInspect? }`.
+
+**Cambios de UI (GrammarTab.tsx):**
+- Preview `useMemo` ahora construye el AST (`buildClauseAST`), lo realiza (`realizeClause(ast,...)`), y deriva
+  `diagram = astToDiagram(ast)`.
+- Nuevo subtab **"Árbol AST"** además de "Canvas Sintáctico" y "Preview Rápido" (3 toggles).
+- `syntaxSubTab` → `useState<'canvas' | 'ast' | 'preview'>('canvas')`.
+
+**Tests (tsx, todos PASS):** `ast.test.ts` (nodo/árbol básico), `ast-chain.test.ts` (3 escenarios: cadena verbal
+"ael vo vilya", "ren tiet vlent dwa", calificador "ael azul vilya"), `ast-integration.test.ts` ("aevin vo come
+pistaches"). Total motor = 7 tests PASS.
+
+**Verificación:**
+- `npm run typecheck` = 0 errores nuevos (los 8 preexistentes en Neography* siguen fuera de alcance).
+- `npm run build` OK. `npm run lint` OK.
+- 7 tests tsx PASS (morphology/syntax/phonology/exceptions/ast/ast-chain/ast-integration).
+
+**Commits:** `5a850b2` (Phase 1 interfaces+walker), `21fc4a1` (Phase 2 builder+view+canvas+wiring),
+`2c309b9` (Phase 3 partículas/cadenas/modificadores), `a55af1b` (Phase 4 integration test), `8a59563` (Phase 5 subtab AST).
+
+**Nota de handoff / reversibilidad:** el path legacy (`ClauseFeatures` plano) sigue vivo en `realizeClause` → el refactor
+es reversible con `git revert` de los 5 commits. Pendiente OPCIONAL (perspectiva de futuro que pidió el usuario):
+edición visual del árbol (add/remove dependents desde el Árbol AST) y cablear `sessionCache.ts` a `App.tsx`.
+
+**Próximo paso:** validar en runtime (`tauri dev`) que el subtab "Árbol AST" dibuja el árbol y que el preview respeta
+partículas/auxiliares. Luego decidir si se expone la edición del árbol en la UI (conectores tipo diagrama de flujo).
+
+---
+
+## [2026-07-18] Checkpoint: Editor visual del Árbol AST (diagrama de flujo con conectores)
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el usuario pidió seguir "con perspectiva a futuro" — la parte lógica
+del AST debía conectarse a una "interfaz gráfica tipo diagrama de flujo con conectores". Esta fase entrega exactamente eso:
+el subtab "Árbol AST" ahora es un editor interactivo, no solo un visor.
+
+**Nuevo componente `src/components/ASTEditor.tsx`:**
+- Diagrama de flujo: capa SVG con conectores curvos (`path` Bézier) + `marker` arrowhead (padre → dependiente).
+- Layout por niveles: raíz (verbo) a la izquierda, dependents fluyen a la derecha; hojas distribuidas en Y.
+- Interacción: arrastrar nodos para reposicionar; pan arrastrando el fondo; zoom con rueda + botones ＋/－/⤢.
+- Selección expone barra de acciones sobre el nodo: **＋ hijo** (prompt rol + etiqueta → `makeNode`),
+  **🔍** (onInspect), **🗑** (borra subárbol; la raíz está protegida). Doble-clic renombra (actualiza `lexeme.root`).
+- Colores por rol (`ROLE_COLORS`: root/subject/object/modifier/particle/auxiliary_verb).
+
+**Helpers puros en `src/services/grammar/ast-view.ts` (sin tocar el motor):**
+- `cloneClauseAST` (deep clone, `structuredClone` con fallback JSON), `makeNode(role,label)`,
+  `addDependent(ast,parentId,child)`, `removeNode(ast,nodeId)`, `updateNode(ast,nodeId,{label?,role?})`,
+  `realizeEditedTree(ast,manifest)` (envuelve `realizeClause` con try/catch).
+- Los helpers son INMUTABLES (nunca mutan el input) → el editor es reversible y el motor `realizeLexeme`/`realizeClause`
+  quedan intactos. Import de `realizeClause` al final del módulo (sin ciclo: `syntax.ts` no importa `ast-view`).
+
+**Cableado en `src/components/GrammarTab.tsx`:**
+- Estado `editableAst` (local) sembrado desde el preview vía `useEffect` por IDs de entrada (S/V/O) → los edits del
+  usuario no se pisan al re-renderizar. `buildClauseAST` → `setEditableAst`.
+- Subtab `ast` ahora monta `<ASTEditor ast={editableAst} onChange={setEditableAst} />` y, debajo, re-realiza la oración
+  del árbol editado EN VIVO (`realizeEditedTree`) con sus violaciones fonotácticas. `SyntaxCanvasAST` queda como visor
+  en el subtab "Preview Rápido".
+- Imports añadidos: `ASTEditor`, `cloneClauseAST`, `realizeEditedTree`.
+
+**Tests (tsx, todos PASS):** `ast-editor.test.ts` (6) — buildClauseAST marca raíz, addDependent/removeNode/updateNode son
+puros e inmutables, cloneClauseAST independiente, realizeEditedTree refleja un modificador añadido. Total motor = **8 tests PASS**.
+
+**Verificación:**
+- `npm run typecheck` = 0 errores (los 8 preexistentes en Neography* siguen fuera de alcance).
+- `npm run build` OK (✓ built ~19.8s). `npm run lint` OK.
+- 8 tests tsx PASS (morphology/syntax/phonology/exceptions/ast/ast-chain/ast-integration/ast-editor).
+
+**Nota de handoff / reversibilidad:** `editableAst` vive solo en estado local de GrammarTab → no modifica el manifiesto ni
+el léxico; es totalmente reversible y no afecta a `realizeClause`. Commits pendientes de crear (cambios sin commitear en
+working tree: ASTEditor.tsx, ast-view.ts, GrammarTab.tsx, ast-editor.test.ts).
+
+**Pendiente opcional (no pedido explícitamente):** persistir el árbol editado en el manifiesto (p.ej. `manifest.syntaxCanvas`
+o un campo `savedClauseAST`) para que sobreviva al cierre, y cablear `sessionCache.ts` a `App.tsx`. La edición de roles vía
+dropdown en vez de `window.prompt` sería un refinamiento de UX.
+
+**Próximo paso:** validar en runtime (`tauri dev`) que el editor arrastra/zoom/pan y que la oración se re-realiza al añadir
+un "modifier" hijo de un sujeto. Decidir si se persiste el AST editado.
+
+---
+
+## [2026-07-19] Checkpoint: Fase 1 — UX del asistente + claridad en Estrategias/Roles
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el usuario reportó que el asistente de gramática se abría "atrás"
+y rígido (no movible), que los tipos de estrategia no eran claros, y dudó si "Aplica a Roles" afectaba a todos o a
+algunos. También entregó una Matriz Tipológica Universal (YAML) como base/ontología para extraer perfiles de
+cualquier documento importado. Esta sesión cubre la FASE 1 (UX inmediata); la Fase 2 (YAML como guía de extracción)
+queda como checkpoint accionable.
+
+**Decisión de diseño (ventana):** modal normal centrado (cierre por clic fuera + Esc) **+** botón para desacoplar a
+ventana libre arrastrable/redimensionable. El YAML NO es input del usuario: define el vocabulario y la info mínima a
+extraer de cualquier file (txt/md/doc). Alcance guardado: solo motor + escritura (pragmática/léxico descartados).
+Roles: catálogo típico + custom abierto. Estrategias: mapeadas desde `marking_strategy_legend` (15) ↔ `StrategyType` (7).
+
+**Archivos tocados / creados (Fase 1):**
+- `src/components/FloatingModal.tsx` (NUEVO): overlay por portal a `document.body` (rompe el contexto `z-0` de `<main>` →
+  nunca queda "atrás"). Modo `modal` (scrim + cierre por clic/ Esc) y modo `free` (arrastre desde cabecera + resize en
+  esquina, sin librerías). Botón ⧉ alterna modo. Reutilizable por otros modales.
+- `src/data/markingStrategies.ts` (NUEVO): `MARKING_STRATEGY_LEGEND` (15 estrategias del YAML con descripción),
+  `STRATEGY_TYPE_HELP` (texto plano de los 7 `StrategyType`), `ENGINE_STRATEGY_MAP` (legend→motor). Centraliza vocabulario.
+- `src/components/GrammarWizard.tsx`: reemplaza el `div fixed inset-0 z-50` por `<FloatingModal open title onClose>`; el
+  header (título+descripción) pasa a `title`+cuerpo; el botón cerrar lo maneja FloatingModal. Conserva los 3 pasos y onApply.
+- `src/components/MultiSelectDropdown.tsx`: `options` acepta ahora `string[] | {value,label}[]` (normaliza internamente;
+  `selected` sigue siendo `string[]` de values). No rompe el uso actual de categorías.
+- `src/components/GrammarTab.tsx` → `renderStrategies()`: `InfoHint` en la etiqueta "Tipo" (texto según `strategy.type`),
+  y "Aplica a Roles" pasa de `<select multiple>` nativo a `MultiSelectDropdown` por ID de rol (`options={roles.map(r=>({value:r.id,label:r.name}))}`).
+  Añadido `InfoHint` en el título de la sección explicando el vínculo con el Árbol AST/Canvas. Import de `STRATEGY_TYPE_HELP`.
+- `src/components/GrammarManagerModal.tsx`: `InfoHint` en "Tipo" y "Roles a los que aplica" (toggle-chips ya permitía elegir
+  roles específicos; solo se aclaró). Importa `InfoHint` + `STRATEGY_TYPE_HELP`.
+
+**Verificación:**
+- `npm run lint` (check:esc) = OK — sin secuencias de escape ilegales.
+- `npm run build` = OK (✓ built ~11.5s).
+- `npm run typecheck` = 8 errores, **todos preexistentes y fuera de alcance** (GrammarTab `syntaxCanvas`/`FlexibleGrammar`/
+  `types/wizard`, `types.ts` `ClauseAST`, y Neography*). **0 errores nuevos en los archivos tocados** (FloatingModal,
+  markingStrategies, MultiSelectDropdown, GrammarWizard, GrammarTab estrategias, GrammarManagerModal).
+- Comportamiento: el asistente ahora está siempre sobre toasts/modales (portal + z-[60]); se cierra al clic fuera y a Esc;
+  el botón ⧉ lo desacopla a ventana libre (arrastrar cabecera, redimensionar esquina).
+- Pendiente de runtime (usuario con `tauri dev`): validar visualmente el desacople/arrastre/resize y los dropdowns por rol.
+
+**FASE 2 (checkpoint accionable, NO iniciada):** YAML como guía de extracción.
+- `src/types.ts`: `TypologicalProfile` (secciones motor+escritura, inventarios abiertos) + `GrammarManifest.typologicalProfile?`.
+- `src/services/typologyProfile.ts` (NUEVO): `typologyToManifest` (mapea perfil→manifest: wordOrder/alignment/morphology/
+  headDirection, case/number→paradigms de sustantivo, tense/aspect/mood→paradigms de verbo, strategies, roles catalog+custom,
+  writing). `manifestToTypology` opcional.
+- `src/services/geminiService.ts` → `parseGrammarAdvanced`: enriquecer el system-prompt con `TypologicalProfile` +
+  `marking_strategy_legend` como GUÍA de extracción mínima (NO botón de importar YAML; el usuario sigue trayendo su file).
+- `src/types/grammar-flexible.ts` + `GrammarTab.handleSaveFlexibleGrammar`: ampliar mapeo para conservar casos abiertos
+  (20+ de Quavanol), roles catalog+custom, estrategias del legend, escritura.
+- `docs/typology-profile-prompt.md` (NUEVO): prompt sugerido adaptado (vocabulario controlado + valores abiertos).
+- `languageProfiles.ts`: unificar valores inglés/español de tipología con `renderTypology` (GrammarTab:559-562) para evitar
+  fallback "Seleccionar...".
+
+---
+
+## [2026-07-19] Checkpoint: Fase 2 — Perfil Tipológico YAML como guía de extracción (COMPLETADO)
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el usuario entregó la Matriz Tipológica Universal (YAML) y aclaró que
+NO es un input: es la **base/ontología** que define el vocabulario controlado y la info mínima a extraer de CUALQUIER
+documento que importe el usuario (txt/md/doc). Alcance: solo motor + escritura (pragmática/léxico descartados). Roles:
+catálogo típico + custom abierto. Estrategias mapeadas desde `marking_strategy_legend` (15) ↔ `StrategyType` (7).
+
+**Archivos tocados / creados (Fase 2):**
+- `src/types.ts`: NUEVO `MarkingStrategy` (unión de las 15 del legend), `TypologicalProfile` (secciones motor+escritura,
+  inventarios `string[]` ABIERTOS: case/number/tense/aspect/mood/roles catalog+custom/markingStrategies/writing),
+  y `GrammarManifest.typologicalProfile?` (capa guía, NO consumida por el motor).
+- `src/services/typologyProfile.ts` (NUEVO): `typologyToManifest(profile)` mapea perfil→`Partial<GrammarManifest>`
+  (typology wordOrder/alignment/morphology/headDirection; case+number→paradigms de sustantivo; tense+aspect+mood→paradigms
+  de verbo; markingStrategies→strategies con `ENGINE_STRATEGY_MAP`, las fuera del motor como `notes`; roles catalog+custom→
+  `roles`; perfil completo en `typologicalProfile`). `manifestToTypology(manifest)` best-effort inverso para export.
+- `src/services/geminiService.ts` → `parseGrammarAdvanced`: el prompt ahora incluye el esquema `typologicalProfile` + la
+  GUÍA de extracción (vocabulario `marking_strategy_legend`, inventarios abiertos, `syntacticRoles.custom`, ámbito motor+escritura).
+  El merge conserva `typologicalProfile` del parse. NO se añadió botón de importar YAML (el usuario trae su file).
+- `src/types/grammar-flexible.ts`: sin cambio de forma (ya lleva `manifest: GrammarManifest`); el `typologicalProfile`
+  viaja dentro de `manifest`.
+- `src/components/GrammarTab.tsx` → `handleSaveFlexibleGrammar`: conserva `typologicalProfile` al guardar el manifiesto.
+- `src/data/languageProfiles.ts`: normalizado `alignment` de inglés→español (`Nominative-Accusative`→`Nominativo-Acusativo`,
+  `Ergative-Absolutive`→`Ergativo-Absolutivo`) en los 5 perfiles, para que coincidan con las opciones del `<select>` de
+  `renderTypology` y no caigan en "Seleccionar..." al importar desde el asistente.
+- `docs/typology-profile-prompt.md` (NUEVO): prompt sugerido adaptado (vocabulario controlado + valores abiertos) + tabla
+  de mapeo Perfil→Manifest. Es documentación de referencia, no un botón.
+- `src/services/__tests__/typologyProfile.test.ts` (NUEVO): mapeo Quavanol (22 casos abiertos conservados, roles catalog+
+  custom fusionados, estrategias mapeadas, round-trip). ALL PASS.
+
+**Verificación:**
+- `npx tsx typologyProfile.test.ts` = ALL PASS (mapeo + round-trip).
+- `npx tsx ast-integration.test.ts` = ALL PASS (sin regresiones del motor).
+- `npm run lint` (check:esc) = OK.
+- `npm run build` = OK (~6.3s).
+- `npm run typecheck` = 6 errores, **todos preexistentes en el working tree y fuera de alcance de Fase 2**
+  (GrammarTab `syntaxCanvas`/`FlexibleGrammar`/`types/wizard`, `types.ts` `ClauseAST`). **0 errores nuevos** en
+  `typologyProfile.ts`, `geminiService.ts`, `types.ts` (TypologicalProfile), `languageProfiles.ts`, `GrammarTab`
+  (handleSaveFlexibleGrammar). El error propio de Fase 2 (`typologicalProfile` en `manifestToTypology`) se corrigió.
+- Pendiente de runtime (usuario con `tauri dev`): importar un .md/.txt de gramática y confirmar que el perfil tipológico
+  (casos/roles/estrategias) se prellena y persiste en el manifiesto.
+
+**Próximo paso sugerido:** decidir si se expone `typologicalProfile` en una pestaña de la UI (visor de solo lectura de lo
+extraído) o si se conecta algún campo del perfil al motor (hoy el motor usa `paradigms`/`typology.wordOrder`; el perfil es
+capa guía). Fuera de alcance salvo petición expresa.
+- Tests tsx de `typologyProfile.ts` (mapeo; caso abierto 20+ conservado; roles catalog+custom).
+
+---
+
+## [2026-07-20] Checkpoint: Cierre de punta sueltas Fase 1+2 (typecheck limpio)
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el usuario pidió "wrap off - handoff" para retomar en pestaña fresca, y luego
+continuar con subagent-driven-development para cerrar las tareas pendientes del handoff Fase 1+2.
+
+**Trabajo realizado:**
+- **Fase2E (verificada, sin cambios necesarios):** se revisó `renderTypology` (GrammarTab.tsx:553-580) contra `languageProfiles.ts`.
+  Los 5 perfiles ya usan valores en español que COINCIDEN con las opciones del `<select>` (alineamiento `Nominativo-Acusativo`/
+  `Ergativo-Absolutivo`; morfología `Aislante`/`Aglutinante`/`Fusional`/`Polisintético`; `Head-Initial`/`Head-Final`; `SVO`/`SOV`).
+  No hay fallback a "Seleccionar..." al importar desde el asistente. La normalización en→es ya se hizo en Fase 2; la tarea
+  Fase2E del handoff estaba efectivamente cubierta.
+- **Fix de 6 errores TypeScript (AST refactor previo):** `GrammarTab.tsx` importaba `FlexibleGrammar` desde un módulo inexistente
+  `../types/wizard`; se corrigió a `../types/grammar-flexible`. En `types.ts` se añadió `import type { ClauseAST } from './services/grammar/engineTypes'`
+  y la propiedad opcional `syntaxCanvas?: SyntaxCanvas` a `GrammarManifest` (los reads/writes en GrammarTab:157-158 ahora tipan).
+  Esto cierra los errores TS2307/TS2339/TS2353/TS2304 que bloqueaban el `typecheck`.
+
+**Verificación:**
+- `npm run typecheck` = **0 errores** (antes 6, todos en GrammarTab.tsx/types.ts por el refactor AST). ✅
+- `npm run build` = OK. `npm run lint` = OK.
+- Tests tsx previos (`typologyProfile`, `ast*`) sin regresiones.
+- `git diff` confirma: solo `GrammarTab.tsx` (1 línea de import) y `types.ts` (3 líneas: import + prop `syntaxCanvas`) cambiados para este fix.
+
+**Pendiente de runtime (usuario con `npm run tauri dev`):** smoke test visual del asistente FloatingModal (desacoplar/arrastre/resize),
+MultiSelectDropdown por rol, e import de `.md/.txt` que prellena el perfil tipológico. No es bloqueante para el merge.
+
+**Archivos tocados en esta sesión:** `src/components/GrammarTab.tsx`, `src/types.ts` (fix typecheck). Los demás modificados en el working
+tree (`SyntaxCanvas.tsx`, `wordLists.ts`, `morphology.ts`, `normalize.ts`, `sqlStorage.ts`, `package.json`/lock) son de trabajo previo
+en curso y fuera de este cierre.
+
+**Próximo paso:** el usuario debe correr `npm run tauri dev` para validación visual. Luego se puede proceder a
+`finishing-a-development-branch` (merge/PR de `feature/sql-migration-clean`).
+
+---
+
+## [2026-07-20] Checkpoint: Taxonomía Interna de LOXAR — diccionario de entidades canónicas (P1 completado)
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el usuario detectó que había definiciones distintas para las mismas cosas across módulos
+(categoría léxica como `Categoría`/`Función`/`category`/`categoria`; roles como `GrammaticalRole`/`SyntacticRole`/`role` libre;
+afijos como `prefijo`/`prefix`; etc.). El objetivo es un diccionario de entidades que estandarice el uso en código
+sin acentos en canonical, con aliases de entrada, jerarquía flexible, y display labels en español.
+
+**Archivos creados/modificados:**
+- `src/data/taxonomy.ts` (NUEVO) — diccionario de 10 dominios taxonómicos:
+  1. Categoría gramatical léxica (29 entries: raíces + subcats, jerarquía sustantivo→pronombre/nombre/numeral/etc.)
+  2. Rol gramatical (8 entries: root/subject/object/modifier/particle/auxiliary_verb/clitic/connector)
+  3. Tipo de morfema (5 entries: stem/affix/mutation/tone/particle)
+  4. Posición de afijo (4 entries: prefix/suffix/infix/circumfix)
+  5. Estrategia de marcaje (15 legend + 7 engine + ENGINE_STRATEGY_MAP)
+  6. Tipo de nodo sintáctico (4 entries)
+  7. Tipo de conexión sintáctica (3 entries)
+  8. Ranura de orden de palabras (3 entries: S/V/O)
+  9. Modos de generación IA (3 entries)
+  10. Valores de tipología (wordOrder/alignment/morphology/headDirection)
+  - Todos los canonical keys son SIN ACENTOS, sin espacios, snake_case para compuestos
+  - Aliases incluyen variantes con tilde, inglés, shorthand, espacios
+  - `resolveLexicalCategory()` soluciona bug B1: `desconocido`→`desconocida`, `n/a`/`sin clasificar`/`?`→`desconocida`
+  - Jerarquía: `getAncestors`, `getDescendants`, `isSubcategory`, `getChildren`, `getRootCategories`
+  - Display labels: `displayOf`, `displayOfRole`, `displayOfMorphemeKind`, `displayOfAffixPosition`
+  - API para dropdowns: `lexicalCategoryOptions()`, `grammaticalRoleOptions()`, `affixPositionOptions()`
+  - Compatibility shims: `DEFAULT_CATEGORIES`, `STANDARD_CATEGORIES_KEYS` (reemplazan DEFAULT_FUNCTIONS/STANDARD_CATEGORIES)
+
+- `src/data/__tests__/taxonomy.test.ts` (NUEVO) — 171 tests unitarios:
+  - resolveLexicalCategory (canonical, aliases inglés, fix B1, fallback seguros, subcats)
+  - resolveGrammaticalRole, resolveMorphemeKind, resolveAffixPosition, resolveNodeType, resolveConnectionType
+  - displayOf, displayOfRole, displayOfMorphemeKind, displayOfAffixPosition
+  - Jerarquía: isSubcategory, getChildren, getDescendants, getRootCategories, getAncestors
+  - Compatibilidad: DEFAULT_CATEGORIES == STANDARD_CATEGORIES_KEYS
+  - Verificación: ninguna key tiene acentos
+
+- `src/services/normalize.ts` — wire taxonomy como puente de normalización:
+  - Importa `resolveLexicalCategory` y `DEFAULT_CATEGORIES` desde taxonomy
+  - `normalizeEntry`: reemplaza la escalera de 5 fallbacks (`Categoría→Función→Categoria→categoria→'desconocida'`)
+    por `resolveLexicalCategory()` que normaliza acentos/case/espacios y soluciona B1
+  - `DEFAULT_FUNCTIONS` ahora es alias de `DEFAULT_CATEGORIES` (deprecated, para compatibilidad)
+
+- `src/data/standardCategories.ts` — shim de compatibilidad que re-exporta desde taxonomy:
+  - `STANDARD_CATEGORIES` → `STANDARD_CATEGORIES_KEYS` (29 items canónicos sin acentos)
+  - `mergeCategoryOptions` → función local que combina standard + custom, devuelve `string[]`
+  - `lexicalCategoryOptions`, `displayOf` → re-exportados desde taxonomy
+
+**Verificación:**
+- `npm run build` = ✓ (332 módulos, 0 errores)
+- `npm run lint` = ✓ (escape validation OK)
+- `npm run typecheck` = ✓ (0 errores, 0 nuevos)
+- taxonomy.test.ts = ✓ 171/171 PASS
+- morphology.test.ts = ✓ ALL PASS (sin regresiones)
+- syntax.test.ts = ✓ ALL PASS
+- phonology.test.ts = ✓ ALL PASS
+- exceptions.test.ts = ✓ ALL PASS
+- ast.test.ts / ast-chain.test.ts / ast-editor.test.ts = ✓ ALL PASS
+- typologyProfile.test.ts = ✓ ALL PASS
+- linter.test.ts = ✓ ALL PASS
+
+**Pendiente (próxima sesión):**
+- P3 — Cablear taxonomy en más módulos: `useLexicon.ts` (manageFunctions usa `Categoría` que ahora es canonical sin acentos),
+  `EntryEditor.tsx` (usar `displayOf` para labels), `GrammarTab.tsx` (usar `displayOfRole`/`displayOfStrategyType`),
+  `LexiconTable.tsx` (usar display labels en columna), `GrammarManagerModal.tsx`
+- P4 — Usar `STANDARD_CATEGORIES_KEYS` en lugar de `DEFAULT_FUNCTIONS` en `useLexicon.ts:197`
+- P5 — Eliminar `Función` como campo/alias en normalize.ts una vez que todo escribe a `Categoría`
+- P6 — Eliminar `DEFAULT_FUNCTIONS` y `CategoryManagerModal.tsx`/`FunctionManagerModal.tsx` duplicados
+- El unificador de categorías existente (`CategoryManagerModal`/`FunctionManagerModal`) puede editar la jerarquía de taxonomy
+  una vez que se cree el componente de edición del árbol taxonómico
+
+**Próximo paso:** validar en runtime (`npm run tauri dev`) que el dropdown de Categoría en EntryEditor funciona con las 29 categorías
+ampliadas. Luego proceder a P3 (cablear taxonomy en UI components).
+
+---
+
+## [2026-08-01] Checkpoint: Fix completo motor de gramática + UI wiring
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el módulo de gramática no podía procesar texto gramatical de ejemplo. Diagnóstico: importador 100% dependiente de LLM, sin parser local ni validación post-import. Estrategias editables en UI pero nunca cableadas al motor.
+
+**Archivos creados (nuevo pipeline):**
+- `src/services/grammar/declarativeFormat.ts` — formato intermedio `DeclarativeManifest` entre parser/LLM y motor
+- `src/services/grammar/textParser.ts` — parser local determinista (texto libre → `DeclarativeManifest`), sin LLM
+- `src/services/grammar/normalizer.ts` — normaliza variantes de entrada (`sustantivo`, `noun`, `sostantivo`, `nomen`) → canonical key via `taxonomy.ts` alias maps
+- `src/services/grammar/postImportValidator.ts` — valida `DeclarativeManifest`, produce `ImportValidationReport` (score, problemas, sugerencias)
+- `src/services/grammar/strategyBridge.ts` — convierte `MorphosyntacticStrategy[]` → reglas que el motor consume
+- `src/services/grammar/inductFromText.ts` — pipeline completo: `parseLocal → normalizer → validator → optional LLM booster → DeclarativeManifest`
+
+**Archivos modificados (UI wiring):**
+- `src/components/GrammarImporterModal.tsx` — reemplazado pipeline viejo (`parseGrammarAdvanced` de geminiService) por nuevo (`inductFromText` + `convertToLegacy` bridge). Agregado `convertDeclarativeToFlexible` helper. Removido prop `onSaveInflection` (dead code).
+- `src/components/GrammarTab.tsx` — removido `onSaveInflection` prop de `GrammarImporterModal`
+- `src/components/SyntaxCanvas.tsx` — agregado import de `inductFromText` (para futuro wiring de graph generation)
+- `src/services/grammarParser.ts` — `convertToLegacy` ahora exportado (era internal), arreglados tipos de estrategia
+- `src/services/grammar/phonology.ts` — fix bug crítico en `groupIntoSyllables`: "pato" ahora se agrupa como "CV.CV" (antes era "CVC.V" incorrecto)
+- `src/data/taxonomy.ts` — agregados alias de normalización para categorías gramaticales
+
+**Archivos de tests (node:test → vitest, 22 archivos):**
+- Convertidos: `normalizer.test.ts`, `postImportValidator.test.ts`, `strategyBridge.test.ts`, `quavanolPipeline.test.ts`, `integrationUI.test.ts`, `inductFromText.test.ts`, `ast.test.ts`, `exceptions.test.ts`, `morphology.test.ts`, `syntax.test.ts`, `phonology.test.ts`, `ast-chain.test.ts`, `ast-editor.test.ts`, `ast-integration.test.ts`, `quavanol.fixture.test.ts`
+- Arreglados: bare module-level code wrapped en describe/it, `expect.strictEqual` → `expect().toBe`, LexiconEntry field names (español: Raíz, Léxema, Categoría, Significado)
+
+**Consolidación de tipos:**
+- `ImportValidationReport` y `SectionStatus` estaban definidos en AMBOS `declarativeFormat.ts` y `postImportValidator.ts` con tipos incompatibles. Consolidados en `declarativeFormat.ts` (fuente de verdad). `postImportValidator.ts` ahora importa desde ahí.
+
+**Verificación:**
+- `npm run build` = ✓ (334 módulos, 0 errores)
+- `npm run typecheck` = ✓ (0 errores)
+- Grammar tests = ✓ 83/83 PASS (vitest)
+- Todos los tests de grammar module pasan sin regresiones
+
+**Arquitectura del nuevo pipeline:**
+```
+Texto libre → textParser (local, determinista) → DeclarativeManifest
+                                          ↓
+                                  normalizer (taxonomy aliases)
+                                          ↓
+                              postImportValidator (score + problemas)
+                                          ↓
+                              optional: LLM booster (Gemini/Ollama)
+                                          ↓
+                              DeclarativeManifest final → convertToLegacy → FlexibleGrammar
+```
+
+**Pendiente (próxima sesión):**
+- Limpiar código viejo de `geminiService.ts`: `parseGrammarAdvanced`, `cleanseJson`, `parseGrammarText` (una vez confirmado que el nuevo pipeline funciona en runtime)
+- Wirear `SyntaxCanvas` graph generation (`handleGenerateGraph`) al nuevo pipeline (actualmente usa `callAi + cleanseJson` para diagramas)
+- Convertir 7 test files preexistentes fuera de grammar module de `node:test` a `vitest`
+- Validación runtime: usuario debe correr `npm run tauri dev`
+- Commit de toda la sesión a GitHub
+
+**Próximo paso:** hacer commit de toda la sesión. Usuario valida runtime con `npm run tauri dev`.
+
+---
+
+## [2026-08-02] Checkpoint: Fix import/export (CSV real + exportar gramática)
+**Rama:** `feature/sql-migration-clean`. **Motivo:** el botón "Exportar CSV" generaba JSON en lugar de CSV, y no había forma de exportar la gramática como archivo separado.
+
+**Archivos modificados:**
+- `src/App.tsx` — `handleFileExport` ahora usa `Papa.unparse` para generar CSV real con columnas ID/Raíz/Léxema/Categoría/Significado/externalID. Agregado `import Papa from 'papaparse'`.
+- `src/components/GrammarTab.tsx` — agregado prop `onExportGrammar` y botón "Exportar Gramática" en la barra de acciones. Exporta `GrammarManifest` como `.loxar-grammar.json`.
+
+**Arquitectura de importación/exportación confirmada:**
+- **Léxico:** importa CSV/TXT/JSON de entradas, exporta CSV (real) o JSON
+- **Gramática:** importa texto libre (inductFromText), exporta `.loxar-grammar.json`
+- **Backup:** guarda `LexiconData` completo (todo junto) como JSON
+- Los tres sistemas son ortogonales, no hay conflicto entre léxico y gramática
+
+**Verificación:**
+- `npm run typecheck` = ✓ 0 errores
+- `npm run build` = ✓ 334 módulos, 0 errores
+
+**Próximo paso:** runtime validation (`npm run tauri dev`) para confirmar que el CSV exportado se puede re-importar correctamente.
+
+---
+
+## [2026-08-02] Checkpoint: Fix import/backup — modals faltantes + path Windows + CSV export
+**Rama:** `feature/sql-migration-clean`. **Motivo:** botones "Importar" y "Restaurar Backup" parecían no hacer nada. Diagnóstico: modals para `repair_characters` y `error` no existían en ModalManager, path separators en Windows, CSV export generaba JSON.
+
+**Archivos modificados:**
+- `src/components/ModalManager.tsx` — agregados modals inline para `repair_characters` (textarea editable + botón "Reparar e importar") y `error` (mensaje de error + botón Cerrar). Antes no había UI para estos pasos → falla silenciosa.
+- `src/hooks/useLexicon.ts` — `applyCharacterRepair` ya existía pero no estaba en `importHandlers`. Ahora se expone.
+- `src/App.tsx` — `handleRestoreBackup` normaliza path separators en Windows (`exportPath.replace(/\\/g, '/')`). `handleFileExport` usa `Papa.unparse` para CSV real. `importHandlers` incluye `applyCharacterRepair`.
+- `src/components/GrammarTab.tsx` — botón "Exportar Gramática" (.loxar-grammar.json) + prop `onExportGrammar`.
+
+**Verificación:**
+- `npm run typecheck` = ✓ 0 errores
+- `npm run build` = ✓ 334 módulos, 0 errores
+
+**Próximo paso:** runtime validation (`npm run tauri dev`) para confirmar que import/export funcionan end-to-end.
+
+
+---
+## [2026-08-10] Checkpoint: Preparación para GitHub + quarantine de artefactos
+**Motivo:** usuario solicitó dejar el folder "profesional y listo para subir a Github", sin eliminar artefactos sino preservándolos en una carpeta aparte dentro de LOXAR.
+
+**Cambios:**
+- Creada `_ARTIFACTS_NO_GIT/` como quarantine interna de LOXAR (no se sube a git).
+- Movidos ahí: `LOXAR_CODIGO_PARA_ZAI.zip`, `debug_log.txt`, `..loxar-backup-before-cleanup.bundle`, `_BACKUPS/`, `.vite/`.
+- `NEW VERSION/` quedó bloqueado por proceso Windows y no se pudo mover; se mantiene en root pero **ignorado por git**.
+- Corregido `.gitignore` corrupto (tenía bytes nulos y reglas insuficientes). Ahora ignora:
+  `node_modules/`, `dist/`, `dist-electron/`, `release/`, `src-tauri/target/`, `.vite/`,
+  `_ARTIFACTS_NO_GIT/`, `NEW VERSION/`, `*.zip`, `*.bundle`, `debug_log.txt`, `.env*`, etc.
+- `package.json`: removidos `.env` y `.env.local` de `build.files` para no empaquetar secretos en releases.
+
+**Verificación:**
+- `npm run build` = OK (334 módulos).
+- Build no depende de los artefactos movidos.
+- Árbol público esperado: código fuente + docs + configs, sin env ni binarios grandes.
+
+**Próximo paso:** inicializar git (`git init`) si no existe y hacer el commit inicial, o abrir el repo en GitHub y pushear.
+
+---

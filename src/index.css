@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #101e22;
+    color: #F0FFF4;
+    overflow: hidden;
+}
+
+#root {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Global Form Elements Reset for Dark Mode */
+input,
+textarea,
+select {
+    background-color: #16262c;
+    color: #F0FFF4;
+    border-color: #223f49;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #6c8d99;
+}
+
+/* Stitch Theme Utilities */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #101e22;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #223f49;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #0db9f2;
+}
+
+.glass-panel {
+    background: rgba(22, 38, 44, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-toast {
+    background: rgba(13, 185, 242, 0.1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-left: 4px solid #0db9f2;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+
+.bg-grid-pattern {
+    background-image: linear-gradient(rgba(144, 188, 203, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(144, 188, 203, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #223f49 transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Animations from version-anterior */
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); width: 20%; }
+  50% { width: 60%; }
+  100% { transform: translateX(300%); width: 20%; }
+}
+
+.animate-progress-indeterminate {
+  animation: progress-indeterminate 2s infinite ease-in-out;
+}

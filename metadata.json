@@ -1,0 +1,6 @@
+{
+  "name": "Conlang Lexicon Manager",
+  "description": "An application to manage and expand a conlang lexicon, with AI-powered word generation to suggest new vocabulary consistent with the language's structure.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}

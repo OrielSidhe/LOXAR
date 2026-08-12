@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-electron/
+release/
+
+# Tauri
+src-tauri/target/
+
+# Vite
+.vite/
+
+# Artifacts / quarantine (preserved, not committed)
+_ARTIFACTS_NO_GIT/
+NEW VERSION/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+debug_log.txt
+
+# Archives / bundles
+*.zip
+*.tar
+*.tar.gz
+*.gz
+*.rar
+*.7z
+*.bundle
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Legacy Electron output
+dist-electron/

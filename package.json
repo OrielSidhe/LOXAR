@@ -1,0 +1,74 @@
+{
+  "name": "conlang-lexicon-manager",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "An application to manage and expand a conlang, with AI-powered word generation to suggest new vocabulary consistent with the language's structure.",
+  "author": "Victor Sidhe",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite --strictPort",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri:dev": "npx tauri dev",
+    "tauri:build": "npx tauri build",
+    "check:esc": "node scripts/validate_escapes.cjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "npm run check:esc"
+  },
+  "dependencies": {
+    "@google/genai": "^1.12.0",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-fs": "^2.5.0",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-sql": "^2.4.0",
+    "@tauri-apps/plugin-window": "^2.0.0-alpha.1",
+    "dotenv": "^16.4.5",
+    "imagetracerjs": "^1.2.6",
+    "papaparse": "^5.4.1",
+    "perfect-freehand": "^1.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "svg2ttf": "^6.0.3",
+    "ws": "^8.18.0",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.1",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/svg2ttf": "^5.0.3",
+    "@vitejs/plugin-react": "4.3.1",
+    "autoprefixer": "^10.4.19",
+    "jest": "^30.4.2",
+    "postcss": "^8.4.39",
+    "sharp": "^0.33.4",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.21"
+  },
+  "build": {
+    "appId": "com.conlang.lexicon.manager",
+    "productName": "Conlang Lexicon Manager",
+    "files": [
+      "dist-electron/**/*",
+      "dist/**/*"
+    ],
+    "directories": {
+      "buildResources": "assets",
+      "output": "release"
+    },
+    "win": {
+      "icon": "public/icon.png"
+    },
+    "mac": {
+      "icon": "public/icon.png"
+    },
+    "linux": {
+      "icon": "public/icon.png"
+    }
+  }
+}

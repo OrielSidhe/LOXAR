@@ -1,0 +1,33 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permisos de Loxar: fs acotado a zonas seguras (carpeta del usuario $HOME + datos de la app), dialog (selector de carpeta), process (salir) y sql (persistencia SQLite).",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "process:default",
+    "fs:default",
+    "fs:allow-read-text-file",
+    "fs:allow-write-text-file",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-read-dir",
+    "fs:allow-mkdir",
+    "fs:allow-exists",
+    "sql:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        "$HOME/*",
+        "$APPDATA/*",
+        "$APPCONFIG/*",
+        "$APPLOCALDATA/*",
+        "$APP_CACHE/*",
+        "$TEMP/*"
+      ]
+    }
+  ]
+}

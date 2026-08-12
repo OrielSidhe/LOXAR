@@ -1,0 +1,20 @@
+{
+  "lastUpdated": "2026-08-10T00:00:00.000Z",
+  "uiState": {
+    "activeTab": "grammar",
+    "syntaxSubTab": "ast",
+    "activeProfile": "default",
+    "editorMode": "add",
+    "incompleteIndex": 0,
+    "searchTerm": "",
+    "viewFilter": "all",
+    "functionFilter": "all",
+    "selectedIds": []
+  },
+  "aiContext": {
+    "lastPrompt": "Preparación para GitHub: limpieza de artefactos, .gitignore, package.json y verificación de build.",
+    "lastModelUsed": "gemini-2.5-flash",
+    "lastProfileId": "default"
+  },
+  "sessionSummary": "PREPARACIÓN GITHUB. 1) Creada _ARTIFACTS_NO_GIT/ y movidos artefactos preservándolos para continuidad. 2) Corregido .gitignore corrupto (bytes nulos). 3) Removidos .env/.env.local de package.json build.files. 4) Build verificado: 334 módulos OK."
+}
