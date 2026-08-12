@@ -58,6 +58,29 @@ async function ensureSchema(db: any): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_backups_name
     ON lexicon_backups(name, createdAt DESC)
   `);
+  await db.execute(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS lexicon_fts USING fts5(
+      name,
+      content,
+      tokenize = 'unicode61'
+    )
+  `);
+  await db.execute(`
+    CREATE TRIGGER IF NOT EXISTS lexicons_ai AFTER INSERT ON lexicons BEGIN
+      INSERT INTO lexicon_fts(rowid, name, content) VALUES (new.rowid, new.name, new.data);
+    END
+  `);
+  await db.execute(`
+    CREATE TRIGGER IF NOT EXISTS lexicons_ad AFTER DELETE ON lexicons BEGIN
+      INSERT INTO lexicon_fts(lexicon_fts, rowid, name, content) VALUES ('delete', old.rowid, old.name, old.data);
+    END
+  `);
+  await db.execute(`
+    CREATE TRIGGER IF NOT EXISTS lexicons_au AFTER UPDATE ON lexicons BEGIN
+      INSERT INTO lexicon_fts(lexicon_fts, rowid, name, content) VALUES ('delete', old.rowid, old.name, old.data);
+      INSERT INTO lexicon_fts(rowid, name, content) VALUES (new.rowid, new.name, new.data);
+    END
+  `);
 }
 
 const MAX_BACKUPS_PER_LEXICON = 5;
@@ -124,23 +147,24 @@ export async function saveLexicon(name: string, data: LexiconData): Promise<void
   const db = await getDb();
   await ensureSchema(db);
 
-  // Backup existing data before overwrite.
-  const existing = (await db.select(
-    'SELECT data FROM lexicons WHERE name = $1',
-    [name],
-  )) as Row[];
-  if (existing.length > 0) {
-    await db.execute(
-      'INSERT INTO lexicon_backups (name, data, createdAt) VALUES ($1, $2, $3)',
-      [name, existing[0].data, new Date().toISOString()],
-    );
-    await pruneOldBackups(db, name);
-  }
+  await db.transaction(async () => {
+    const existing = (await db.select(
+      'SELECT data FROM lexicons WHERE name = $1',
+      [name],
+    )) as Row[];
+    if (existing.length > 0) {
+      await db.execute(
+        'INSERT INTO lexicon_backups (name, data, createdAt) VALUES ($1, $2, $3)',
+        [name, existing[0].data, new Date().toISOString()],
+      );
+      await pruneOldBackups(db, name);
+    }
 
-  await db.execute(
-    'INSERT OR REPLACE INTO lexicons (name, data) VALUES ($1, $2)',
-    [name, payload],
-  );
+    await db.execute(
+      'INSERT OR REPLACE INTO lexicons (name, data) VALUES ($1, $2)',
+      [name, payload],
+    );
+  });
 }
 
 export async function deleteLexicon(name: string): Promise<void> {
@@ -152,8 +176,10 @@ export async function deleteLexicon(name: string): Promise<void> {
   }
   const db = await getDb();
   await ensureSchema(db);
-  await db.execute('DELETE FROM lexicons WHERE name = $1', [name]);
-  await db.execute('DELETE FROM lexicon_backups WHERE name = $1', [name]);
+  await db.transaction(async () => {
+    await db.execute('DELETE FROM lexicons WHERE name = $1', [name]);
+    await db.execute('DELETE FROM lexicon_backups WHERE name = $1', [name]);
+  });
 }
 
 export async function listBackups(name: string): Promise<BackupRow[]> {
