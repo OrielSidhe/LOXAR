@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useMemo, ReactNode } from 'react';
+import React, { useCallback, useState, useEffect, useMemo, ReactNode, Suspense, lazy } from 'react';
 import Header from './components/Header';
 import LexiconTable from './components/LexiconTable';
 import FileControls from './components/FileControls';
@@ -29,14 +29,12 @@ import InfoIcon from './components/icons/InfoIcon';
 // Components
 import LoadingOverlay from './components/LoadingOverlay';
 import WelcomeScreen from './components/WelcomeScreen';
-import ModalManager from './components/ModalManager';
 import CompletionDashboard from './components/CompletionDashboard';
 import EntryEditor from './components/EntryEditor';
 import CollectionsManager from './components/CollectionsManager';
 import WritingAndNeographyTab from './components/WritingAndNeographyTab';
 import GrammarTab from './components/GrammarTab';
 import TranslationPlayground from './components/TranslationPlayground';
-import ToolsDashboard from './components/ToolsDashboard';
 import SuggestionsWorkbench from './components/SuggestionsWorkbench';
 import WorkbenchRightPanel from './components/WorkbenchRightPanel';
 import WorkQueueBar from './components/WorkQueueBar';
@@ -44,7 +42,8 @@ import BatchActionToolbar from './components/BatchActionToolbar';
 import SplashScreen from './components/SplashScreen';
 import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
-import AiSettingsModal from './components/AiSettingsModal';
+
+const ToolsDashboard = lazy(() => import('./components/ToolsDashboard'));
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -54,6 +53,9 @@ import { generateLanguageSample } from './services/geminiService';
 import { isAiAvailable } from './services/geminiService';
 import { validateGrammarEngine } from './validation/runtimeValidation';
 import { listen } from '@tauri-apps/api/event';
+
+const ModalManager = lazy(() => import('./components/ModalManager'));
+const AiSettingsModal = lazy(() => import('./components/AiSettingsModal'));
 
 const App = () => {
     const appVersion = "2.4.0-pro";

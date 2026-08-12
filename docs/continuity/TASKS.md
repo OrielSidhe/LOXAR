@@ -70,6 +70,16 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 **Próximo paso:** marcar en `LOXAR_AUTO_PILOT.md` los bloques A-E como completados y definir nuevas tareas ejecutables de validación runtime + polish UI.
 
+
+---
+
+## [2026-08-12] Checkpoint: Bloque I2 completado (lazy loading de componentes pesados)
+**Rama:** `main`. **Motivo:** reducir bundle inicial cargando bajo demanda `ToolsDashboard` y `GrammarImporterModal`.
+**Cambios:**
+- `src/App.tsx`: `ToolsDashboard` pasa a import dinámico con `React.lazy`.
+- `src/components/GrammarTab.tsx`: `GrammarImporterModal` pasa a import dinámico con `React.lazy` y `Suspense` local.
+- Validaciones: `npm run typecheck` 0 errores.
+
 ---
 ## [2026-07-16] Cierre de sesión: Plan de implementación de continuidad (6 tareas COMPLETADAS)
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").

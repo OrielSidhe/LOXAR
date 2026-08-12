@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import ExceptionEditor from './ExceptionEditor';
 import RuleEditor from './RuleEditor';
 import { GrammarManifest, SyntacticRole, MorphosyntacticStrategy, StrategyType, LexiconEntry, GrammarAffix } from '../types';
@@ -7,7 +7,7 @@ import PlusIcon from './icons/PlusIcon';
 import TrashIcon from './icons/TrashIcon';
 import SparkleIcon from './icons/SparkleIcon';
 import DownloadIcon from './icons/DownloadIcon';
-import GrammarImporterModal from './GrammarImporterModal';
+const GrammarImporterModal = lazy(() => import('./GrammarImporterModal'));
 import { FlexibleGrammar } from '../types/grammar-flexible';
 import InfoHint from './InfoHint';
 import GrammarWizard from './GrammarWizard';
@@ -968,12 +968,14 @@ const isMeaningfulTypology = (t?: GrammarManifest['typology']): boolean =>
     return (
         <div className="flex h-full gap-4">
             {isImporterOpen && (
-                <GrammarImporterModal
-                    onSaveFlexibleGrammar={handleSaveFlexibleGrammar}
-                    onClose={() => setIsImporterOpen(false)}
-                    showNotification={() => {}}
-                    existingNotes={editedManifest.notes?.join('\n') || ''}
-                />
+                <Suspense fallback={<div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"><div className="text-white text-sm">Cargando importador...</div></div>}>
+                    <GrammarImporterModal
+                        onSaveFlexibleGrammar={handleSaveFlexibleGrammar}
+                        onClose={() => setIsImporterOpen(false)}
+                        showNotification={() => {}}
+                        existingNotes={editedManifest.notes?.join('\n') || ''}
+                    />
+                </Suspense>
             )}
             <GrammarWizard
                 open={isWizardOpen}
