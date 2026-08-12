@@ -15,13 +15,19 @@ export interface InterlinearGlossViewerProps {
 }
 
 const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon, sentence = '', options }) => {
-  const [text, setText] = React.useState(sentence);
+  const [text, setText] = React.useState(sentence || 'El gato come pescado');
   const [result, setResult] = React.useState<InterlinearGloss | null>(null);
 
   const handleAnalyze = () => {
     const gloss = glossSentence(text, lexicon.entries, options);
     setResult(gloss);
   };
+
+  React.useEffect(() => {
+    if (!sentence && !result) {
+      handleAnalyze();
+    }
+  }, []);
 
   return (
     <div className="space-y-3">

@@ -14,9 +14,10 @@ export interface SoundChangeWorkbenchProps {
 
 const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) => {
   const [rules, setRules] = React.useState<SoundChangeRule[]>([
-    { id: '1', name: 'Ejemplo', find: 'a', replace: 'ā', scope: 'lexeme' },
+    { id: '1', name: 'Aspiración', find: 'p', replace: 'ph', scope: 'lexeme' },
+    { id: '2', name: 'Lenición', find: 't', replace: 'd', scope: 'root' },
   ]);
-  const [text, setText] = React.useState('');
+  const [text, setText] = React.useState('pata');
   const [preview, setPreview] = React.useState('');
 
   const handleApply = () => {

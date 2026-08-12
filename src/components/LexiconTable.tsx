@@ -13,6 +13,7 @@ import LexiconFilters from './LexiconFilters';
 import LayoutGridIcon from './icons/LayoutGridIcon';
 import FilterIcon from './icons/FilterIcon';
 import GitMergeIcon from './icons/GitMergeIcon';
+import LoaderIcon from './icons/LoaderIcon';
 
 const ITEMS_PER_PAGE = 25;
 
@@ -203,6 +204,8 @@ const LexiconTable = (props: LexiconTableProps) => {
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(['id', 'raiz', 'lexema', 'categoria', 'significado', 'acciones']));
     const [showColumnMenu, setShowColumnMenu] = useState(false);
     const [ftsResults, setFtsResults] = useState<LexiconEntry[] | null>(null);
+    const [ftsLoading, setFtsLoading] = useState(false);
+    const [ftsResultCount, setFtsResultCount] = useState(0);
 
     const uniqueCategories = useMemo(() => {
         if (!data) return [];
@@ -262,15 +265,26 @@ const LexiconTable = (props: LexiconTableProps) => {
     useEffect(() => {
         if (!onSearch || !searchTerm || !lexiconName) {
             setFtsResults(null);
+            setFtsLoading(false);
+            setFtsResultCount(0);
             return;
         }
+        setFtsLoading(true);
         let active = true;
         (async () => {
             try {
                 const results = await onSearch(searchTerm);
-                if (active) setFtsResults(results);
+                if (active) {
+                    setFtsResults(results);
+                    setFtsResultCount(results.length);
+                    setFtsLoading(false);
+                }
             } catch (e) {
-                if (active) setFtsResults(null);
+                if (active) {
+                    setFtsResults(null);
+                    setFtsResultCount(0);
+                    setFtsLoading(false);
+                }
             }
         })();
         return () => { active = false; };
@@ -407,6 +421,25 @@ const LexiconTable = (props: LexiconTableProps) => {
                     </button>
                 )}
             </div>
+
+            {searchTerm && lexiconName && (
+                <div className="max-w-3xl mx-auto w-full mb-4">
+                    {ftsLoading ? (
+                        <div className="flex items-center gap-2 text-xs text-text-secondary">
+                            <LoaderIcon className="h-4 w-4 animate-spin" />
+                            <span>Buscando en el léxico completo...</span>
+                        </div>
+                    ) : ftsResultCount > 0 ? (
+                        <div className="text-xs text-text-secondary">
+                            <span className="text-accent font-semibold">{ftsResultCount}</span> resultado{ftsResultCount === 1 ? '' : 's'} encontrado{ftsResultCount === 1 ? '' : 's'} para "<span className="italic">{searchTerm}</span>"
+                        </div>
+                    ) : (
+                        <div className="text-xs text-text-secondary">
+                            Sin resultados para "<span className="italic">{searchTerm}</span>"
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Fila secundaria: Filtros alineados y ordenados */}
             <div className="flex flex-wrap items-center justify-between gap-3 mb-6 p-3 bg-background-dark/30 rounded-xl border border-subtle/40 backdrop-blur-sm">
