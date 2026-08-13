@@ -6,9 +6,18 @@ interface HeaderProps {
   wordsAddedCount: number;
   onOpenWidget: () => void;
   onShowTour?: () => void;
+  themeId: string;
+  onThemeChange: (themeId: string) => void;
 }
 
-const Header = ({ wordsAddedCount, onOpenWidget, onShowTour }: HeaderProps) => {
+const themes = [
+  { id: 'midnight', label: 'Midnight', dot: '#0db9f2' },
+  { id: 'cyber', label: 'Cyber', dot: '#7c5cff' },
+  { id: 'amber', label: 'Amber', dot: '#f5a623' },
+  { id: 'forest', label: 'Forest', dot: '#22c55e' },
+];
+
+const Header = ({ wordsAddedCount, onOpenWidget, onShowTour, themeId, onThemeChange }: HeaderProps) => {
   return (
     <header className="bg-surface p-4 shadow-md border-b border-subtle">
       <div className="container mx-auto flex items-center justify-between">
@@ -32,6 +41,18 @@ const Header = ({ wordsAddedCount, onOpenWidget, onShowTour }: HeaderProps) => {
                 <WidgetIcon className="h-5 w-5" />
                 <span className="hidden md:inline">Widget</span>
             </button>
+
+            <div className="flex items-center gap-2">
+                {themes.map((theme) => (
+                  <button
+                    key={theme.id}
+                    onClick={() => onThemeChange(theme.id)}
+                    className={`h-6 w-6 rounded-full border-2 transition-all ${themeId === theme.id ? 'border-white scale-110' : 'border-transparent hover:scale-105'}`}
+                    style={{ backgroundColor: theme.dot }}
+                    title={theme.label}
+                  />
+                ))}
+            </div>
 
             <div className="text-right flex items-center gap-4">
                 <div className="animate-fade-in" key={wordsAddedCount}>

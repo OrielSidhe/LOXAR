@@ -8,6 +8,7 @@ import { generateRootAndLexeme, normalizeText, completeEntry, correctSignificado
 import { filterParadigmsForFunction, generateInflectedForms } from './services/inflectionService';
 import { searchLexicon } from './services/ftsSearch';
 import { loadSessionCache, saveSessionCache } from './services/sessionCache';
+import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode } from './types';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
@@ -71,6 +72,12 @@ const App = () => {
     // Navigation & View State
     const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('dashboard');
     const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
+    const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
+
+    useEffect(() => {
+      applyTheme(themes[themeId]);
+      saveTheme(themeId);
+    }, [themeId]);
     
     // Workbench / Editor State
     const [editorMode, setEditorMode] = useState<'add' | 'complete'>('add');
@@ -112,7 +119,6 @@ const App = () => {
     const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
     const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
 
-    // Tools sub-views
     const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
 
     const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
@@ -126,6 +132,14 @@ const App = () => {
         activeLexicon, activeLexiconName, activeProfile, activeMetadata, 
         activeCustomFunctions, lexicons, isDirty, activeGrammar
     } = lexiconHook;
+
+    // Dynamic title/favicon
+    useEffect(() => {
+        const title = activeMetadata?.conlangName || activeLexiconName || 'LOXAR';
+        document.title = `${title} - ${appVersion}`;
+        const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
+        if (link) link.href = '/icon.png';
+    }, [activeLexiconName, activeMetadata?.conlangName, appVersion]);
 
     // Canonical phonology source of truth: when a grammar manifest defines
     // phonology, generation should prefer it over the stored generative profile.
@@ -865,7 +879,7 @@ const App = () => {
                     <AiSettingsModal onClose={handleCloseModal} />
                 )}
 
-                <Header wordsAddedCount={lexiconHook.wordsAddedSinceSave} onOpenWidget={() => window.electronAPI.openWidget()} onShowTour={handleStartTour} />
+                <Header wordsAddedCount={lexiconHook.wordsAddedSinceSave} onOpenWidget={() => window.electronAPI.openWidget()} onShowTour={handleStartTour} themeId={themeId} onThemeChange={(id) => setThemeId(id as any)} />
 
                 <div className="flex items-center justify-between px-6 py-4 bg-surface-dark/90 backdrop-blur-md border-b border-border-dark flex-wrap gap-4 z-30 relative">
                     <LexiconSelector 

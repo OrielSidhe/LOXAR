@@ -199,18 +199,18 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
-## [2026-08-13] Checkpoint: sessionCache cableado a App.tsx + traductor offline + sound change avanzado + error boundary
-**Rama:** `main`. **Motivo:** unificar estado de sesión, cerrar traducción offline usable, avanzar sound change y agregar recovery de crashes.
+## [2026-08-13] Checkpoint: experiencia de marca + temas + observaciones SDD
+**Rama:** `main`. **Motivo:** hacer LOXAR más memorable y usable, y preparar el SDD con observaciones vivas.
 **Cambios:**
-- `src/services/sessionCache.ts`: ampliado a tabs, exportPath y tourCompleted; fallback browser con localStorage.
-- `src/App.tsx`: carga inicial desde `sessionCache`, persiste tab/exportPath/tourCompleted, elimina lecturas duplicadas de `localStorage` para sesión y agrega `ErrorBoundary`.
-- `src/services/localTranslator.ts` (NUEVO): motor local de traducción offline por matching + realización morfológica.
-- `src/components/TranslationPlayground.tsx`: usa traducción offline antes de caer a IA.
-- `src/services/soundChanger.ts`: reglas condicionales por entorno, aplicación por lote, snapshots para undo/redo.
-- `src/components/SoundChangeWorkbench.tsx`: presets, historial, aplicación al léxico y validación visual.
-- `src/components/ErrorBoundary.tsx` (NUEVO): recovery de crashes sin perder el flujo de la app.
-- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npx vitest run` 117 passed, `npm run build` OK.
-- Commiteado: `60ed011`.
+- `docs/SDD_RUNTIME_OBSERVATIONS.md` (NUEVO): documento de observaciones runtime para el SDD.
+- `src/services/audioService.ts`: jingle de inicio más memorable y click más satisfactorio.
+- `src/components/icons/AppLogoIcon.tsx`: icono profesional LOX (cuadro + O + tache).
+- `src/services/themeService.ts` (NUEVO): temas Midnight, Cyber, Amber, Forest con persistencia en `localStorage`.
+- `src/components/Header.tsx`: selector de temas en header.
+- `src/components/Button.tsx` (NUEVO): botón unificado con variantes y microinteracciones.
+- `src/index.css`: mejoras visuales globales (botones, tabs, inputs, glow).
+- `src/App.tsx`: integración de temas y favicon/título dinámico.
+- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK.
 
 ## [2026-07-13 00:00] Checkpoint: Diccionario de categorías estándar (local-first)
 - Archivos tocados: `src/data/standardCategories.ts` (NUEVO), `src/App.tsx`,

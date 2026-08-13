@@ -59,7 +59,10 @@ class AudioService {
     public playClick() {
         if (this.isMuted || !this.ensureContext()) return;
         const t = this.ctx!.currentTime;
-        this.playTone(600, 'sine', t, 0.1, 0.05);
+
+        // Click más “clickeable”: cuerpo corto + chispa alta
+        this.playTone(520, 'sine', t, 0.08, 0.04);
+        this.playTone(1200, 'sine', t + 0.01, 0.04, 0.015);
     }
 
     private playEtherealTone(freq: number, startTime: number, duration: number = 4.0, vol: number = 0.1) {
@@ -170,22 +173,26 @@ class AudioService {
         if (this.isMuted || !this.ensureContext()) return;
         const t = this.ctx!.currentTime;
 
-        // --- SÍLABA "LO..." (Acorde Dm7: místico y contemplativo) ---
-        const durationLo = 1.6;
-        const volLo = 0.08;
-        this.playVocalTone(146.83, t, durationLo, volLo, 'O');      // D3
-        this.playVocalTone(174.61, t, durationLo, volLo * 0.9, 'O'); // F3
-        this.playVocalTone(220.00, t, durationLo, volLo * 0.8, 'O'); // A3
-        this.playVocalTone(261.63, t, durationLo, volLo * 0.7, 'O'); // C4
+        // Motif memorable: escala pentatónica con repetición rítmica
+        // Patrón: nota grave → ascendente breve → repetición con brillo
+        const baseFreq = 220.0; // A3
+        const fifth = baseFreq * 1.498; // approx fifth
+        const octave = baseFreq * 2; // A4
 
-        // --- SÍLABA "...XAR" (Resolución en Quinta Justa D5: medieval/épica) ---
-        const startXar = 1.35; // Transición suave
-        const durationXar = 2.4;
-        const volXar = 0.095;
-        this.playVocalTone(146.83, t + startXar, durationXar, volXar, 'A');      // D3
-        this.playVocalTone(220.00, t + startXar, durationXar, volXar * 0.9, 'A'); // A3
-        this.playVocalTone(293.66, t + startXar, durationXar, volXar * 0.85, 'A');// D4
-        this.playVocalTone(440.00, t + startXar, durationXar, volXar * 0.7, 'A'); // A4
+        // "LOXAR" motif: 4 notas distintivas, con eco final
+        const notes = [
+            { freq: baseFreq, start: 0.00, dur: 0.45, vol: 0.10 },
+            { freq: fifth, start: 0.22, dur: 0.40, vol: 0.09 },
+            { freq: baseFreq * 1.26, start: 0.44, dur: 0.38, vol: 0.08 },
+            { freq: octave, start: 0.66, dur: 0.70, vol: 0.07 },
+        ];
+
+        for (const note of notes) {
+            this.playVocalTone(note.freq, t + note.start, note.dur, note.vol, note.freq < fifth ? 'O' : 'A');
+        }
+
+        // Eco final brillante
+        this.playEtherealTone(octave * 1.5, t + 0.9, 1.8, 0.04);
     }
 
     public playSuccess() {
