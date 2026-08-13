@@ -38,7 +38,7 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({ active, onChange, onO
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-16 bg-surface-dark/90 backdrop-blur-md border-r border-border-dark z-40 flex flex-col items-center py-3 gap-1">
+    <aside className="fixed left-0 top-0 h-screen w-16 bg-surface-dark/70 backdrop-blur-md border-r border-border-dark/60 z-40 flex flex-col items-center py-3 gap-1">
       <div className="mb-3">
         <span className="text-[10px] font-black tracking-widest text-accent">LOX</span>
       </div>

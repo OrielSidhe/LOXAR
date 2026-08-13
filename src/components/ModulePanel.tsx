@@ -14,7 +14,7 @@ const ModulePanel: React.FC<ModulePanelProps> = ({ title, active, onClose, child
 
   return (
     <div className={`fixed inset-0 z-30 flex items-center justify-center pointer-events-none ${className}`}>
-      <div className="pointer-events-auto w-full max-w-6xl max-h-[90vh] overflow-hidden bg-background/95 backdrop-blur-xl rounded-2xl border border-border-dark shadow-2xl flex flex-col animate-scale-in">
+      <div className="pointer-events-auto w-full max-w-6xl max-h-[90vh] overflow-hidden bg-background/80 backdrop-blur-xl rounded-2xl border border-border-dark shadow-2xl flex flex-col animate-scale-in">
         <div className="flex items-center justify-between p-4 border-b border-border-dark bg-surface-dark/50">
           <h2 className="text-lg font-bold text-white">{title}</h2>
           <button onClick={onClose} className="p-1 rounded-full text-text-secondary hover:text-white hover:bg-white/5 transition-colors">

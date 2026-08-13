@@ -50,6 +50,7 @@ const ToolsDashboard = lazy(() => import('./components/ToolsDashboard'));
 import SettingsModal from './components/SettingsModal';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
+import LanguageTreeCanvas from './components/LanguageTreeCanvas';
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -921,6 +922,11 @@ const App = () => {
                 </div>
 
                 <div className="flex flex-1 min-h-0 relative">
+                    <LanguageTreeCanvas
+                      activeModule={activeTab}
+                      onNodeClick={(nodeId) => setActiveTab(nodeId as any)}
+                    />
+
                     <VerticalSidebar
                       active={activeTab}
                       onChange={(id) => setActiveTab(id as any)}
