@@ -79,10 +79,10 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] J2. Añadir `build.rollupOptions.output.manualChunks` para reducir tamaño del bundle principal
 - [x] J3. Mejorar tooltips y accesibilidad en componentes de tabla y modales
 
-### Bloque K: Pulido final y cierre de ciclo (próximo en ejecutar)
-- [ ] K1. Revisar consistencia de tooltips en modales y formularios
-- [ ] K2. Añadir accesibilidad básica en vistas de herramientas (glosado/sound change)
-- [ ] K3. Preparar release candidate final y resumen de estado
+### Bloque K: Pulido final y cierre de ciclo (COMPLETADO)
+- [x] K1. Revisar consistencia de tooltips en modales y formularios
+- [x] K2. Añadir accesibilidad básica en vistas de herramientas (glosado/sound change)
+- [x] K3. Preparar release candidate final y resumen de estado
 
 ---
 
@@ -96,9 +96,7 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**Bloque K — Pulido final y cierre de ciclo**
-- K1. Revisar consistencia de tooltips en modales y formularios
-- K2. Añadir accesibilidad básica en vistas de herramientas (glosado/sound change)
-- K3. Preparar release candidate final y resumen de estado
+No hay tareas ejecutables nuevas pendientes en el auto-pilot.
+Los bloques A-K están cerrados. Próximo paso: validación runtime manual con `npm run tauri dev`.
 
 ---
