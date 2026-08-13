@@ -1,10 +1,13 @@
-import { loadSessionCache, saveSessionCache } from '@/services/sessionCache';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Properly mock Tauri invoke
-const mockInvoke = jest.fn();
-jest.mock('@tauri-apps/api/tauri', () => ({ invoke: mockInvoke }));
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn(),
+}));
 
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
+import { loadSessionCache, saveSessionCache } from '../../services/sessionCache';
+
+const mockInvoke = invoke as ReturnType<typeof vi.fn>;
 
 describe('sessionCache persistence', () => {
   beforeEach(() => {
@@ -19,7 +22,7 @@ describe('sessionCache persistence', () => {
   });
 
   it('should save and round-trip a session object', async () => {
-    mockInvoke.mockResolvedValueOnce(JSON.stringify({ activeTab: 'profile' }));
+    mockInvoke.mockResolvedValueOnce({ data: JSON.stringify({ activeTab: 'profile' }) });
     mockInvoke.mockResolvedValueOnce(undefined);
 
     const loaded = await loadSessionCache();
