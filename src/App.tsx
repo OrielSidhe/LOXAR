@@ -7,6 +7,7 @@ import { useLexicon } from './hooks/useLexicon';
 import { generateRootAndLexeme, normalizeText, completeEntry, correctSignificado } from './services/geminiService';
 import { filterParadigmsForFunction, generateInflectedForms } from './services/inflectionService';
 import { searchLexicon } from './services/ftsSearch';
+import { loadSessionCache, saveSessionCache } from './services/sessionCache';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode } from './types';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
@@ -42,6 +43,7 @@ import BatchActionToolbar from './components/BatchActionToolbar';
 import SplashScreen from './components/SplashScreen';
 import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const ToolsDashboard = lazy(() => import('./components/ToolsDashboard'));
 
@@ -67,17 +69,7 @@ const App = () => {
     const [isAppLoaded, setIsAppLoaded] = useState(false);
 
     // Navigation & View State
-    const getInitialTab = () => {
-    try {
-        const saved = localStorage.getItem('conlang_session_cache');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            if (parsed.activeTab) return parsed.activeTab;
-        }
-    } catch {}
-    return 'dashboard';
-};
-const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>(getInitialTab);
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('dashboard');
     const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
     
     // Workbench / Editor State
@@ -115,8 +107,9 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
 
     // Backups & Config
     const [backups, setBackups] = useState<string[]>([]);
-    const [exportPath, setExportPath] = useState<string | null>(localStorage.getItem('conlang_lexicon_manager_export_path'));
+    const [exportPath, setExportPath] = useState<string | null>(null);
     const [isTourActive, setIsTourActive] = useState(false);
+    const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
     const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
 
     // Tools sub-views
@@ -172,6 +165,27 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
         };
         validateEngine();
     }, []);
+
+    // Session cache: load persisted state on mount + save tab changes
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            try {
+                const cached = await loadSessionCache();
+                if (cancelled) return;
+                if (cached.activeTab) setActiveTab(cached.activeTab as any);
+                if (cached.exportPath) setExportPath(cached.exportPath);
+                setSessionCacheData({ tourCompleted: cached.tourCompleted });
+            } catch (e) {
+                console.error('Failed to load session cache', e);
+            }
+        })();
+        return () => { cancelled = true; };
+    }, []);
+
+    useEffect(() => {
+        saveSessionCache({ activeTab, exportPath }).catch(console.error);
+    }, [activeTab, exportPath]);
 
     // Widget inflection listener
     useEffect(() => {
@@ -278,7 +292,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
             setShowWelcome(false);
             
             // Auto tour for newcomers
-            const tourCompleted = localStorage.getItem('conlang_lexicon_manager_tour_completed');
+            const tourCompleted = sessionCacheData?.tourCompleted;
             const isFirstLexicon = lexiconHook.lexiconNames.length <= 1;
             if (isFirstLexicon && !tourCompleted) {
                 setTimeout(() => setIsTourActive(true), 500);
@@ -342,7 +356,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
         const path = await window.electronAPI.getDirectoryPath();
         if (path) {
             setExportPath(path);
-            localStorage.setItem('conlang_lexicon_manager_export_path', path);
+            saveSessionCache({ exportPath: path, activeTab }).catch(console.error);
             showNotification('Carpeta de exportación establecida.', 'success');
         }
     };
@@ -391,6 +405,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
             && window.confirm("¿Seguro? Se borrarán TODOS los léxicos.")
         ) {
             localStorage.clear();
+            saveSessionCache({ activeTab: 'dashboard', activeProfile: null, exportPath: null, tourCompleted: false }).catch(console.error);
             window.location.reload();
         }
     }, [confirmDiscardUnsaved]);
@@ -690,7 +705,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
 
     const onTourEnd = () => {
         setIsTourActive(false);
-        localStorage.setItem('conlang_lexicon_manager_tour_completed', 'true');
+        saveSessionCache({ tourCompleted: true, activeTab }).catch(console.error);
     };
 
     const handleOpenInterlinearGloss = useCallback(() => {
@@ -741,6 +756,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
     if (!isAppLoaded) return <LoadingOverlay message="Cargando léxicos..." />;
 
     return (
+        <ErrorBoundary>
         <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
             {!splashFinished && <SplashScreen onFinish={() => setSplashFinished(true)} />}
 
@@ -938,7 +954,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
                                     setEntryToInflect(entry);
                                     handleOpenModal('inflection_generator');
                                 }}
-                                onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term)).map(r => r.entry) : undefined}
+                                onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
                             />
                         )}
                         {activeTab === 'workbench' && (
@@ -1141,6 +1157,7 @@ const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' |
                 </div>
             </div>
         </div>
+        </ErrorBoundary>
     );
 };
 

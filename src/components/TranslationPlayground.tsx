@@ -1,9 +1,9 @@
 
 import { useState, memo, useRef, useEffect } from 'react';
 import { LexiconEntry, GrammarManifest, CorpusEntry } from '../types';
-import { conlangAgentChat } from '../services/geminiService.ts';
+import { conlangAgentChat, isAiAvailable } from '../services/geminiService.ts';
 import { realizeLexeme } from '../services/grammar';
-import { isAiAvailable } from '../services/grammarParser';
+import { translateWithLocalEngine } from '../services/localTranslator';
 import SparkleIcon from './icons/SparkleIcon';
 import XCircleIcon from './icons/XCircleIcon';
 import UserIcon from './icons/UserIcon';
@@ -70,17 +70,17 @@ const TranslationPlayground = ({ lexicon, grammar, corpus, onUpdateCorpus, onClo
         setIsLoading(true);
 
         const ai = await isAiAvailable();
-        const localGloss = buildLocalGloss(userMsg, lexicon, grammar);
+        const localTranslation = translateWithLocalEngine(userMsg, lexicon, grammar);
 
         try {
             if (!ai) {
-                const notice = 'Modo offline: la traducción libre necesita IA. Aquí tienes las formas conocidas del diccionario según tu gramática:';
-                const body = localGloss ? `${notice}\n${localGloss}` : `${notice}\n(No se encontraron palabras del diccionario en tu mensaje.)`;
+                const notice = 'Modo offline: usando motor local de traducción.';
+                const body = localTranslation ? `${notice}\n${localTranslation}` : `${notice}\n(No se encontraron palabras del diccionario en tu mensaje.)`;
                 setMessages(prev => [...prev, { role: 'assistant', content: body }]);
                 return;
             }
 
-            const groundedMsg = localGloss ? `${userMsg}\n\n[Contexto del diccionario local (motor de gramática)]\n${localGloss}` : userMsg;
+            const groundedMsg = localTranslation ? `${userMsg}\n\n[Contexto local]\n${localTranslation}` : userMsg;
             const response = await conlangAgentChat(groundedMsg, messages, lexicon, grammar);
             setMessages(prev => [...prev, { role: 'assistant', content: response.reply }]);
             if (response.analysis) setAnalysis(response.analysis);

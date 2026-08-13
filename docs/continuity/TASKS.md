@@ -1,5 +1,5 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-08-12 
+**Última actualización:** 2026-08-13 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
@@ -199,7 +199,16 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
-## 📌 Último Checkpoint
+## [2026-08-13] Checkpoint: sessionCache cableado a App.tsx + traductor offline + sound change avanzado
+**Rama:** `main`. **Motivo:** unificar estado de sesión, cerrar traducción offline usable y avanzar sound change.
+**Cambios:**
+- `src/services/sessionCache.ts`: ampliado a tabs, exportPath y tourCompleted; fallback browser con localStorage.
+- `src/App.tsx`: carga inicial desde `sessionCache`, persiste tab/exportPath/tourCompleted, elimina lecturas duplicadas de `localStorage` para sesión.
+- `src/services/localTranslator.ts` (NUEVO): motor local de traducción offline por matching + realización morfológica.
+- `src/components/TranslationPlayground.tsx`: usa traducción offline antes de caer a IA.
+- `src/services/soundChanger.ts`: reglas condicionales por entorno, aplicación por lote, snapshots para undo/redo.
+- `src/components/SoundChangeWorkbench.tsx`: presets, historial, aplicación al léxico y validación visual.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npx vitest run` 117 passed, `npm run build` OK.
 
 ## [2026-07-13 00:00] Checkpoint: Diccionario de categorías estándar (local-first)
 - Archivos tocados: `src/data/standardCategories.ts` (NUEVO), `src/App.tsx`,
