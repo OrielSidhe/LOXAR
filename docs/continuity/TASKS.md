@@ -103,6 +103,17 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
 ---
 
+## [2026-08-12] Checkpoint: Bloque J1 completado (reparar suite legacy de tests)
+**Rama:** `main`. **Motivo:** convertir tests legacy a Vitest y reparar assertions fallidas.
+**Cambios:**
+- `src/data/__tests__/taxonomy.test.ts`: corregidas 3 assertions (`resolveNodeType('lexema')`, `resolveConnectionType('constituyente')`, `getRootCategories().some(...)`).
+- `src/services/__tests__/sessionCache.test.ts`: reemplazados mocks Jest por `vi.mock` de Vitest, corregido import `@tauri-apps/api/core`.
+- `src/components/__tests__/IPAKeyboard.test.ts`, `src/hooks/__tests__/useUndoRedo.test.ts`, `src/services/phonology/__tests__/linter.test.ts`, `src/validation/__tests__/runtimeValidation.test.ts`, `src/services/__tests__/typologyProfile.test.ts`: convertidos a formato describe/test de Vitest.
+- Validaciones: `npx vitest run` = 23 test files, 116 passed.
+- Commiteado: `07834d0`.
+
+---
+
 ## [2026-08-12] Checkpoint: Bloque J3 completado (tooltips y accesibilidad)
 **Rama:** `main`. **Motivo:** mejorar usabilidad y accesibilidad en herramientas UI principales.
 **Cambios:**

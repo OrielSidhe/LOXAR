@@ -75,6 +75,7 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] I3. Optimizar `LexiconTable` para léxicos grandes (virtualización si aplica)
 
 ### Bloque J: Tests legacy y calidad (COMPLETADO)
+- [x] J1. Reparar suite legacy de tests para Vitest (taxonomy, sessionCache, IPAKeyboard, useUndoRedo, linter, runtimeValidation, typologyProfile)
 - [x] J2. Añadir `build.rollupOptions.output.manualChunks` para reducir tamaño del bundle principal
 - [x] J3. Mejorar tooltips y accesibilidad en componentes de tabla y modales
 

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-12T16:55:00.000Z",
+  "lastUpdated": "2026-08-12T18:21:00.000Z",
   "uiState": {
     "activeTab": "writing",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Ejecutar ciclo de avance LOXAR: mejorar tooltips y accesibilidad en ToolsDashboard, InterlinearGlossViewer y SoundChangeWorkbench, y actualizar continuidad.",
+    "lastPrompt": "Ejecutar ciclo de avance LOXAR: reparar suite legacy de tests para Vitest y actualizar continuidad.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Bloques A-J3 cerrados. Lazy loading aplicado, LexiconTable memoizada, bundle separado con manualChunks, tooltips y accesibilidad mejorados en herramientas UI, typecheck/build sin errores, auto-pilot actualizado. Próximo: Bloque K pulido final."
+  "sessionSummary": "Bloques A-J3 cerrados. Suite legacy reparada para Vitest (taxonomy, sessionCache, IPAKeyboard, useUndoRedo, linter, runtimeValidation, typologyProfile). npx vitest run = 23 test files, 116 passed. Lazy loading aplicado, LexiconTable memoizada, bundle separado con manualChunks, tooltips y accesibilidad mejorados en herramientas UI, typecheck/build sin errores, auto-pilot actualizado. Próximo: Bloque K pulido final."
 }
