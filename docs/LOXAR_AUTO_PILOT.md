@@ -7,7 +7,7 @@
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `60ed011`
+- Git inicializado y con commits; último commit `d7d5950`
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica
@@ -17,6 +17,7 @@
 - Estado de sesión unificado: `sessionCache` cableado a `App.tsx` con persistencia de tab/exportPath/tourCompleted
 - Herramientas UI: `InterlinearGlossViewer`, `SoundChangeWorkbench`, `NeographyText` integrados en `App.tsx`
 - CI/CD: GitHub Actions workflow para Windows
+- Experiencia de marca: jingle renovado, icono LOX, temas Midnight/Cyber/Amber/Forest, microinteracciones UI
 
 ---
 

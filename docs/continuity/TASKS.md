@@ -199,18 +199,15 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
-## [2026-08-13] Checkpoint: experiencia de marca + temas + observaciones SDD
-**Rama:** `main`. **Motivo:** hacer LOXAR más memorable y usable, y preparar el SDD con observaciones vivas.
-**Cambios:**
-- `docs/SDD_RUNTIME_OBSERVATIONS.md` (NUEVO): documento de observaciones runtime para el SDD.
-- `src/services/audioService.ts`: jingle de inicio más memorable y click más satisfactorio.
-- `src/components/icons/AppLogoIcon.tsx`: icono profesional LOX (cuadro + O + tache).
-- `src/services/themeService.ts` (NUEVO): temas Midnight, Cyber, Amber, Forest con persistencia en `localStorage`.
-- `src/components/Header.tsx`: selector de temas en header.
-- `src/components/Button.tsx` (NUEVO): botón unificado con variantes y microinteracciones.
-- `src/index.css`: mejoras visuales globales (botones, tabs, inputs, glow).
-- `src/App.tsx`: integración de temas y favicon/título dinámico.
-- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK.
+## [2026-08-13] Checkpoint: validación de integración UI y cierre de ciclo
+**Rama:** `main`. **Motivo:** verificar que FTS5, InterlinearGlossViewer y SoundChangeWorkbench están integrados en UI y que el bloque de validación completa está verde.
+**Cambios / Verificación:**
+- Integración UI confirmada:
+  - FTS5: `LexiconTable` consume `searchLexicon` desde `App.tsx` con `activeLexiconName`.
+  - `InterlinearGlossViewer`: integrado en tab `tools` mediante `activeToolView === 'interlinear-gloss'`.
+  - `SoundChangeWorkbench`: integrado en tab `tools` mediante `activeToolView === 'sound-change'`.
+- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK, `npx vitest run` 117 passed.
+- Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
 
 ## [2026-07-13 00:00] Checkpoint: Diccionario de categorías estándar (local-first)
 - Archivos tocados: `src/data/standardCategories.ts` (NUEVO), `src/App.tsx`,
