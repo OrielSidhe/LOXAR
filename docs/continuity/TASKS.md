@@ -199,6 +199,17 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-13] Checkpoint: validación de builds y empaquetado Tauri
+**Rama:** `main`. **Motivo:** cerrar el ciclo de avance confirmando que la integración UI y los empaquetados siguen verdes.
+**Cambios / Verificación:**
+- Integración UI confirmada:
+  - FTS5: `LexiconTable` consume `searchLexicon` desde `App.tsx` con `activeLexiconName`.
+  - `InterlinearGlossViewer`: integrado en tools mediante `activeToolView === 'interlinear-gloss'`.
+  - `SoundChangeWorkbench`: integrado en tools mediante `activeToolView === 'sound-change'`.
+- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK, `npm run tauri:build` OK.
+- `npm run tauri:build` generó instaladores: MSI y NSIS en `src-tauri/target/release/bundle/`.
+- Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
+
 ## [2026-08-13] Checkpoint: navegación vertical Harness/Canvas + Settings
 **Rama:** `main`. **Motivo:** transformar la navegación a formato Harness/Canvas con barra vertical de iconos y ventanas flotantes por módulo.
 **Cambios:**

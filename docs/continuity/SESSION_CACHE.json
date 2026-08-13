@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-13T06:20:00.000Z",
+  "lastUpdated": "2026-08-13T06:25:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Implementar navegación Harness/Canvas con VerticalSidebar y ModulePanel, y registrar objetivo en SDD.",
+    "lastPrompt": "Validar integración UI de FTS5, InterlinearGlossViewer y SoundChangeWorkbench, y correr tauri:build.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Reemplazada navegación horizontal por VerticalSidebar + ModulePanel flotantes. Agregado objetivo Harness/Canvas en SDD. Validaciones: lint OK, typecheck 0 errores, build OK. Próximo: runtime manual con npm run tauri dev."
+  "sessionSummary": "Verificadas integraciones UI de FTS5, InterlinearGlossViewer y SoundChangeWorkbench. Validaciones: lint OK, typecheck 0 errores, build OK, tauri:build OK con MSI y NSIS generados. Próximo: runtime manual con npm run tauri dev y observaciones en SDD."
 }
