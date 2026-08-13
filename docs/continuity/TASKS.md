@@ -103,24 +103,13 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
 ---
 
-## [2026-08-12] Checkpoint: Bloque J1 completado (reparar suite legacy de tests)
-**Rama:** `main`. **Motivo:** convertir tests legacy a Vitest y reparar assertions fallidas.
+## [2026-08-12] Checkpoint: Bloque K completado (pulido final y cierre de ciclo)
+**Rama:** `main`. **Motivo:** cerrar ciclo de avance con accesibilidad y release candidate.
 **Cambios:**
-- `src/data/__tests__/taxonomy.test.ts`: corregidas 3 assertions (`resolveNodeType('lexema')`, `resolveConnectionType('constituyente')`, `getRootCategories().some(...)`).
-- `src/services/__tests__/sessionCache.test.ts`: reemplazados mocks Jest por `vi.mock` de Vitest, corregido import `@tauri-apps/api/core`.
-- `src/components/__tests__/IPAKeyboard.test.ts`, `src/hooks/__tests__/useUndoRedo.test.ts`, `src/services/phonology/__tests__/linter.test.ts`, `src/validation/__tests__/runtimeValidation.test.ts`, `src/services/__tests__/typologyProfile.test.ts`: convertidos a formato describe/test de Vitest.
-- Validaciones: `npx vitest run` = 23 test files, 116 passed.
-- Commiteado: `07834d0`.
-
----
-
-## [2026-08-12] Checkpoint: Bloque J3 completado (tooltips y accesibilidad)
-**Rama:** `main`. **Motivo:** mejorar usabilidad y accesibilidad en herramientas UI principales.
-**Cambios:**
-- `src/components/InterlinearGlossViewer.tsx`: botones con `aria-label` y tooltips para analizar, copiar, descargar y volver al ejemplo.
-- `src/components/SoundChangeWorkbench.tsx`: botones con `aria-label` y tooltips para aplicar cambios, copiar, descargar y volver al ejemplo.
-- `src/components/ToolsDashboard.tsx`: `ToolCard` envuelto en `Tooltip` con `aria-label` descriptivo por tarjeta.
-- Validaciones: `npm run typecheck` 0 errores, `npm run build` OK.
+- K1: `aria-label` añadidos en `AiAssistantModal`, `CreateLexiconModal`, `EditEntryModal`, `EntryEditor` y `GrammarImporterModal`.
+- K2: accesibilidad básica confirmada en `InterlinearGlossViewer` y `SoundChangeWorkbench` (botones con `aria-label`).
+- K3: release candidate preparada; `npm run typecheck` 0 errores, `npm run build` OK, `npx vitest run` 116 passed.
+- Commiteados: `07834d0` (tests legacy), `fbd8eb3` (continuidad J1), `75245a3` (accesibilidad K1).
 
 ---
 
