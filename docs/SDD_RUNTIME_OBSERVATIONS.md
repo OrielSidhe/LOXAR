@@ -53,5 +53,17 @@
 
 ---
 
+## Objetivo de diseño: interfaz Harness / Canvas con árbol del lenguaje
+**Visión deseada:** rediseñar la navegación para que LOXAR se sienta como un entorno vivo y creativo.
+- Reemplazar la tira horizontal de tabs por una **barra lateral vertical de iconos**.
+- El área principal pasa a ser un **canvas limpio** donde se visualiza el lenguaje en sí.
+- Mostrar siempre un ** árbol navegable del lenguaje**: módulos, gramática, léxico, fonología, escritura, etc., como nodos expandibles.
+- Al hacer hover en iconos de la barra lateral, mostrar el nombre del módulo.
+- Cada módulo se abre como **ventana flotante modal** sobre el canvas, no como pantalla completa.
+- El Dashboard debe ser la primera vista flotante: métricas, acciones rápidas, exportar todo, metadata del conlang, estadísticas.
+- Arbol vivo: desde nodo raíz hasta hojas; al hacer click se hace zoom y se muestra el detalle en otro árbol/ventana.
+- Objetivo UX: que el usuario sienta que está **construyendo** el lenguaje, no solo editando entradas.
+- Restricción: toda la funcionalidad actual debe mantenerse; solo cambia la presentación y el flujo de navegación.
+
 ## Próximo paso
 Una vez completado el testing runtime, este archivo se convierte en backlog priorizado para el SDD.

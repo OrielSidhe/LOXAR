@@ -199,15 +199,15 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
-## [2026-08-13] Checkpoint: SettingsModal flotante y continuidad de marca
-**Rama:** `main`. **Motivo:** centralizar preferencias en una ventana flotante reutilizable y mantener el flujo de avance.
+## [2026-08-13] Checkpoint: navegación vertical Harness/Canvas + Settings
+**Rama:** `main`. **Motivo:** transformar la navegación a formato Harness/Canvas con barra vertical de iconos y ventanas flotantes por módulo.
 **Cambios:**
-- `src/components/SettingsModal.tsx` (NUEVO): modal flotante con secciones Apariencia, IA, Backup/exportación, Comportamiento, Rendimiento, Datos y Avanzado; persiste en `sessionCache`.
-- `src/components/Header.tsx`: agregado botón de Settings y prop `onOpenSettings`.
-- `src/App.tsx`: agregado estado `showSettings` y render condicional de `SettingsModal`.
-- `src/services/themeService.ts`: `applyTheme` ahora acepta `Theme | ThemeId`.
-- `src/services/sessionCache.ts`: extendido con `themeId` y `soundsEnabled`.
-- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK, `npx vitest run src/services/grammar/__tests__` 83 passed.
+- `src/components/VerticalSidebar.tsx` (NUEVO): barra lateral vertical fija con hover tooltip y estados activos.
+- `src/components/ModulePanel.tsx` (NUEVO): panel flotante reutilizable para abrir módulos sobre el canvas.
+- `src/App.tsx`: reemplazada tira horizontal de tabs por `VerticalSidebar`; cada módulo se renderiza dentro de `ModulePanel`.
+- `src/components/Header.tsx` y `src/App.tsx`: integrado `SettingsModal` flotante accesible desde header/sidebar.
+- `docs/SDD_RUNTIME_OBSERVATIONS.md`: registrado objetivo oficial de diseño Harness/Canvas con árbol navegable del lenguaje.
+- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
 
 ## [2026-08-13] Checkpoint: validación de integración UI y cierre de ciclo
