@@ -106,11 +106,12 @@ export const themes: Record<ThemeId, Theme> = {
 
 export const defaultTheme: ThemeId = 'midnight';
 
-export function applyTheme(theme: Theme) {
+export function applyTheme(theme: Theme | ThemeId) {
   const root = document.documentElement;
   if (!root) return;
-  root.setAttribute('data-theme', theme.id);
-  Object.entries(theme.colors).forEach(([key, value]) => {
+  const resolved = typeof theme === 'string' ? themes[theme] : theme;
+  root.setAttribute('data-theme', resolved.id);
+  Object.entries(resolved.colors).forEach(([key, value]) => {
     root.style.setProperty(`--color-${key}`, value);
   });
 }

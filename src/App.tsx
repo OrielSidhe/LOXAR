@@ -47,6 +47,7 @@ import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 const ToolsDashboard = lazy(() => import('./components/ToolsDashboard'));
+import SettingsModal from './components/SettingsModal';
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -68,6 +69,7 @@ const App = () => {
     const [loadingMessage, setLoadingMessage] = useState("");
     const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
     const [isAppLoaded, setIsAppLoaded] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
 
     // Navigation & View State
     const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('dashboard');
@@ -879,7 +881,11 @@ const App = () => {
                     <AiSettingsModal onClose={handleCloseModal} />
                 )}
 
-                <Header wordsAddedCount={lexiconHook.wordsAddedSinceSave} onOpenWidget={() => window.electronAPI.openWidget()} onShowTour={handleStartTour} themeId={themeId} onThemeChange={(id) => setThemeId(id as any)} />
+                {showSettings && (
+                    <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
+                )}
+
+                <Header wordsAddedCount={lexiconHook.wordsAddedSinceSave} onOpenWidget={() => window.electronAPI.openWidget()} onShowTour={handleStartTour} onOpenSettings={() => setShowSettings(true)} themeId={themeId} onThemeChange={(id) => setThemeId(id as any)} />
 
                 <div className="flex items-center justify-between px-6 py-4 bg-surface-dark/90 backdrop-blur-md border-b border-border-dark flex-wrap gap-4 z-30 relative">
                     <LexiconSelector 

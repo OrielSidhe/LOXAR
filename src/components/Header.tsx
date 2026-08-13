@@ -1,11 +1,13 @@
 import React from 'react';
 import WidgetIcon from './icons/WidgetIcon';
 import InfoIcon from './icons/InfoIcon';
+import SettingsIcon from './icons/SettingsIcon';
 
 interface HeaderProps {
   wordsAddedCount: number;
   onOpenWidget: () => void;
   onShowTour?: () => void;
+  onOpenSettings?: () => void;
   themeId: string;
   onThemeChange: (themeId: string) => void;
 }
@@ -17,7 +19,7 @@ const themes = [
   { id: 'forest', label: 'Forest', dot: '#22c55e' },
 ];
 
-const Header = ({ wordsAddedCount, onOpenWidget, onShowTour, themeId, onThemeChange }: HeaderProps) => {
+const Header = ({ wordsAddedCount, onOpenWidget, onShowTour, onOpenSettings, themeId, onThemeChange }: HeaderProps) => {
   return (
     <header className="bg-surface p-4 shadow-md border-b border-subtle">
       <div className="container mx-auto flex items-center justify-between">
@@ -41,6 +43,17 @@ const Header = ({ wordsAddedCount, onOpenWidget, onShowTour, themeId, onThemeCha
                 <WidgetIcon className="h-5 w-5" />
                 <span className="hidden md:inline">Widget</span>
             </button>
+
+            {onOpenSettings && (
+                <button
+                    onClick={onOpenSettings}
+                    className="flex items-center gap-2 px-3 py-2 bg-background/50 text-text-secondary hover:text-white rounded-md hover:bg-white/5 transition-all font-bold text-sm border border-border-dark"
+                    title="Configuración"
+                >
+                    <SettingsIcon className="h-5 w-5" />
+                    <span className="hidden md:inline">Settings</span>
+                </button>
+            )}
 
             <div className="flex items-center gap-2">
                 {themes.map((theme) => (

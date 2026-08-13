@@ -199,6 +199,17 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-13] Checkpoint: SettingsModal flotante y continuidad de marca
+**Rama:** `main`. **Motivo:** centralizar preferencias en una ventana flotante reutilizable y mantener el flujo de avance.
+**Cambios:**
+- `src/components/SettingsModal.tsx` (NUEVO): modal flotante con secciones Apariencia, IA, Backup/exportación, Comportamiento, Rendimiento, Datos y Avanzado; persiste en `sessionCache`.
+- `src/components/Header.tsx`: agregado botón de Settings y prop `onOpenSettings`.
+- `src/App.tsx`: agregado estado `showSettings` y render condicional de `SettingsModal`.
+- `src/services/themeService.ts`: `applyTheme` ahora acepta `Theme | ThemeId`.
+- `src/services/sessionCache.ts`: extendido con `themeId` y `soundsEnabled`.
+- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK, `npx vitest run src/services/grammar/__tests__` 83 passed.
+- Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
+
 ## [2026-08-13] Checkpoint: validación de integración UI y cierre de ciclo
 **Rama:** `main`. **Motivo:** verificar que FTS5, InterlinearGlossViewer y SoundChangeWorkbench están integrados en UI y que el bloque de validación completa está verde.
 **Cambios / Verificación:**

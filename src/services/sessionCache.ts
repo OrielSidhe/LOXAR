@@ -5,6 +5,8 @@ export interface SessionCache {
   activeProfile?: string | null;
   exportPath?: string | null;
   tourCompleted?: boolean;
+  themeId?: string;
+  soundsEnabled?: boolean;
 }
 
 const STORE_KEY = 'loxar-session-cache';
