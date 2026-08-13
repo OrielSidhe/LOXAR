@@ -924,6 +924,9 @@ const App = () => {
                 <div className="flex flex-1 min-h-0 relative">
                     <LanguageTreeCanvas
                       activeModule={activeTab}
+                      grammar={activeGrammar}
+                      lexicon={activeLexicon}
+                      profile={activeProfile}
                       onNodeClick={(nodeId) => setActiveTab(nodeId as any)}
                     />
 

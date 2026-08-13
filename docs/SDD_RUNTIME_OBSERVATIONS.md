@@ -65,5 +65,16 @@
 - Objetivo UX: que el usuario sienta que está **construyendo** el lenguaje, no solo editando entradas.
 - Restricción: toda la funcionalidad actual debe mantenerse; solo cambia la presentación y el flujo de navegación.
 
+## Unificación del canvas de gramática + árbol del lenguaje
+**Cambio estructural:** el antiguo canvas/grafo de gramática y el árbol del lenguaje ahora son una sola capa: `LanguageTreeCanvas`.
+- `LanguageTreeCanvas` renderiza el **árbol base** (fonología, morfología, sintaxis, léxico, semántica, neografía) como fondo permanente.
+- Sobre ese árbol, inyecta un **grafo vivo** derivado del `grammar` activo y el `lexicon` cargado:
+  - Categorías gramaticales.
+  - Reglas de morphology/syntax/phonology.
+  - Excepciones.
+  - Conteo de entradas por categoría desde el léxico.
+- Esto reemplaza el diagrama/flujo separado anterior: ya no hay dos visiones distintas, hay una sola **vista de lenguaje**.
+- Los paneles flotantes (`ModulePanel`) se abren sobre este canvas sin taparlo completamente, conservando la sensación de profundidad.
+
 ## Próximo paso
 Una vez completado el testing runtime, este archivo se convierte en backlog priorizado para el SDD.
