@@ -10,6 +10,7 @@ import WrenchIcon from './icons/WrenchIcon';
 import WandIcon from './icons/WandIcon';
 import GitMergeIcon from './icons/GitMergeIcon';
 import BookOpenIcon from './icons/BookOpenIcon';
+import Tooltip from './Tooltip';
 import { WORD_LISTS } from '../data/wordLists';
 
 interface ToolsDashboardProps {
@@ -30,20 +31,23 @@ interface ToolsDashboardProps {
     onStartTour: () => void;
 }
 
-const ToolCard = ({ icon, title, description, onClick, disabled, accentColor = 'text-accent' }: any) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        className="bg-surface-dark border border-border-dark p-4 rounded-xl flex items-start gap-4 text-left transition-all hover:bg-surface-light/10 hover:border-primary/50 hover:-translate-y-1 hover:shadow-lg group w-full"
-    >
-        <div className={`p-3 rounded-lg bg-background-darker/50 ${accentColor} group-hover:bg-primary/20 group-hover:text-primary transition-colors`}>
-            {icon}
-        </div>
-        <div>
-            <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">{title}</h3>
-            <p className="text-sm text-text-secondary leading-relaxed mt-1">{description}</p>
-        </div>
-    </button>
+const ToolCard = ({ icon, title, description, onClick, disabled, accentColor = 'text-accent', tooltip }: any) => (
+    <Tooltip text={tooltip || description}>
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            className="bg-surface-dark border border-border-dark p-4 rounded-xl flex items-start gap-4 text-left transition-all hover:bg-surface-light/10 hover:border-primary/50 hover:-translate-y-1 hover:shadow-lg group w-full"
+            aria-label={`${title}. ${tooltip || description}`}
+        >
+            <div className={`p-3 rounded-lg bg-background-darker/50 ${accentColor} group-hover:bg-primary/20 group-hover:text-primary transition-colors`}>
+                {icon}
+            </div>
+            <div>
+                <h3 className="text-lg font-bold text-white group-hover:text-primary transition-colors">{title}</h3>
+                <p className="text-sm text-text-secondary leading-relaxed mt-1">{description}</p>
+            </div>
+        </button>
+    </Tooltip>
 );
 
 const ToolsDashboard = ({
@@ -77,6 +81,7 @@ const ToolsDashboard = ({
                         onClick={onCompleteFunctions}
                         disabled={disabled || stats.needsFunction === 0}
                         accentColor="text-purple-400"
+                        tooltip="Completa automáticamente las funciones gramaticales faltantes del léxico activo."
                     />
                     <ToolCard
                         icon={<AutoFixIcon className="w-6 h-6" />}
@@ -85,6 +90,7 @@ const ToolsDashboard = ({
                         onClick={onFillMissing}
                         disabled={disabled}
                         accentColor="text-pink-400"
+                        tooltip="Genera raíces, lexemas y definiciones para todas las entradas incompletas del léxico activo."
                     />
                     <ToolCard
                         icon={<SparkleIcon className="w-6 h-6" />}
@@ -93,6 +99,7 @@ const ToolsDashboard = ({
                         onClick={onOpenTranslator}
                         disabled={disabled}
                         accentColor="text-indigo-400"
+                        tooltip="Traduce textos entre tu conlang y el idioma principal usando IA."
                     />
                 </div>
             </section>
@@ -110,6 +117,7 @@ const ToolsDashboard = ({
                         onClick={onOpenProfile}
                         disabled={disabled}
                         accentColor="text-blue-400"
+                        tooltip="Configura fonemas, sílabas y reglas generativas para generar palabras."
                     />
                     <ToolCard
                         icon={<PenToolIcon className="w-6 h-6" />}
@@ -118,6 +126,7 @@ const ToolsDashboard = ({
                         onClick={onOpenNeography}
                         disabled={disabled}
                         accentColor="text-cyan-400"
+                        tooltip="Diseña y administra sistemas de escritura, glifos y reglas de romanización."
                     />
                     <ToolCard
                         icon={<GitMergeIcon className="w-6 h-6" />}
@@ -126,6 +135,7 @@ const ToolsDashboard = ({
                         onClick={onOpenInflectionWorkshop}
                         disabled={disabled}
                         accentColor="text-emerald-400"
+                        tooltip="Define y edita paradigmas de flexión y reglas fonológicas para el léxico."
                     />
                     <ToolCard
                         icon={<BookOpenIcon className="w-6 h-6" />}
@@ -134,6 +144,7 @@ const ToolsDashboard = ({
                         onClick={onOpenGrammar}
                         disabled={disabled}
                         accentColor="text-purple-400"
+                        tooltip="Administra la gramática del conlang: tipología, roles y reglas sintácticas."
                     />
                     <ToolCard
                         icon={<PenToolIcon className="w-6 h-6" />}
@@ -142,6 +153,7 @@ const ToolsDashboard = ({
                         onClick={onOpenInterlinearGloss}
                         disabled={disabled}
                         accentColor="text-teal-400"
+                        tooltip="Genera glosas interlineales estilo Leipzig a partir de oraciones y el léxico activo."
                     />
                     <ToolCard
                         icon={<WandIcon className="w-6 h-6" />}
@@ -150,6 +162,7 @@ const ToolsDashboard = ({
                         onClick={onOpenSoundChangeWorkbench}
                         disabled={disabled}
                         accentColor="text-amber-400"
+                        tooltip="Aplica sound changes a lexemas y raíces usando reglas personalizadas."
                     />
 
                     <ToolCard
@@ -159,6 +172,7 @@ const ToolsDashboard = ({
                         onClick={onManageFunctions}
                         disabled={disabled}
                         accentColor="text-yellow-400"
+                        tooltip="Organiza, fusiona o elimina categorías gramaticales del léxico."
                     />
                     <ToolCard
                         icon={<HyphenIcon className="w-6 h-6" />}
@@ -167,6 +181,7 @@ const ToolsDashboard = ({
                         onClick={onManageHyphens}
                         disabled={disabled}
                         accentColor="text-orange-400"
+                        tooltip="Controla el uso de guiones y separadores en las entradas del léxico."
                     />
                 </div>
             </section>

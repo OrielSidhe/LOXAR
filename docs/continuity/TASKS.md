@@ -101,6 +101,17 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
+---
+
+## [2026-08-12] Checkpoint: Bloque J3 completado (tooltips y accesibilidad)
+**Rama:** `main`. **Motivo:** mejorar usabilidad y accesibilidad en herramientas UI principales.
+**Cambios:**
+- `src/components/InterlinearGlossViewer.tsx`: botones con `aria-label` y tooltips para analizar, copiar, descargar y volver al ejemplo.
+- `src/components/SoundChangeWorkbench.tsx`: botones con `aria-label` y tooltips para aplicar cambios, copiar, descargar y volver al ejemplo.
+- `src/components/ToolsDashboard.tsx`: `ToolCard` envuelto en `Tooltip` con `aria-label` descriptivo por tarjeta.
+- Validaciones: `npm run typecheck` 0 errores, `npm run build` OK.
+
+---
 
 **Tareas del plan (`docs/superpowers/plans/2026-07-16-loxar-continuity-implementation-plan.md`):**
 1. **T1 SESSION_CACHE → runtime:** `src/services/sessionCache.ts` con `invoke` de `@tauri-apps/api/core` (v2). Interface `SessionCache { activeTab; activeProfile }`. Test: pass.

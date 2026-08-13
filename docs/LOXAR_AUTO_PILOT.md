@@ -74,9 +74,14 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] I2. Lazy loading de modales y componentes pesados (`GrammarImporterModal`, `ToolsDashboard`)
 - [x] I3. Optimizar `LexiconTable` para léxicos grandes (virtualización si aplica)
 
-### Bloque J: Tests legacy y calidad (en ejecución)
+### Bloque J: Tests legacy y calidad (COMPLETADO)
 - [x] J2. Añadir `build.rollupOptions.output.manualChunks` para reducir tamaño del bundle principal
-- [ ] J3. Mejorar tooltips y accesibilidad en componentes de tabla y modales
+- [x] J3. Mejorar tooltips y accesibilidad en componentes de tabla y modales
+
+### Bloque K: Pulido final y cierre de ciclo (próximo en ejecutar)
+- [ ] K1. Revisar consistencia de tooltips en modales y formularios
+- [ ] K2. Añadir accesibilidad básica en vistas de herramientas (glosado/sound change)
+- [ ] K3. Preparar release candidate final y resumen de estado
 
 ---
 
@@ -90,7 +95,9 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**Bloque J — Tests legacy y calidad**
-- J3. Mejorar tooltips y accesibilidad en componentes de tabla y modales
+**Bloque K — Pulido final y cierre de ciclo**
+- K1. Revisar consistencia de tooltips en modales y formularios
+- K2. Añadir accesibilidad básica en vistas de herramientas (glosado/sound change)
+- K3. Preparar release candidate final y resumen de estado
 
 ---

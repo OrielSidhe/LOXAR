@@ -78,6 +78,7 @@ const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon
           type="button"
           onClick={handleAnalyze}
           className="rounded bg-black px-3 py-1.5 text-sm text-white"
+          aria-label="Analizar oración"
         >
           Glosar
         </button>
@@ -86,6 +87,7 @@ const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon
           onClick={handleResetExample}
           className="rounded border border-subtle px-3 py-1.5 text-sm text-text-secondary hover:text-white hover:border-accent transition-colors"
           title="Volver al ejemplo"
+          aria-label="Volver al ejemplo"
         >
           Volver al ejemplo
         </button>
@@ -96,6 +98,7 @@ const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon
               onClick={handleCopy}
               className="rounded border border-subtle px-3 py-1.5 text-sm text-text-secondary hover:text-white hover:border-accent transition-colors"
               title="Copiar glosado"
+              aria-label="Copiar glosado"
             >
               <ClipboardIcon className="h-4 w-4" />
             </button>
@@ -104,6 +107,7 @@ const InterlinearGlossViewer: React.FC<InterlinearGlossViewerProps> = ({ lexicon
               onClick={handleDownload}
               className="rounded border border-subtle px-3 py-1.5 text-sm text-text-secondary hover:text-white hover:border-accent transition-colors"
               title="Descargar glosado"
+              aria-label="Descargar glosado"
             >
               <DownloadIcon className="h-4 w-4" />
             </button>

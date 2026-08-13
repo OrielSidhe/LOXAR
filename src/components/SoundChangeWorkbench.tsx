@@ -119,6 +119,7 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
             type="button"
             onClick={handleApply}
             className="w-full rounded bg-black px-3 py-1.5 text-sm text-white"
+            aria-label="Aplicar cambios de sonido"
           >
             Aplicar cambios
           </button>
@@ -126,6 +127,8 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
             type="button"
             onClick={handleResetExample}
             className="w-full rounded border border-subtle px-3 py-1.5 text-xs text-text-secondary hover:text-white hover:border-accent transition-colors"
+            title="Volver al ejemplo"
+            aria-label="Volver al ejemplo"
           >
             Volver al ejemplo
           </button>
@@ -136,6 +139,7 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
                 onClick={handleCopy}
                 className="rounded border border-subtle px-3 py-1.5 text-xs text-text-secondary hover:text-white hover:border-accent transition-colors"
                 title="Copiar resultado"
+                aria-label="Copiar resultado"
               >
                 <ClipboardIcon className="h-4 w-4" />
               </button>
@@ -144,6 +148,7 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon }) 
                 onClick={handleDownload}
                 className="rounded border border-subtle px-3 py-1.5 text-xs text-text-secondary hover:text-white hover:border-accent transition-colors"
                 title="Descargar resultado"
+                aria-label="Descargar resultado"
               >
                 <DownloadIcon className="h-4 w-4" />
               </button>
