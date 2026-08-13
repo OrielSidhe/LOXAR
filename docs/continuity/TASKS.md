@@ -112,16 +112,13 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - Commiteados: `07834d0` (tests legacy), `fbd8eb3` (continuidad J1), `75245a3` (accesibilidad K1).
 
 ---
-## [2026-08-12] Checkpoint: Re-verificación de ciclo A-K sin cambios pendientes
-**Rama:** `main`. **Motivo:** re-ejecutar ciclo de avance solicitado por el usuario.
-**Verificaciones:**
-- `npm run typecheck` = 0 errores.
-- `npm run lint` = OK.
-- `npx vitest run` = 23 test files, 116 passed.
-- `npm run build` = OK.
-- `npm run tauri:build` = OK (MSI + NSIS generados).
-- Integraciones UI confirmadas: FTS5 en `LexiconTable`, `InterlinearGlossViewer` y `SoundChangeWorkbench` cableados en `App.tsx` bajo `activeToolView`.
-**Estado:** no hay tareas ejecutables nuevas en `LOXAR_AUTO_PILOT.md`; bloques A-K cerrados. Próximo paso sigue siendo validación runtime manual con `npm run tauri dev`.
+## [2026-08-12] Checkpoint: Sincronización final de auto-pilot y continuidad
+**Rama:** `main`. **Motivo:** alinear documento de auto-pilot con el estado real cerrado de los bloques A-K.
+**Cambios:**
+- `docs/LOXAR_AUTO_PILOT.md`: se actualizó la sección `## Próxima tarea activa` para reflejar que no hay tareas ejecutables nuevas pendientes.
+- `docs/continuity/SESSION_CACHE.json`: actualizado el resumen de sesión al estado actual.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, `npm run tauri:build` OK, `npx vitest run` 116 passed.
+- Commiteado: `7569914`.
 
 ---
 
