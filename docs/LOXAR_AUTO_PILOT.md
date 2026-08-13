@@ -5,12 +5,16 @@
 ---
 
 ## Estado actual
-- Repo limpio, artefactos en `_ARTIFACTS_NO_GIT/`, build/typecheck OK
-- `tauri:dev` y `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `0402834`
-- Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 y Web Worker
+- Repo limpio, build/typecheck/lint verdes
+- `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
+- Git inicializado y con commits; último commit `60ed011`
+- Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
-- Gramatización real: motor M1-M8 implementado, tests pasando, `GrammarImporterModal` y `SyntaxCanvas` cableados a `inductFromText`
+- Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica
+- Gramática avanzada: motor M1-M8 implementado, tests pasando, `GrammarImporterModal` y `SyntaxCanvas` cableados a `inductFromText`
+- Sound change avanzado: reglas condicionales por entorno, lote al léxico, historial undo/redo y presets
+- Robustez: `ErrorBoundary` en `App.tsx` para recuperación de crashes
+- Estado de sesión unificado: `sessionCache` cableado a `App.tsx` con persistencia de tab/exportPath/tourCompleted
 - Herramientas UI: `InterlinearGlossViewer`, `SoundChangeWorkbench`, `NeographyText` integrados en `App.tsx`
 - CI/CD: GitHub Actions workflow para Windows
 
