@@ -646,6 +646,7 @@ const EntryEditor = (props: EntryEditorProps) => {
                                 onClick={() => setShowIPA(!showIPA)}
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-surface border border-subtle hover:bg-accent hover:text-white transition-colors"
                                 title="Toggle IPA keyboard"
+                                aria-label={showIPA ? 'Ocultar teclado IPA' : 'Mostrar teclado IPA'}
                             >
                                 <span className="font-mono">/ɑ/</span>
                                 {showIPA ? 'Hide IPA' : 'IPA'}

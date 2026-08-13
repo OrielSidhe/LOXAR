@@ -98,8 +98,8 @@ const EditEntryModal = ({ entry, onClose, onSave, showNotification, customFuncti
                         {error && <p className="text-danger text-sm">{error}</p>}
                     </main>
                     <footer className="p-4 flex justify-end gap-4 border-t border-subtle">
-                        <button type="button" onClick={onClose} className="px-4 py-2 bg-subtle text-text-primary font-semibold rounded-md shadow-sm hover:bg-gray-600 transition-colors">Cancelar</button>
-                        <button type="submit" className="px-6 py-2 bg-accent text-white font-semibold rounded-md shadow-lg hover:bg-accent-hover transition-colors">Guardar Cambios</button>
+                        <button type="button" onClick={onClose} className="px-4 py-2 bg-subtle text-text-primary font-semibold rounded-md shadow-sm hover:bg-gray-600 transition-colors" aria-label="Cancelar edición">Cancelar</button>
+                        <button type="submit" className="px-6 py-2 bg-accent text-white font-semibold rounded-md shadow-lg hover:bg-accent-hover transition-colors" aria-label="Guardar cambios de la entrada">Guardar Cambios</button>
                     </footer>
                 </form>
             </div>

@@ -177,6 +177,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                         <button
                             onClick={() => setActiveTab('raw')}
                             className={`px-4 py-2 rounded-t-lg text-sm font-medium flex items-center gap-2 transition-colors ${activeTab === 'raw' ? 'bg-surface text-accent border-t border-x border-subtle' : 'text-text-secondary hover:text-text-primary'}`}
+                            aria-label="Ver texto original de la gramática"
                         >
                             <FileIcon className="h-4 w-4" /> Texto Original
                         </button>
@@ -184,6 +185,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                             onClick={() => setActiveTab('preview')}
                             disabled={!analysisResult}
                             className={`px-4 py-2 rounded-t-lg text-sm font-medium flex items-center gap-2 transition-colors ${activeTab === 'preview' ? 'bg-surface text-accent border-t border-x border-subtle' : 'text-text-secondary hover:text-text-primary disabled:opacity-50'}`}
+                            aria-label="Ver estructura detectada de la gramática"
                         >
                             <CodeIcon className="h-4 w-4" /> Estructura Detectada
                         </button>

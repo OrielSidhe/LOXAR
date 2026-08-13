@@ -35,6 +35,7 @@ const AiAssistantModal = ({ onClose, onCompleteCategories, onFillMissing, stats,
                         onClick={onCompleteCategories}
                         disabled={disabled || stats.needsCategory === 0}
                         className="bg-background p-4 rounded-lg flex items-center gap-4 text-left w-full transition-colors focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed hover:bg-subtle focus:ring-2 focus:ring-accent"
+                        aria-label={`Completar categorías. ${stats.needsCategory} entradas necesitan categoría gramatical.`}
                     >
                         <div className="text-accent bg-accent/20 p-2 rounded-md"><SparkleIcon className="h-6 w-6"/></div>
                         <div className="flex-grow">
@@ -46,6 +47,7 @@ const AiAssistantModal = ({ onClose, onCompleteCategories, onFillMissing, stats,
                         onClick={onFillMissing}
                         disabled={disabled || (stats.totalIncomplete === 0 && stats.needsCategory === 0)}
                         className="bg-background p-4 rounded-lg flex items-center gap-4 text-left w-full transition-colors focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed hover:bg-subtle focus:ring-2 focus:ring-accent"
+                        aria-label="Completar todo con IA. Rellena categorías, genera lexemas y raíces faltantes."
                     >
                          <div className="text-accent bg-accent/20 p-2 rounded-md"><AutoFixIcon className="h-6 w-6"/></div>
                         <div className="flex-grow">

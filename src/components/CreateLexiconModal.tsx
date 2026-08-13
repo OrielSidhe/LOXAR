@@ -91,12 +91,14 @@ const CreateLexiconModal = ({ onClose, onCreate }: CreateLexiconModalProps) => {
                             type="button"
                             onClick={onClose}
                             className="px-4 py-2 bg-subtle text-text-primary font-semibold rounded-md shadow-sm hover:bg-gray-600 transition-colors"
+                            aria-label="Cancelar creación de léxico"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             className="px-6 py-2 bg-accent text-white font-semibold rounded-md shadow-lg hover:bg-accent-hover transition-colors flex items-center gap-2"
+                            aria-label="Crear nuevo léxico"
                         >
                             <PlusIcon className="h-5 w-5" />
                             Crear Léxico
