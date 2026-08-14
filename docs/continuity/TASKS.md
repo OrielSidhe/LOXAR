@@ -1,5 +1,5 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-08-13 
+**Última actualización:** 2026-08-14 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
@@ -112,6 +112,16 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - Commiteados: `07834d0` (tests legacy), `fbd8eb3` (continuidad J1), `75245a3` (accesibilidad K1).
 
 ---
+## [2026-08-14] Checkpoint: Validación runtime de tauri:dev y tauri:build
+**Rama:** `main`. **Motivo:** cerrar ciclo de avance con validación real de builds.
+**Cambios:**
+- `npm run tauri:dev`: compila Rust, lanza Vite en 5173 y ejecuta `target\debug\app.exe` sin crashes.
+- `npm run tauri:build`: genera bundles MSI y NSIS en `src-tauri\target\release\bundle\`.
+- `docs/continuity/SESSION_CACHE.json`: actualizado resumen de sesión.
+- Validaciones estáticas previas: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+
+---
+
 ## [2026-08-12] Checkpoint: Sincronización final de auto-pilot y continuidad
 **Rama:** `main`. **Motivo:** alinear documento de auto-pilot con el estado real cerrado de los bloques A-K.
 **Cambios:**
