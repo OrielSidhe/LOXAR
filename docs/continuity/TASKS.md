@@ -258,6 +258,17 @@ una sola fuente de verdad.
 
 ---
 
+## [2026-08-14] Checkpoint: Fase 3 completada (normalizer + taxonomy wiring)
+**Rama:** `main`. **Motivo:** encadenar `src/services/grammar/normalizer.ts` al flujo productivo de importación para que todo manifiesto pase por taxonomy antes de seguir.
+**Cambios:**
+- `src/services/grammar/inductFromText.ts`: ahora aplica `normalize()` a la salida del parser local antes de construir el reporte.
+- Esto garantiza alias→canonical (categorías, roles, posiciones, estrategias) sin tocar la UI.
+- `src/services/grammar/__tests__/normalizer.test.ts`: 7 tests pasando.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- Próximo bloque ejecutable: Fase 4 (validador post-import).
+
+---
+
 ## [2026-08-14] Checkpoint: Validación runtime de tauri:dev y tauri:build
 **Rama:** `main`. **Motivo:** cerrar ciclo de avance con validación real de builds.
 **Cambios:**

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T12:45:00.000Z",
+  "lastUpdated": "2026-08-14T13:05:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Completar Fase 2 del fix del motor de gramática: inductor LLM mejorado.",
+    "lastPrompt": "Completar Fase 3 del fix del motor de gramática: normalizer + taxonomy wiring.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Fase 2 completada: inductor LLM mejorado con ruta local-first, prompt DeclarativeManifest y 7 tests pasando. Próximo bloque ejecutable: Fase 3 (normalizer + taxonomy)."
+  "sessionSummary": "Fase 3 completada: normalizer cableado a inductFromText con 7 tests pasando. Próximo bloque ejecutable: Fase 4 (validador post-import)."
 }

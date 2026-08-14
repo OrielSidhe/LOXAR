@@ -19,6 +19,7 @@
 
 import type { DeclarativeManifest, ParseReport, ImportValidationReport } from './declarativeFormat';
 import { parseLocal } from './textParser';
+import { normalize } from './normalizer';
 
 // ---------------------------------------------------------------------------
 // Tipos de entrada/salida
@@ -51,6 +52,11 @@ export interface InductResult {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+function applyNormalization(manifest: DeclarativeManifest): DeclarativeManifest {
+  const normalized = normalize(manifest);
+  return normalized.manifest;
+}
 
 function computeScore(manifest: DeclarativeManifest, report: ParseReport): number {
   let points = 0;
@@ -191,7 +197,7 @@ export async function inductFromText(
   // -----------------------------------------------------------------------
   if (localScore >= 60) {
     return {
-      manifest: localResult.manifest,
+      manifest: applyNormalization(localResult.manifest),
       confidence: localScore,
       method: 'local',
       parseReport: localResult.report,
@@ -262,7 +268,7 @@ export async function inductFromText(
       // LLM falló → fallback a local (NO segunda llamada a IA)
       console.warn('[inductFromText] LLM falló, usando resultado local:', error);
       return {
-        manifest: localResult.manifest,
+        manifest: applyNormalization(localResult.manifest),
         confidence: localScore,
         method: 'local',
         parseReport: localResult.report,
