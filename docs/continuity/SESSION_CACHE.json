@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Reejecutado ciclo de avance. Integraciones UI confirmadas: FTS5, InterlinearGlossViewer y SoundChangeWorkbench. Validaciones: typecheck 0 errores, lint OK, build OK. docs/LOXAR_AUTO_PILOT.md mantiene bloques A-K cerrados. Próximo: runtime manual con npm run tauri dev."
+  "sessionSummary": "Corregido problema visual: ModulePanel ahora queda adelante del ribbon y oculta mejor el fondo. Ajustado z-index y capa de superposición. Validaciones: typecheck 0 errores, lint OK, build OK. Commiteado: 8f15afa."
 }

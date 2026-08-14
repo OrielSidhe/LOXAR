@@ -230,6 +230,14 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - Próximo paso: validación runtime manual con `npm run tauri dev`.
 - Commiteados: `9ef069e`, `53c7fa5`.
 
+---
+## [2026-08-13] Checkpoint: fix de z-index y legibilidad de ModulePanel
+**Rama:** `main`. **Motivo:** corregir problema visual reportado: el panel flotante quedaba detrás del ribbon superior y dejaba ver demasiado el árbol/fondo.
+**Cambios:**
+- `src/components/ModulePanel.tsx`: elevado `z-index` del panel, agregada capa de superposición oscura entre fondo y panel, y ajustada opacidad para priorizar legibilidad sin perder la sensación de fondo.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- Commiteado: `8f15afa`.
+
 - `docs/SDD_RUNTIME_OBSERVATIONS.md`: registrado objetivo oficial de diseño Harness/Canvas con árbol navegable del lenguaje.
 - Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
