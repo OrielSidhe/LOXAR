@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T01:00:00.000Z",
+  "lastUpdated": "2026-08-14T01:15:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Avanzar ciclo LOXAR: limpiar flujo .loxar y validar build.",
+    "lastPrompt": "Avanzar ciclo LOXAR: revalidar builds y actualizar continuidad.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Persistencia del canvas integrada en .loxar, layout inicial con árbol visible y canvas interactivo con drag/conectar/crear nodos. Flujo de proyecto corregido para rutas explícitas y limpieza de estado. Validaciones: typecheck 0 errores, lint OK, build OK, tauri:build OK, tauri:dev compila y ejecuta app.exe sin crashes."
+  "sessionSummary": "Ciclo de avance revalidado: typecheck 0 errores, lint OK, build OK, tauri:build OK con bundles MSI y NSIS generados. No hay tareas nuevas pendientes en LOXAR_AUTO_PILOT.md."
 }

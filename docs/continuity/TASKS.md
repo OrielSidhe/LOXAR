@@ -122,6 +122,18 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-14] Checkpoint: Revalidación completa de builds y continuidad
+**Rama:** `main`. **Motivo:** ejecutar ciclo de avance solicitado y confirmar que no hay regresiones.
+**Cambios:**
+- `npm run typecheck` = 0 errores.
+- `npm run lint` = OK.
+- `npm run build` = OK.
+- `npm run tauri:build` = OK, bundles MSI y NSIS generados.
+- `docs/continuity/SESSION_CACHE.json` actualizado.
+- Sin cambios de código fuente necesarios; `LOXAR_AUTO_PILOT.md` mantiene bloques A-K completados.
+
+---
+
 ## [2026-08-14] Checkpoint: Revalidación runtime de tauri:dev y actualización de continuidad
 **Rama:** `main`. **Motivo:** confirmar que el flujo .loxar y los builds siguen estables tras cambios.
 **Cambios:**
