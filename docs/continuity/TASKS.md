@@ -217,6 +217,19 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - `src/components/ModulePanel.tsx` (NUEVO): panel flotante reutilizable para abrir módulos sobre el canvas.
 - `src/App.tsx`: reemplazada tira horizontal de tabs por `VerticalSidebar`; cada módulo se renderiza dentro de `ModulePanel`.
 - `src/components/Header.tsx` y `src/App.tsx`: integrado `SettingsModal` flotante accesible desde header/sidebar.
+
+---
+## [2026-08-13] Checkpoint: LanguageTreeCanvas unificado (árbol + grafo de grammar/lexicon)
+**Rama:** `main`. **Motivo:** unificar el antiguo canvas de gramática/diagrama con el árbol del lenguaje como fondo vivo y persistente.
+**Cambios:**
+- `src/components/LanguageTreeCanvas.tsx`: ahora combina el árbol base con un grafo dinámico generado desde `grammar` y `lexicon` (categorías, reglas, excepciones, conteos).
+- `src/App.tsx`: pasa `grammar`, `lexicon` y `profile` al canvas; el árbol/base se mantiene siempre visible detrás de sidebar y paneles.
+- `docs/SDD_RUNTIME_OBSERVATIONS.md`: documentada la unificación del canvas de gramática + árbol del lenguaje en `LanguageTreeCanvas`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, `npm run tauri:build` OK.
+- `tauri:build` generó instaladores: MSI y NSIS en `src-tauri/target/release/bundle/`.
+- Próximo paso: validación runtime manual con `npm run tauri dev`.
+- Commiteados: `9ef069e`, `53c7fa5`.
+
 - `docs/SDD_RUNTIME_OBSERVATIONS.md`: registrado objetivo oficial de diseño Harness/Canvas con árbol navegable del lenguaje.
 - Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
