@@ -26,10 +26,10 @@ export type LoxarProject = {
   };
 };
 
-const CURRENT_VERSION = '0.1.0';
+export const LOXAR_PROJECT_VERSION = '0.1.0';
 
 export const createEmptyProject = (conlangName = 'Léxico sin nombre', mainLanguage = 'Español'): LoxarProject => ({
-  version: CURRENT_VERSION,
+  version: LOXAR_PROJECT_VERSION,
   conlangName,
   mainLanguage,
   updatedAt: new Date().toISOString(),

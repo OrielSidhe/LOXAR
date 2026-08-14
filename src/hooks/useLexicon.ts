@@ -559,6 +559,16 @@ export const useLexicon = (
         }));
     }, [state.activeLexiconName]);
 
+    const upsertLexiconData = useCallback((name: string, data: LexiconData) => {
+        setState(prev => ({
+            ...prev,
+            lexicons: { ...prev.lexicons, [name]: normalizeLexiconData(data, name, data.metadata?.mainLanguage || 'Español') },
+            activeLexiconName: prev.activeLexiconName || name,
+        }));
+        localStorage.setItem(`${LEXICON_STORAGE_KEY_PREFIX}list`, JSON.stringify([...Object.keys(state.lexicons), name]));
+        localStorage.setItem(`${LEXICON_STORAGE_KEY_PREFIX}${name}`, JSON.stringify(data));
+    }, [state.lexicons]);
+
     const undoChange = useCallback(() => {
         if (undoRedo.canUndo) {
             undoRedo.undo();
@@ -624,5 +634,6 @@ export const useLexicon = (
         updateGenerativeProfile, updateNeographyProfile, updateInflectionProfile, updateCorpus, updateGrammarManifest, saveChanges, undoChange,
         startImportProcess, cancelImport, setImportMapping, resolveConflict, proceedWithValidEntries,
         resanitizeAndContinue, applyCharacterRepair, aiCompleteFunctions, aiFillMissingFields, manageFunctions, addCustomFunction, manageHyphens,
+        upsertLexiconData,
     };
 };

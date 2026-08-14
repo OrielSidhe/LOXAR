@@ -210,6 +210,20 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - `npm run tauri:build` generó instaladores: MSI y NSIS en `src-tauri/target/release/bundle/`.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
 
+## [2026-08-14] Checkpoint: integración real del formato .loxar y rediseño de layout principal
+**Rama:** `main`. **Motivo:** implementar guardado/carga explícito con archivo de proyecto y arreglar la vista inicial para que el árbol se vea cuando no hay panel abierto.
+**Cambios:**
+- `src/services/projectFile.ts`: tipo `LoxarProject` + helpers `createEmptyProject` / `projectToJson` / `projectFromJson`.
+- `src/App.tsx`: flujo `.loxar` con `Nuevo/Abrir/Guardar/Guardar como`, pickers con `@tauri-apps/plugin-dialog`, persistencia en ruta elegida por el usuario y autosave cada 30s cuando hay cambios.
+- `src/hooks/useLexicon.ts`: nuevo `upsertLexiconData` para hidratar léxicos desde un proyecto abierto.
+- `src/components/FileControls.tsx`: botones de proyecto integrados en la barra de archivos.
+- `src/components/ModulePanel.tsx` + `src/App.tsx`: el panel ya no oscurece todo el canvas; el fondo con `LanguageTreeCanvas` queda visible en la pantalla inicial.
+- `src/services/sessionCache.ts`: se agrega `projectPath` al cache de sesión.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- Próximo paso: probar runtime con `npm run tauri dev` el flujo Nuevo/Abrir/Guardar y validar que el árbol quede visible en la pantalla inicial.
+
+---
+
 ## [2026-08-13] Checkpoint: navegación vertical Harness/Canvas + Settings
 **Rama:** `main`. **Motivo:** transformar la navegación a formato Harness/Canvas con barra vertical de iconos y ventanas flotantes por módulo.
 **Cambios:**

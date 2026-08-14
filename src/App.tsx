@@ -60,6 +60,9 @@ import { generateLanguageSample } from './services/geminiService';
 import { isAiAvailable } from './services/geminiService';
 import { validateGrammarEngine } from './validation/runtimeValidation';
 import { listen } from '@tauri-apps/api/event';
+import { open, save } from '@tauri-apps/plugin-dialog';
+import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
 
 const ModalManager = lazy(() => import('./components/ModalManager'));
 const AiSettingsModal = lazy(() => import('./components/AiSettingsModal'));
@@ -120,6 +123,9 @@ const App = () => {
     // Backups & Config
     const [backups, setBackups] = useState<string[]>([]);
     const [exportPath, setExportPath] = useState<string | null>(null);
+    const [projectPath, setProjectPath] = useState<string | null>(null);
+    const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
+    const [isProjectDirty, setIsProjectDirty] = useState(false);
     const [isTourActive, setIsTourActive] = useState(false);
     const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
     const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
@@ -194,6 +200,10 @@ const App = () => {
                 if (cancelled) return;
                 if (cached.activeTab) setActiveTab(cached.activeTab as any);
                 if (cached.exportPath) setExportPath(cached.exportPath);
+                if (cached.projectPath) {
+                    setProjectPath(cached.projectPath);
+                    await restoreProjectFromPath(cached.projectPath);
+                }
                 setSessionCacheData({ tourCompleted: cached.tourCompleted });
             } catch (e) {
                 console.error('Failed to load session cache', e);
@@ -203,8 +213,8 @@ const App = () => {
     }, []);
 
     useEffect(() => {
-        saveSessionCache({ activeTab, exportPath }).catch(console.error);
-    }, [activeTab, exportPath]);
+        saveSessionCache({ activeTab, exportPath, projectPath }).catch(console.error);
+    }, [activeTab, exportPath, projectPath]);
 
     // Widget inflection listener
     useEffect(() => {
@@ -379,6 +389,139 @@ const App = () => {
             showNotification('Carpeta de exportación establecida.', 'success');
         }
     };
+
+    const buildProjectPayload = useCallback((): LoxarProject => {
+        return {
+            version: LOXAR_PROJECT_VERSION,
+            conlangName: activeMetadata?.conlangName || activeLexiconName || 'Léxico sin nombre',
+            mainLanguage: activeMetadata?.mainLanguage || 'Español',
+            updatedAt: new Date().toISOString(),
+            lexicons: lexicons,
+            grammar: activeGrammar,
+            generativeProfile: activeProfile,
+            neographyProfile: lexiconHook.activeNeographyProfile,
+            inflectionProfile: lexiconHook.activeInflectionProfile,
+            corpus: lexiconHook.activeCorpus,
+            customFunctions: activeCustomFunctions,
+            settings: {
+                themeId,
+                soundsEnabled: true,
+                autoBackupEnabled: !!exportPath,
+                autoBackupMinutes: 15,
+            },
+            session: {
+                activeTab,
+                activeProfile: activeProfile ? activeProfile.sampleText.slice(0, 20) : null,
+                tourCompleted: sessionCacheData?.tourCompleted,
+            },
+        };
+    }, [activeLexiconName, activeMetadata, lexicons, activeGrammar, activeProfile, lexiconHook, activeCustomFunctions, themeId, exportPath, activeTab, sessionCacheData]);
+
+    const writeProjectToPath = useCallback(async (path: string, payload: LoxarProject) => {
+        const content = projectToJson(payload);
+        await writeTextFile(path, content);
+        setProjectLastSaved(new Date());
+        setIsProjectDirty(false);
+    }, []);
+
+    const handleNewProject = useCallback(async () => {
+        if (isProjectDirty && !window.confirm('Tienes cambios sin guardar. ¿Crear nuevo proyecto de todos modos?')) return;
+        const name = window.prompt('Nombre del conlang para el nuevo proyecto:', 'Léxico sin nombre');
+        if (!name) return;
+        const project = createEmptyProject(name, 'Español');
+        await writeProjectToPath(projectPath || `${name}.loxar`, project);
+        setProjectPath(projectPath || `${name}.loxar`);
+        saveSessionCache({ projectPath: projectPath || `${name}.loxar`, activeTab }).catch(console.error);
+        showNotification(`Proyecto "${name}" creado.`, 'success');
+    }, [isProjectDirty, projectPath, writeProjectToPath]);
+
+    const handleOpenProject = useCallback(async () => {
+        if (isProjectDirty && !window.confirm('Tienes cambios sin guardar. ¿Abrir otro proyecto de todos modos?')) return;
+        try {
+            const selected = await open({ multiple: false, filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }] });
+            if (typeof selected !== 'string' || !selected) return;
+            const raw = await readTextFile(selected);
+            const project = projectFromJson(raw);
+            if (!project) throw new Error('El archivo no es un proyecto LOXAR válido.');
+            await restoreProjectFromPath(selected);
+            setProjectPath(selected);
+            setIsProjectDirty(false);
+            setProjectLastSaved(new Date());
+            saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
+            showNotification(`Proyecto "${project.conlangName}" abierto.`, 'success');
+        } catch (e) {
+            showNotification(e instanceof Error ? e.message : 'No se pudo abrir el proyecto.', 'error');
+        }
+    }, [isProjectDirty]);
+
+    const handleSaveProject = useCallback(async () => {
+        if (!projectPath) {
+            const selected = await save({ filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }], defaultPath: `${activeMetadata?.conlangName || 'proyecto'}.loxar` });
+            if (typeof selected !== 'string' || !selected) return;
+            setProjectPath(selected);
+            await writeProjectToPath(selected, buildProjectPayload());
+            saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
+            showNotification('Proyecto guardado.', 'success');
+            return;
+        }
+        await writeProjectToPath(projectPath, buildProjectPayload());
+        saveSessionCache({ projectPath, activeTab }).catch(console.error);
+        showNotification('Cambios guardados en el proyecto.', 'success');
+    }, [projectPath, buildProjectPayload, writeProjectToPath, activeMetadata?.conlangName, activeTab]);
+
+    const handleSaveProjectAs = useCallback(async () => {
+        const selected = await save({ filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }], defaultPath: `${activeMetadata?.conlangName || 'proyecto'}.loxar` });
+        if (typeof selected !== 'string' || !selected) return;
+        setProjectPath(selected);
+        await writeProjectToPath(selected, buildProjectPayload());
+        saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
+        showNotification('Proyecto guardado como.', 'success');
+    }, [buildProjectPayload, writeProjectToPath, activeMetadata?.conlangName, activeTab]);
+
+    const restoreProjectFromPath = useCallback(async (path: string) => {
+        try {
+            const raw = await readTextFile(path);
+            const project = projectFromJson(raw);
+            if (!project) return;
+            if (project.lexicons) {
+                Object.entries(project.lexicons).forEach(([name, data]) => {
+                    lexiconHook.upsertLexiconData(name, data);
+                });
+            }
+            if (project.grammar) lexiconHook.updateGrammarManifest(project.grammar);
+            if (project.generativeProfile) lexiconHook.updateGenerativeProfile(project.generativeProfile);
+            if (project.neographyProfile) lexiconHook.updateNeographyProfile(project.neographyProfile);
+            if (project.inflectionProfile) lexiconHook.updateInflectionProfile(project.inflectionProfile);
+            if (project.corpus?.length) lexiconHook.updateCorpus(project.corpus);
+            if (project.customFunctions?.length) {
+                project.customFunctions.forEach(fn => lexiconHook.addCustomFunction(fn));
+            }
+            if (project.session?.activeTab) setActiveTab(project.session.activeTab as any);
+        } catch (e) {
+            console.error('Failed to restore project', e);
+        }
+    }, [lexiconHook]);
+
+    const markProjectDirty = useCallback(() => setIsProjectDirty(true), []);
+
+    useEffect(() => {
+        const id = setInterval(() => {
+            if (!isProjectDirty || !projectPath) return;
+            writeProjectToPath(projectPath, buildProjectPayload()).catch(() => {});
+        }, 30000);
+        return () => clearInterval(id);
+    }, [isProjectDirty, projectPath, buildProjectPayload, writeProjectToPath]);
+
+    useEffect(() => {
+        const handler = (event: BeforeUnloadEvent) => {
+            if (isDirty || isProjectDirty) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [isDirty, isProjectDirty]);
 
     const handleSaveChanges = useCallback(() => {
         lexiconHook.saveChanges();
@@ -914,6 +1057,11 @@ const App = () => {
                             onError={(msg) => showNotification(msg, 'error')} 
                             disabled={!activeLexiconName} 
                             isDirty={isDirty} 
+                            onNewProject={handleNewProject}
+                            onOpenProject={handleOpenProject}
+                            onSaveProject={handleSaveProject}
+                            onSaveProjectAs={handleSaveProjectAs}
+                            projectPath={projectPath}
                         />
                         <button onClick={handleStartTour} className="p-2 text-text-secondary hover:text-primary transition-colors hover:bg-white/5 rounded-full">
                             <InfoIcon className="w-6 h-6" />
@@ -938,7 +1086,7 @@ const App = () => {
                       onShowTour={handleStartTour}
                     />
 
-                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth">
+                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
                         <div className="flex-grow h-full flex flex-col">
                             {activeTab === 'dashboard' && (
                                 <ModulePanel title="Panel" active={activeTab === 'dashboard'} onClose={() => setActiveTab('table')}>
@@ -955,152 +1103,140 @@ const App = () => {
                                 </ModulePanel>
                             )}
                             {activeTab === 'table' && (
-                                <ModulePanel title="Léxico" active={activeTab === 'table'} onClose={() => setActiveTab('table')}>
-                                    <LexiconTable
-                                        data={activeLexicon} lexiconName={activeLexiconName}
-                                        conlangName={activeMetadata?.conlangName} mainLanguage={activeMetadata?.mainLanguage}
-                                        onEditWord={lexiconHook.editWord}
-                                        onDeleteWord={lexiconHook.deleteWord}
-                                        showNotification={showNotification}
-                                        searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
-                                        categoryFilter={functionFilter} onCategoryFilterChange={setFunctionFilter}
-                                        viewFilter={viewFilter as any} onViewFilterChange={setViewFilter as any}
-                                        showAffixFormatting={showAffixFormatting}
-                                        onShowAffixFormattingChange={setShowAffixFormatting}
-                                        selectedIds={selectedIds}
-                                        onToggleSelection={handleToggleSelection}
-                                        onToggleSelectAll={handleToggleSelectAll}
-                                        onGenerateInflections={(entry) => {
-                                            setEntryToInflect(entry);
-                                            handleOpenModal('inflection_generator');
-                                        }}
-                                        onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
-                                    />
-                                </ModulePanel>
+                                <LexiconTable
+                                    data={activeLexicon} lexiconName={activeLexiconName}
+                                    conlangName={activeMetadata?.conlangName} mainLanguage={activeMetadata?.mainLanguage}
+                                    onEditWord={lexiconHook.editWord}
+                                    onDeleteWord={lexiconHook.deleteWord}
+                                    showNotification={showNotification}
+                                    searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
+                                    categoryFilter={functionFilter} onCategoryFilterChange={setFunctionFilter}
+                                    viewFilter={viewFilter as any} onViewFilterChange={setViewFilter as any}
+                                    showAffixFormatting={showAffixFormatting}
+                                    onShowAffixFormattingChange={setShowAffixFormatting}
+                                    selectedIds={selectedIds}
+                                    onToggleSelection={handleToggleSelection}
+                                    onToggleSelectAll={handleToggleSelectAll}
+                                    onGenerateInflections={(entry) => {
+                                        setEntryToInflect(entry);
+                                        handleOpenModal('inflection_generator');
+                                    }}
+                                    onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
+                                />
                             )}
                             {activeTab === 'workbench' && (
-                                <ModulePanel title="Workbench" active={activeTab === 'workbench'} onClose={() => setActiveTab('workbench')}>
-                                    <div className="flex gap-4 h-full min-h-[600px]">
-                                        {/* LEFT: Entry Editor + cola de trabajo */}
-                                        <div className="flex-1 min-w-0 flex flex-col gap-3">
-                                            {queueActive && (
-                                                <WorkQueueBar
-                                                    items={workQueue}
-                                                    cursor={queueCursor}
-                                                    onPrev={queuePrev}
-                                                    onNext={queueAdvance}
-                                                    onTogglePending={queueTogglePending}
-                                                    onRemove={queueRemoveCurrent}
-                                                    onClear={queueClear}
-                                                />
-                                            )}
-                                            <div className="flex-1 min-h-0">
-                                                <EntryEditor
-                                                    mode={editorMode} onModeChange={setEditorMode}
-                                                    entryToEdit={entryBeingEdited || undefined}
-                                                    incompleteCount={incompleteEntries.length} incompleteIndex={incompleteIndex}
-                                                    onNavigateIncomplete={handleNavigateIncomplete} onLookup={handleLookupForCompletion}
-                                                    onAddWord={lexiconHook.addWord} onUpdateWord={lexiconHook.editWord}
-                                                    findDuplicateSignificados={(sig, excludeId) => lexiconHook.activeLexicon.filter(e => e.Significado.includes(sig) && e.ID !== excludeId)}
-                                                    onDuplicateFound={() => {}}
-                                                    onAiCompleteEntry={handleAiCompleteEntry}
-                                                    onAiGenerateRootAndLexeme={handleAiGenerate}
-                                                    onCorrectSignificado={handleCorrectSignificado}
-                                                    showNotification={showNotification} disabled={!activeLexiconName}
-                                                    initialDataForAdd={effectiveInitialDataForAdd}
-                                                    setIsLoading={setIsLoading} setLoadingMessage={setLoadingMessage}
-                                                    customCategories={activeCustomFunctions} onAddCustomCategory={lexiconHook.addCustomFunction}
-                                                    activeMetadata={activeMetadata}
-                                                    activeLexicon={activeLexicon}
-                                                    generationModes={generationModes}
-                                                    onGenerationModesChange={setGenerationModes}
-                                                    onQueueAdvance={queueActive ? queueAdvance : undefined}
-                                                />
-                                            </div>
-                                        </div>
-                                        {/* RIGHT: Suggestions & Word Lists */}
-                                        <div className="w-72 shrink-0">
-                                            <WorkbenchRightPanel
-                                                suggestions={suggestions}
-                                                listName={suggestionListName}
-                                                onClose={() => setSuggestions([])}
-                                                onAddManually={handleAddManuallyFromSuggestion}
-                                                onGenerateAI={handleGenerateAIFromSuggestion}
-                                                isLoading={aiStatus === 'working'}
+                                <div className="flex gap-4 h-full min-h-[600px]">
+                                    {/* LEFT: Entry Editor + cola de trabajo */}
+                                    <div className="flex-1 min-w-0 flex flex-col gap-3">
+                                        {queueActive && (
+                                            <WorkQueueBar
+                                                items={workQueue}
+                                                cursor={queueCursor}
+                                                onPrev={queuePrev}
+                                                onNext={queueAdvance}
+                                                onTogglePending={queueTogglePending}
+                                                onRemove={queueRemoveCurrent}
+                                                onClear={queueClear}
+                                            />
+                                        )}
+                                        <div className="flex-1 min-h-0">
+                                            <EntryEditor
+                                                mode={editorMode} onModeChange={setEditorMode}
+                                                entryToEdit={entryBeingEdited || undefined}
+                                                incompleteCount={incompleteEntries.length} incompleteIndex={incompleteIndex}
+                                                onNavigateIncomplete={handleNavigateIncomplete} onLookup={handleLookupForCompletion}
+                                                onAddWord={lexiconHook.addWord} onUpdateWord={lexiconHook.editWord}
+                                                findDuplicateSignificados={(sig, excludeId) => lexiconHook.activeLexicon.filter(e => e.Significado.includes(sig) && e.ID !== excludeId)}
+                                                onDuplicateFound={() => {}}
+                                                onAiCompleteEntry={handleAiCompleteEntry}
+                                                onAiGenerateRootAndLexeme={handleAiGenerate}
+                                                onCorrectSignificado={handleCorrectSignificado}
+                                                showNotification={showNotification} disabled={!activeLexiconName}
+                                                initialDataForAdd={effectiveInitialDataForAdd}
+                                                setIsLoading={setIsLoading} setLoadingMessage={setLoadingMessage}
+                                                customCategories={activeCustomFunctions} onAddCustomCategory={lexiconHook.addCustomFunction}
                                                 activeMetadata={activeMetadata}
-                                                onSelectList={setSuggestionListName}
-                                                onAnalyzeList={handleAnalyzeForSuggestions}
-                                                generativeProfile={activeProfile}
-                                                generativeLexicon={activeLexicon}
-                                                onSaveGenerativeProfile={lexiconHook.updateGenerativeProfile}
-                                                showNotification={showNotification}
-                                                onEnqueue={handleEnqueue}
-                                                onGenerateBatch={handleGenerateBatch}
+                                                activeLexicon={activeLexicon}
                                                 generationModes={generationModes}
-                                                manifest={activeGrammar}
-                                                onSyncPhonology={(p) => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
+                                                onGenerationModesChange={setGenerationModes}
+                                                onQueueAdvance={queueActive ? queueAdvance : undefined}
                                             />
                                         </div>
                                     </div>
-                                </ModulePanel>
+                                    {/* RIGHT: Suggestions & Word Lists */}
+                                    <div className="w-72 shrink-0">
+                                        <WorkbenchRightPanel
+                                            suggestions={suggestions}
+                                            listName={suggestionListName}
+                                            onClose={() => setSuggestions([])}
+                                            onAddManually={handleAddManuallyFromSuggestion}
+                                            onGenerateAI={handleGenerateAIFromSuggestion}
+                                            isLoading={aiStatus === 'working'}
+                                            activeMetadata={activeMetadata}
+                                            onSelectList={setSuggestionListName}
+                                            onAnalyzeList={handleAnalyzeForSuggestions}
+                                            generativeProfile={activeProfile}
+                                            generativeLexicon={activeLexicon}
+                                            onSaveGenerativeProfile={lexiconHook.updateGenerativeProfile}
+                                            showNotification={showNotification}
+                                            onEnqueue={handleEnqueue}
+                                            onGenerateBatch={handleGenerateBatch}
+                                            generationModes={generationModes}
+                                            manifest={activeGrammar}
+                                            onSyncPhonology={(p) => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
+                                        />
+                                    </div>
+                                </div>
                             )}
                             {activeTab === 'collections' && (
-                                <ModulePanel title="Colecciones" active={activeTab === 'collections'} onClose={() => setActiveTab('collections')}>
-                                    <CollectionsManager 
-                                        lexicon={activeLexicon} inflection={lexiconHook.activeInflectionProfile}
-                                        onUpdateEntry={lexiconHook.editWord} onAddEntry={lexiconHook.addWord}
-                                        onAddBatchEntries={lexiconHook.addBatchWords}
-                                        onDeleteEntry={lexiconHook.deleteWord} customCategories={activeCustomFunctions}
-                                        onStartTour={handleStartTour}
-                                    />
-                                </ModulePanel>
+                                <CollectionsManager 
+                                    lexicon={activeLexicon} inflection={lexiconHook.activeInflectionProfile}
+                                    onUpdateEntry={lexiconHook.editWord} onAddEntry={lexiconHook.addWord}
+                                    onAddBatchEntries={lexiconHook.addBatchWords}
+                                    onDeleteEntry={lexiconHook.deleteWord} customCategories={activeCustomFunctions}
+                                    onStartTour={handleStartTour}
+                                />
                             )}
                             {activeTab === 'writing' && (
-                                <ModulePanel title="Escritura y Neografía" active={activeTab === 'writing'} onClose={() => setActiveTab('writing')}>
-                                    <WritingAndNeographyTab 
-                                        corpus={lexiconHook.activeCorpus} 
-                                        onUpdateCorpus={lexiconHook.updateCorpus}
-                                        neographyProfile={lexiconHook.activeNeographyProfile}
-                                        generativeProfile={activeProfile}
-                                        onUpdateNeographyProfile={lexiconHook.updateNeographyProfile}
-                                        onStartTour={handleStartTour}
-                                    />
-                                </ModulePanel>
+                                <WritingAndNeographyTab 
+                                    corpus={lexiconHook.activeCorpus} 
+                                    onUpdateCorpus={lexiconHook.updateCorpus}
+                                    neographyProfile={lexiconHook.activeNeographyProfile}
+                                    generativeProfile={activeProfile}
+                                    onUpdateNeographyProfile={lexiconHook.updateNeographyProfile}
+                                    onStartTour={handleStartTour}
+                                />
                             )}
                             {activeTab === 'grammar' && (
-                                <ModulePanel title="Gramática" active={activeTab === 'grammar'} onClose={() => setActiveTab('grammar')}>
-                                    <GrammarTab
-                                        manifest={activeGrammar}
-                                        onSave={(manifest) => lexiconHook.updateGrammarManifest(manifest)}
-                                        lexicon={activeLexicon}
-                                        conlangName={activeMetadata?.conlangName}
-                                        onAddLexicalException={handleAddLexicalException}
-                                        onExportGrammar={() => {
-                                            const manifest = activeGrammar;
-                                            const safeName = (activeMetadata?.conlangName || 'gramatica').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                                            const date = new Date().toISOString().split('T')[0];
-                                            const fileName = `${safeName}_${date}.loxar-grammar.json`;
-                                            const content = JSON.stringify(manifest, null, 2);
-                                            window.electronAPI.exportFile({ filePath: `${exportPath}/${fileName}`, content })
-                                                .then(({ success, error }) => {
-                                                    if (success) showNotification(`Gramática exportada a ${fileName}`, 'success');
-                                                    else showNotification(`Error de exportación: ${error}`, 'error');
-                                                })
-                                                .catch(e => showNotification(`Error: ${e instanceof Error ? e.message : 'desconocido'}`, 'error'));
-                                        }}
-                                    />
-                                </ModulePanel>
+                                <GrammarTab
+                                    manifest={activeGrammar}
+                                    onSave={(manifest) => lexiconHook.updateGrammarManifest(manifest)}
+                                    lexicon={activeLexicon}
+                                    conlangName={activeMetadata?.conlangName}
+                                    onAddLexicalException={handleAddLexicalException}
+                                    onExportGrammar={() => {
+                                        const manifest = activeGrammar;
+                                        const safeName = (activeMetadata?.conlangName || 'gramatica').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                                        const date = new Date().toISOString().split('T')[0];
+                                        const fileName = `${safeName}_${date}.loxar-grammar.json`;
+                                        const content = JSON.stringify(manifest, null, 2);
+                                        window.electronAPI.exportFile({ filePath: `${exportPath}/${fileName}`, content })
+                                            .then(({ success, error }) => {
+                                                if (success) showNotification(`Gramática exportada a ${fileName}`, 'success');
+                                                else showNotification(`Error de exportación: ${error}`, 'error');
+                                            })
+                                            .catch(e => showNotification(`Error: ${e instanceof Error ? e.message : 'desconocido'}`, 'error'));
+                                    }}
+                                />
                             )}
                             {activeTab === 'translator' && (
-                                <ModulePanel title="Traductor AI" active={activeTab === 'translator'} onClose={() => setActiveTab('translator')}>
-                                    <TranslationPlayground 
-                                        lexicon={activeLexicon} 
-                                        grammar={activeGrammar} 
-                                        corpus={lexiconHook.activeCorpus}
-                                        onUpdateCorpus={lexiconHook.updateCorpus}
-                                        onClose={() => {}}
-                                    />
-                                </ModulePanel>
+                                <TranslationPlayground 
+                                    lexicon={activeLexicon} 
+                                    grammar={activeGrammar} 
+                                    corpus={lexiconHook.activeCorpus}
+                                    onUpdateCorpus={lexiconHook.updateCorpus}
+                                    onClose={() => {}}
+                                />
                             )}
                             {activeTab === 'tools' && (
                                 <ModulePanel title="Herramientas" active={activeTab === 'tools'} onClose={() => setActiveTab('tools')}>

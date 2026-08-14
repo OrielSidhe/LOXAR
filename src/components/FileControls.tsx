@@ -6,6 +6,7 @@ import InfoIcon from './icons/InfoIcon';
 import FolderIcon from './icons/FolderIcon';
 import RestoreIcon from './icons/RestoreIcon';
 import PowerIcon from './icons/PowerIcon';
+import PlusIcon from './icons/PlusIcon';
 import Dropdown, { DropdownItem } from './Dropdown';
 import MoreVerticalIcon from './icons/MoreVerticalIcon';
 import AlertTriangleIcon from './icons/AlertTriangleIcon';
@@ -25,13 +26,18 @@ interface FileControlsProps {
     onError: (message: string) => void;
     disabled?: boolean;
     isDirty?: boolean;
+    onNewProject?: () => void;
+    onOpenProject?: () => void;
+    onSaveProject?: () => void;
+    onSaveProjectAs?: () => void;
+    projectPath?: string | null;
 }
 
 const FileControls = (props: FileControlsProps) => {
     const {
         onImport, onExport, onSave, onSetExportPath, onRestore,
         onOpenAbout, onStartTour, onOpenAiSettings, onQuit, onResetApp, onError,
-        disabled = false, isDirty = false
+        disabled = false, isDirty = false, onNewProject, onOpenProject, onSaveProject, onSaveProjectAs, projectPath
     } = props;
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,6 +70,17 @@ const FileControls = (props: FileControlsProps) => {
                 <input id="lexicon-import-file" name="lexiconImportFile" type="file" onChange={handleFileChange} accept=".csv,.txt,.json" className="hidden" />
             </label>
 
+            {onNewProject && (
+                <button onClick={onNewProject} className="flex items-center gap-2 px-3 py-2 bg-background text-text-primary font-semibold rounded-md shadow-sm border border-subtle hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors">
+                    <PlusIcon className="h-5 w-5" /> Nuevo Proyecto
+                </button>
+            )}
+            {onOpenProject && (
+                <button onClick={onOpenProject} className="flex items-center gap-2 px-3 py-2 bg-background text-text-primary font-semibold rounded-md shadow-sm border border-subtle hover:bg-subtle focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors">
+                    <FolderIcon className="h-5 w-5" /> Abrir Proyecto
+                </button>
+            )}
+
             <button
                 onClick={onSave}
                 disabled={disabled || !isDirty}
@@ -72,6 +89,18 @@ const FileControls = (props: FileControlsProps) => {
             >
                 <SaveIcon className="h-5 w-5" /> {isDirty ? 'Guardar*' : 'Guardado'}
             </button>
+
+            {(onSaveProjectAs || onSaveProject) && (
+                <button onClick={onSaveProjectAs || onSaveProject} className="flex items-center gap-2 px-3 py-2 bg-accent text-white font-semibold rounded-md shadow-sm hover:bg-accent-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-hover transition-colors">
+                    <SaveIcon className="h-5 w-5" /> {onSaveProjectAs ? 'Guardar Proyecto Como...' : 'Guardar Proyecto'}
+                </button>
+            )}
+
+            {projectPath && (
+                <span className="text-xs text-text-secondary truncate max-w-[200px]" title={projectPath}>
+                    {projectPath}
+                </span>
+            )}
 
             {/* Export Dropdown */}
             <Dropdown

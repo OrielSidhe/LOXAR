@@ -4,6 +4,7 @@ export interface SessionCache {
   activeTab?: string;
   activeProfile?: string | null;
   exportPath?: string | null;
+  projectPath?: string | null;
   tourCompleted?: boolean;
   themeId?: string;
   soundsEnabled?: boolean;

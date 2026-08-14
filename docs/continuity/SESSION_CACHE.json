@@ -1,7 +1,7 @@
 {
-  "lastUpdated": "2026-08-13T06:45:00.000Z",
+  "lastUpdated": "2026-08-14T00:00:00.000Z",
   "uiState": {
-    "activeTab": "dashboard",
+    "activeTab": "table",
     "syntaxSubTab": "ast",
     "activeProfile": "default",
     "editorMode": "add",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Reejecutar ciclo de avance y revalidar integraciones UI y builds.",
+    "lastPrompt": "Implementar formato .loxar y rediseñar layout inicial para exponer el árbol.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Corregido problema visual: ModulePanel ahora queda adelante del ribbon y oculta mejor el fondo. Ajustado z-index y capa de superposición. Validaciones: typecheck 0 errores, lint OK, build OK. Commiteado: 8f15afa. Luego se reportó importación con texto narrativo; se filtraron filas inválidas en parser.ts. Validaciones OK. Commiteado: cab161d."
+  "sessionSummary": "Implementado flujo real de proyecto .loxar: Nuevo/Abrir/Guardar/Guardar como, pickers explícitos, autosave y sessionCache con projectPath. Corregido layout inicial: el LanguageTreeCanvas queda visible cuando no hay panel abierto y ModulePanel ya no oscurece todo el canvas. Validaciones: typecheck 0 errores, lint OK, build OK."
 }
