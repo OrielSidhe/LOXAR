@@ -116,4 +116,11 @@ appdata. El agente headless solo valida estático (typecheck/lint/build/tauri:bu
 Siguiente decisión pendiente (cuando el usuario la apruebe): eliminar el espejo SQLite para dejar el
 `.loxar` como única fuente de verdad (FUERA del alcance hasta confirmación, porque afecta FTS5).
 
+**[ ] Validación GUI automatizada (harness listo, pendiente 1er run con autorización).** Se creó
+`tests-gui/` (Playwright, modo web headless) + `npm run test:gui`. El agente puede detectar crashes
+silenciosos / regresiones visuales sin que el usuario pegue screenshots. El PRIMER run requiere
+`npx playwright install chromium` (descarga one-time) y consume CPU; por eso es **notificado y opt-in**
+(SOP §9), NO parte del ciclo horario. Los diálogos nativos de Tauri (Guardar/Abrir `.loxar`) no se
+automatizan acá.
+
 ---

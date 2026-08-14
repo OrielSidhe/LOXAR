@@ -32,6 +32,28 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-14] Checkpoint: Validación GUI automatizada sin el usuario (Playwright headless)
+**Rama:** `main`. **Motivo:** el usuario pidió que el agente evalúe la GUI sin él (demasiados cambios →
+errores pasados por alto; evitar pegar screenshots), pero SIEMPRE avisando porque consume recursos y puede
+ralentizar otras actividades en la PC.
+
+**Cambios:**
+- `package.json`: devDependency `@playwright/test` + script `test:gui` (`playwright test --config tests-gui/playwright.config.ts`).
+- `tests-gui/playwright.config.ts` (NUEVO): levanta `npm run dev` (Vite) y conduce la app con Chromium headless.
+- `tests-gui/smoke.spec.ts` (NUEVO): arranque, modal de ubicación de proyecto, banner de aviso, tabla
+  principal y navegación a Herramientas; captura `pageerror` para detectar crashes silenciosos.
+- `docs/LOXAR_OPERATING_PROTOCOL.md` §9: la validación GUI es **recurso-intensiva, SIEMPRE notificada y
+  opt-in**; NUNCA en el ciclo horario.
+- Cron `automation-26faf8f0`: agregada regla explícita "NO corras test:gui automáticamente".
+
+**Limitación honesta:** los diálogos nativos de Tauri (Guardar/Abrir `.loxar`) no se automatizan con este
+harness (requieren tauri-driver/WebDriver). Ese flujo se cubre con tests de lógica + validación manual.
+
+**Pendiente (requiere autorización del usuario):** el 1er run necesita `npx playwright install chromium`
+(descarga one-time, ~150 MB) y usa CPU durante ~1-2 min. No se ejecutó aún para respetar la regla de aviso.
+
+---
+
 ## [2026-08-14] Checkpoint: Overhaul del protocolo de operación (fin del ciclo "solo leer")
 **Rama:** `main`. **Motivo:** el usuario detectó que el ciclo automatizado (cron `automation-26faf8f0`)
 solo leía/validaba/commiteaba y NUNCA implementaba su pedido real. La instrucción del cron era vaga

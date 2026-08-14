@@ -67,3 +67,16 @@ costoso, avisar de inmediato y dar alternativas.
 El agente headless no puede observar la GUI de `npm run tauri:dev`. Por eso: la validación del agente es
 estática (typecheck/lint/build/tauri:build); la validación visual la hace el usuario. Si se quiere cubrir
 el runtime, se debe crear un smoke test automatizado (fuera de alcance salvo que se pida).
+
+## 9. Validación GUI automatizada (recurso-intensiva — SIEMPRE notificada y opt-in)
+Existe `npm run test:gui` (Playwright, modo web headless) que conduce la app y detecta crashes silenciosos
+/ regresiones visuales sin que el usuario pegue screenshots. Reglas:
+- **NUNCA se corre en silencio ni como parte del ciclo horario.** Es acción que consume CPU/disco y puede
+  ralentizar otras actividades del usuario en la PC.
+- **Siempre avisar antes:** el agente debe notificar (nombre de acción, impacto estimado de recursos, ETA)
+  y esperar autorización del usuario antes de instalar navegadores (one-time ~Chromium) o de ejecutar el test.
+- En la primera corrida hay que instalar dependencias (`npm i` ya incluye `@playwright/test`; luego
+  `npx playwright install chromium` descarga el navegador una vez).
+- Los diálogos nativos de Tauri (Guardar/Abrir `.loxar`) NO se automatizan acá; ese flujo se cubre con
+  tests de lógica (`projectFile`/`projectDiscovery`) y validación manual del usuario.
+- Reportar resultado de forma concisa (pass/fail + errores) en la memoria y al usuario.
