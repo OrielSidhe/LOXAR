@@ -27,6 +27,46 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - [x] **P2 — Undo/Redo:** `useUndoRedo` hook genérico (`past[]`/`future[]`, redo) cableado en `useLexicon` (`updateActiveLexicon`→`undoRedo.set`, `undoChange`→`undoRedo.undo`). Test `useUndoRedo.test.ts`.
 - [x] **T2 — Validación runtime del motor:** `src/validation/runtimeValidation.ts` (`validateGrammarEngine()`) + banner offline en `App.tsx`.
 - [x] **T1 — SESSION_CACHE en runtime:** `src/services/sessionCache.ts` (`loadSessionCache`/`saveSessionCache`) usando `@tauri-apps/api/core` invoke.
+- [x] **P-LOXAR — Persistencia controlada (`.loxar` como fuente de verdad):** la app YA NO guarda en silencio en appdata. Si no hay proyecto configurado al arrancar, muestra `ProjectBootstrapModal` que pide la ubicación del `.loxar` y escanea `.loxar` existentes en el equipo. Autosave (30s) + "Guardar" sincronizan el `.loxar`. Ver checkpoint 2026-08-14 abajo.
+- [ ] **Runtime (usuario, `npm run tauri dev`):** validar que en primera corrida aparece el modal de ubicación, que Crear/Abrir/Importar funcionan y que el `.loxar` sobrevive a un borrado de appdata.
+
+---
+
+## [2026-08-14] Checkpoint: Persistencia controlada — el `.loxar` es la fuente de verdad
+**Rama:** `main`. **Motivo:** el usuario reportó que la app guardaba en silencio en appdata y, si se
+limpiaba esa carpeta, se perdía todo sin copia. El auto-pilot previo marcaba todo como `[x]` pero NUNCA
+había implementado el control de ubicación de guardado; el autosave solo iba a SQLite en appdata salvo
+que el usuario hubiera hecho "Guardar proyecto" a mano.
+
+**Cambios:**
+- `src/services/projectDiscovery.ts` (NUEVO): `scanForLoxarProjects()` escanea Documentos/Escritorio/
+  Descargas/config de la app en busca de `.loxar` (cubre "buscar todos los archivos relacionados") y
+  `projectFileExists()` verifica que la ruta cacheada siga existiendo.
+- `src/components/ProjectBootstrapModal.tsx` (NUEVO): modal de arranque que se muestra cuando no hay
+  proyecto configurado. Ofrece: abrir un `.loxar` encontrado, crear nuevo (elige ubicación), abrir otro,
+  o importar datos locales existentes (SQLite → `.loxar`). Si el usuario elige "Más tarde", deja un banner
+  rojo persistente recordando fijar una ubicación.
+- `src/App.tsx`:
+  - Efecto de arranque: si `cached.projectPath` existe Y el archivo sigue ahí, reabre; si no, escanea
+    `.loxar` existentes + detecta datos locales y muestra el `ProjectBootstrapModal` (en vez de arrancar
+    vacío guardando en appdata).
+  - `handleSaveChanges` (manual) ahora también persiste el `.loxar` cuando hay `projectPath` (antes solo SQLite).
+  - Autosave cada 30s ya escribía `.loxar` (se mantiene). El `.loxar` contiene lexicons + gramática +
+    perfiles + corpus + canvas + settings + sesión = toda la info del proyecto en un archivo del usuario.
+
+**Archivos relacionados con persistencia (mapeo para no perder nada):**
+- `src/services/projectFile.ts` — tipo `LoxarProject` + (de)serialización `.loxar`.
+- `src/services/sqlStorage.ts` — SQLite en appdata (espejo rápido + FTS5; regenerable desde `.loxar`).
+- `src/services/sessionCache.ts` — caché de sesión (apunta a `projectPath`; si se borra appdata, el
+  usuario solo reubica su `.loxar`).
+- `src/services/projectDiscovery.ts` — descubrimiento de `.loxar` en el equipo.
+- `src/components/ProjectBootstrapModal.tsx` — control de ubicación de guardado.
+- `src-tauri/capabilities/default.json` — fs scope incluye `$HOME/*` (permite escanear/guardar en Documentos).
+
+**Verificación:** `npm run typecheck` = 0 errores, `npm run lint` = OK, `npm run build` = OK (352 módulos).
+**Pendiente runtime (usuario, `npm run tauri dev`):** confirmar que el modal aparece en primera corrida y
+que guardar/abrir `.loxar` funciona sin crashes; decidir si luego se elimina el espejo SQLite para tener
+una sola fuente de verdad.
 
 ---
 

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T01:15:00.000Z",
+  "lastUpdated": "2026-08-14T02:30:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Avanzar ciclo LOXAR: revalidar builds y actualizar continuidad.",
+    "lastPrompt": "Implementar persistencia controlada: ProjectBootstrapModal + projectDiscovery + cablear .loxar como fuente de verdad en App.tsx.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Ciclo de avance revalidado: typecheck 0 errores, lint OK, build OK, tauri:build OK con bundles MSI y NSIS generados. No hay tareas nuevas pendientes en LOXAR_AUTO_PILOT.md."
+  "sessionSummary": "Ciclo de avance REAL: se implementó el control de ubicación de guardado. Antes la app guardaba en silencio en appdata; ahora, si no hay proyecto configurado, el ProjectBootstrapModal pide la ubicación del .loxar y escanea .loxar existentes. El .loxar (lexicons+gramática+perfiles+corpus+canvas+settings+sesión) es la fuente de verdad y se autoguarda. typecheck=0, lint=OK, build=OK. Falta validación runtime del usuario en tauri:dev."
 }

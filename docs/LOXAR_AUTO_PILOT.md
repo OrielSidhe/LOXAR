@@ -101,7 +101,14 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-No hay tareas ejecutables nuevas pendientes en el auto-pilot.
-Los bloques A-K están cerrados. Próximo paso: validación runtime manual con `npm run tauri dev`.
+**Persistencia controlada — IMPLEMENTADA (2026-08-14).** La app ya no guarda en silencio en appdata:
+si no hay proyecto configurado al arrancar, `ProjectBootstrapModal` pide la ubicación del `.loxar` y
+escanea `.loxar` existentes; el `.loxar` (lexicons + gramática + perfiles + corpus + canvas + settings +
+sesión) es la fuente de verdad y se autoguarda cada 30s y al guardar manualmente.
+
+Próximo paso ejecutable: **validación runtime con `npm run tauri dev`** — confirmar que en primera
+corrida aparece el modal de ubicación, que Crear/Abrir/Importar funcionan, y que el `.loxar` sobrevive a
+un borrado de la carpeta de la app (appdata). Luego decidir si se elimina el espejo SQLite para tener una
+única fuente de verdad.
 
 ---

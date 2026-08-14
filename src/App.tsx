@@ -51,6 +51,7 @@ import SettingsModal from './components/SettingsModal';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
 import LanguageTreeCanvas from './components/LanguageTreeCanvas';
+import ProjectBootstrapModal from './components/ProjectBootstrapModal';
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -61,8 +62,10 @@ import { isAiAvailable } from './services/geminiService';
 import { validateGrammarEngine } from './validation/runtimeValidation';
 import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
+import { listLexiconNames, loadLexicon } from './services/sqlStorage';
+import { scanForLoxarProjects } from './services/projectDiscovery';
 
 const ModalManager = lazy(() => import('./components/ModalManager'));
 const AiSettingsModal = lazy(() => import('./components/AiSettingsModal'));
@@ -126,6 +129,10 @@ const App = () => {
     const [projectPath, setProjectPath] = useState<string | null>(null);
     const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
     const [isProjectDirty, setIsProjectDirty] = useState(false);
+    const [showProjectBootstrap, setShowProjectBootstrap] = useState(false);
+    const [availableProjects, setAvailableProjects] = useState<string[]>([]);
+    const [hasLocalData, setHasLocalData] = useState(false);
+    const [bootstrapDismissed, setBootstrapDismissed] = useState(false);
     const [canvasState, setCanvasState] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
     const [isTourActive, setIsTourActive] = useState(false);
     const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
@@ -201,9 +208,36 @@ const App = () => {
                 if (cancelled) return;
                 if (cached.activeTab) setActiveTab(cached.activeTab as any);
                 if (cached.exportPath) setExportPath(cached.exportPath);
+
+                // Reabrir el último proyecto si la ruta sigue existiendo. Si el
+                // archivo desapareció (p.ej. se limpió appdata), no confiamos en
+                // la caché y dejamos que el usuario elija de nuevo.
+                let reopened = false;
                 if (cached.projectPath) {
-                    setProjectPath(cached.projectPath);
-                    await restoreProjectFromPath(cached.projectPath);
+                    try {
+                        const fileExists = await exists(cached.projectPath).catch(() => false);
+                        if (fileExists) {
+                            setProjectPath(cached.projectPath);
+                            await restoreProjectFromPath(cached.projectPath);
+                            setIsProjectDirty(false);
+                            reopened = true;
+                        }
+                    } catch {
+                        reopened = false;
+                    }
+                }
+
+                // Sin proyecto configurado: buscar .loxar existentes y pedir
+                // explícitamente dónde guardar en lugar de usar appdata en silencio.
+                if (!reopened) {
+                    const [found, localNames] = await Promise.all([
+                        scanForLoxarProjects().catch(() => [] as string[]),
+                        listLexiconNames().catch(() => [] as string[]),
+                    ]);
+                    if (cancelled) return;
+                    setAvailableProjects(found);
+                    setHasLocalData(localNames.length > 0);
+                    setShowProjectBootstrap(true);
                 }
                 setSessionCacheData({ tourCompleted: cached.tourCompleted });
             } catch (e) {
@@ -511,6 +545,62 @@ const App = () => {
 
     const markProjectDirty = useCallback(() => setIsProjectDirty(true), []);
 
+    // --- Bootstrap de proyecto (primera corrida / sin proyecto configurado) ---
+    const handleBootstrapOpenFound = useCallback(async (p: string) => {
+        try {
+            setProjectPath(p);
+            await restoreProjectFromPath(p);
+            setIsProjectDirty(false);
+            saveSessionCache({ projectPath: p, activeTab }).catch(console.error);
+            showNotification('Proyecto abierto.', 'success');
+        } catch (e) {
+            showNotification(e instanceof Error ? e.message : 'No se pudo abrir el proyecto.', 'error');
+        } finally {
+            setShowProjectBootstrap(false);
+        }
+    }, [restoreProjectFromPath, activeTab, showNotification]);
+
+    const handleBootstrapCreate = useCallback(() => {
+        setShowProjectBootstrap(false);
+        handleNewProject();
+    }, [handleNewProject]);
+
+    const handleBootstrapOpenOther = useCallback(() => {
+        setShowProjectBootstrap(false);
+        handleOpenProject();
+    }, [handleOpenProject]);
+
+    const handleBootstrapDismiss = useCallback(() => {
+        setShowProjectBootstrap(false);
+        setBootstrapDismissed(true);
+        showNotification('Tus datos se guardan solo en este equipo. Usá "Nuevo"/"Abrir Proyecto" para fijar una ubicación segura.', 'error');
+    }, [showNotification]);
+
+    const handleBootstrapImportLocal = useCallback(async () => {
+        setShowProjectBootstrap(false);
+        const selected = await save({
+            filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }],
+            defaultPath: 'proyecto-importado.loxar',
+        });
+        if (typeof selected !== 'string' || !selected) return;
+        try {
+            const names = await listLexiconNames();
+            const project = createEmptyProject('Proyecto importado', 'Español');
+            for (const name of names) {
+                const data = await loadLexicon(name);
+                if (data) project.lexicons[name] = data;
+            }
+            await writeProjectToPath(selected, project);
+            setProjectPath(selected);
+            await restoreProjectFromPath(selected);
+            setIsProjectDirty(false);
+            saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
+            showNotification(`Proyecto creado con ${names.length} léxico(s) importado(s).`, 'success');
+        } catch (e) {
+            showNotification(e instanceof Error ? e.message : 'No se pudo importar.', 'error');
+        }
+    }, [writeProjectToPath, restoreProjectFromPath, activeTab, showNotification]);
+
     const handleCanvasChange = useCallback((nodes: any[], edges: any[]) => {
       setCanvasState({ nodes, edges });
       markProjectDirty();
@@ -538,6 +628,10 @@ const App = () => {
     const handleSaveChanges = useCallback(() => {
         lexiconHook.saveChanges();
         showNotification("Cambios guardados.", 'success');
+        // El archivo .loxar es la fuente de verdad: siempre se sincroniza al guardar.
+        if (projectPath) {
+            writeProjectToPath(projectPath, buildProjectPayload()).catch(() => {});
+        }
         if (exportPath && activeLexiconName && lexicons[activeLexiconName]) {
             const date = new Date().toISOString().replace(/:/g, '-');
             const safeName = activeLexiconName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
@@ -551,7 +645,7 @@ const App = () => {
                     }
                 }).catch(e => console.error("Auto-backup failed", e));
         }
-    }, [lexiconHook, showNotification, exportPath, activeLexiconName, lexicons]);
+    }, [lexiconHook, showNotification, exportPath, activeLexiconName, lexicons, projectPath, buildProjectPayload, writeProjectToPath]);
 
     useEffect(() => {
         const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -1341,6 +1435,30 @@ const App = () => {
                     ))}
                 </div>
             </div>
+
+                {isAppLoaded && showProjectBootstrap && (
+                    <ProjectBootstrapModal
+                        availableProjects={availableProjects}
+                        hasLocalData={hasLocalData}
+                        onCreate={handleBootstrapCreate}
+                        onOpenOther={handleBootstrapOpenOther}
+                        onOpenFound={handleBootstrapOpenFound}
+                        onImportLocal={handleBootstrapImportLocal}
+                        onDismiss={handleBootstrapDismiss}
+                    />
+                )}
+                {!projectPath && !showProjectBootstrap && bootstrapDismissed && (
+                    <div className="fixed top-0 left-0 right-0 z-[90] flex items-center gap-3 px-4 py-2 bg-danger/15 border-b border-danger/40 text-sm text-white">
+                        <AlertTriangleIcon className="h-4 w-4 text-danger flex-shrink-0" />
+                        <span className="flex-1">No hay un archivo de proyecto configurado. Si se limpia la carpeta de la app, tus datos se perderán.</span>
+                        <button
+                            onClick={() => setShowProjectBootstrap(true)}
+                            className="px-3 py-1 rounded-md bg-accent text-white font-semibold hover:bg-accent-hover transition-colors"
+                        >
+                            Elegir ubicación
+                        </button>
+                    </div>
+                )}
         </div>
         </ErrorBoundary>
     );
