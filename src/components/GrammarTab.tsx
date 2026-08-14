@@ -19,6 +19,8 @@ import SyntaxCanvasAST from './SyntaxCanvasAST';
 import ASTEditor from './ASTEditor';
 import { cloneClauseAST, realizeEditedTree } from '../services/grammar/ast-view';
 import { isAiAvailable } from '../services/geminiService';
+import { validatePostImport } from '../services/grammar/postImportValidator';
+import ImportReport from './ImportReport';
 
 interface GrammarTabProps {
     manifest: GrammarManifest;
@@ -122,6 +124,7 @@ const isMeaningfulTypology = (t?: GrammarManifest['typology']): boolean =>
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     // Editable clause AST for the "Árbol AST" editor (seeded from the preview).
     const [editableAst, setEditableAst] = useState<any>(null);
+    const [importReport, setImportReport] = useState<ReturnType<typeof validatePostImport> | null>(null);
 
     useEffect(() => {
         isAiAvailable().then(setAiAvailable);
@@ -211,6 +214,7 @@ const isMeaningfulTypology = (t?: GrammarManifest['typology']): boolean =>
         };
 
         setEditedManifest(nextManifest);
+        setImportReport(validatePostImport(nextManifest));
         onSave(nextManifest);
         setIsDirty(false);
         setIsImporterOpen(false);
@@ -437,6 +441,13 @@ const isMeaningfulTypology = (t?: GrammarManifest['typology']): boolean =>
                     </div>
                 </div>
             </div>
+
+            {importReport && (
+                <div className="bg-background rounded-lg p-6 border border-border-dark">
+                    <h3 className="text-xl font-bold text-white mb-2">Reporte de validación</h3>
+                    <ImportReport report={importReport} />
+                </div>
+            )}
         </div>
     );
 

@@ -269,6 +269,19 @@ una sola fuente de verdad.
 
 ---
 
+## [2026-08-14] Checkpoint: Fase 4 completada (validador post-import + reporte UI)
+**Rama:** `main`. **Motivo:** cerrar el validador post-import y exponer su reporte en la UI para que el usuario vea score, problemas y sugerencias después de importar gramática.
+**Cambios:**
+- `src/services/grammar/postImportValidator.ts`: ahora acepta `DeclarativeManifest | GrammarManifest` y normaliza el acceso a `phonology`/`realization` para compatibilidad con ambos formatos.
+- `src/components/ImportReport.tsx` (NUEVO): componente reutilizable para mostrar score, secciones, problemas y sugerencias.
+- `src/components/GrammarImporterModal.tsx`: usa `ImportReport` en el preview de validación.
+- `src/components/GrammarTab.tsx`: importa `validatePostImport`, renderiza `ImportReport` en la vista general y limpia el reporte al cerrar el importador.
+- `src/services/grammar/__tests__/postImportValidator.test.ts`: 7 tests pasando.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, 32/32 tests pasando en suite Fase 1-4.
+- Próximo bloque ejecutable: Fase 5 (`strategyExtractor.ts`) o Fase 6 (fixture Quavanol), según orden del plan.
+
+---
+
 ## [2026-08-14] Checkpoint: Validación runtime de tauri:dev y tauri:build
 **Rama:** `main`. **Motivo:** cerrar ciclo de avance con validación real de builds.
 **Cambios:**

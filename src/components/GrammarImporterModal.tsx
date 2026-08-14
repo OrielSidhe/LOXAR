@@ -8,6 +8,7 @@ import { isAiAvailable } from '../services/geminiService';
 import { inductFromText } from '../services/grammar/inductFromText';
 import { validatePostImport } from '../services/grammar/postImportValidator';
 import { convertToLegacy } from '../services/grammarParser';
+import ImportReport from './ImportReport';
 import type { DeclarativeManifest } from '../services/grammar/declarativeFormat';
 import type { ImportValidationReport, Problem } from '../services/grammar/declarativeFormat';
 
@@ -309,36 +310,8 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
 
                                         {validation && (
                                             <div className="p-4 bg-surface rounded-lg border border-subtle">
-                                                <h4 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-2">Reporte de validación</h4>
-                                                <div className="flex items-center gap-3">
-                                                    <span className={`text-xs font-semibold px-2 py-1 rounded ${validation.ok ? 'bg-success/15 text-success' : 'bg-danger/15 text-danger'}`}>
-                                                        {validation.ok ? 'Importación válida' : 'Importación con problemas'}
-                                                    </span>
-                                                    <span className="text-sm font-mono text-text-primary">Score: {validation.score}/100</span>
-                                                </div>
-                                                <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2 text-xs text-text-secondary">
-                                                    {Object.entries(validation.sections).map(([key, value]) => (
-                                                        <div key={key} className="flex items-center gap-2">
-                                                            <span className="capitalize">{key}</span>
-                                                            <span className="font-mono">{value}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                {validation.problems.length > 0 && (
-                                                    <div className="mt-3 space-y-1">
-                                                        {validation.problems.map((problem, idx) => (
-                                                            <div key={idx} className="text-xs text-text-secondary">
-                                                                <span className="font-semibold text-text-primary">{problem.location}:</span> {problem.message}
-                                                                {problem.fix && <span className="text-text-secondary/80"> — {problem.fix}</span>}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {validation.suggestions.length > 0 && (
-                                                    <div className="mt-2 text-xs text-text-secondary">
-                                                        <span className="font-semibold text-text-primary">Sugerencias:</span> {validation.suggestions.join(' ')}
-                                                    </div>
-                                                )}
+                                                <h4 className="text-sm font-bold text-text-secondary uppercase tracking-wider mb-3">Reporte de validación</h4>
+                                                <ImportReport report={validation} />
                                             </div>
                                         )}
 

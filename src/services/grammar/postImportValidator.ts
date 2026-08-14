@@ -16,6 +16,7 @@
  */
 
 import type { DeclarativeManifest, DeclarativeParadigm, DeclarativeStrategy, DeclarativeException, DeclarativeRole, ImportValidationReport, Problem, SectionStatus } from './declarativeFormat';
+import type { GrammarManifest } from '../../types';
 import {
   LEXICAL_CATEGORIES,
   GRAMMATICAL_ROLES,
@@ -70,11 +71,14 @@ function detectCycle(categoryKey: string, visited = new Set<string>()): boolean 
 // Función principal
 // ---------------------------------------------------------------------------
 
-export function validatePostImport(manifest: DeclarativeManifest): ImportValidationReport {
+export function validatePostImport(manifest: DeclarativeManifest | GrammarManifest): ImportValidationReport {
   const problems: Problem[] = [];
   const suggestions: string[] = [];
 
-  // ---- TIPOLOGÍA ----
+  const phono = manifest.phonology;
+  const phonologyAny = phono as any;
+  const consonants = phonologyAny?.consonants ?? phonologyAny?.inventory?.consonants ?? [];
+  const vowels = phonologyAny?.vowels ?? phonologyAny?.inventory?.vowels ?? [];
   const typo = manifest.typology;
   if (!typo.wordOrder) {
     problems.push({ severity: 'error', location: 'typology.wordOrder', message: 'Orden de palabras no definido', fix: 'Añade wordOrder: SVO|SOV|VSO|VOS|OVS|OSV|Libre' });
@@ -87,8 +91,7 @@ export function validatePostImport(manifest: DeclarativeManifest): ImportValidat
   }
 
   // ---- FONOLOGÍA ----
-  const phono = manifest.phonology;
-  if (phono.consonants.length === 0 && phono.vowels.length === 0) {
+  if (consonants.length === 0 && vowels.length === 0) {
     problems.push({ severity: 'warning', location: 'phonology', message: 'Sin inventario fonológico', fix: 'Añade al menos algunos fonemas consonánticos o vocálicos' });
     suggestions.push('Añade al menos algunos fonemas consonánticos o vocálicos');
   }
@@ -126,7 +129,8 @@ export function validatePostImport(manifest: DeclarativeManifest): ImportValidat
         if (typeof s.order !== 'number') {
           problems.push({ severity: 'warning', location: `paradigms[${idx}].slots[${sIdx}].order`, message: 'Slot sin orden definido' });
         }
-        const { kind, position, form } = s.realization;
+        const realizationAny = s.realization as any;
+        const { kind, position, form } = realizationAny;
         if (!kind) {
           problems.push({ severity: 'error', location: `paradigms[${idx}].slots[${sIdx}].realization.kind`, message: 'Slot sin tipo de realización (kind)' });
         } else if (!VALID_MORPHEME_KINDS.has(kind.toLowerCase())) {
@@ -213,10 +217,10 @@ export function validatePostImport(manifest: DeclarativeManifest): ImportValidat
   let score = 0;
   if (typo.wordOrder) score += 20;
   if (typo.morphology && typo.headDirection) score += 20;
-  if (phono.consonants.length > 0 || phono.vowels.length > 0) score += 15;
+  if (consonants.length > 0 || vowels.length > 0) score += 15;
   if (paradigms.length > 0) {
     score += 20;
-    if (paradigms.some(p => p.slots.some(s => s.realization.form))) score += 20;
+    if (paradigms.some(p => p.slots.some(s => !!(s.realization as any).form))) score += 20;
   }
   if (strategies.length > 0) score += 10;
   if (manifest.exceptions.length > 0) score += 5;
@@ -226,7 +230,7 @@ export function validatePostImport(manifest: DeclarativeManifest): ImportValidat
   const ok = score >= 50 && !problems.some(p => p.severity === 'error');
 
   const sections: { phonology: SectionStatus; typology: SectionStatus; paradigms: SectionStatus; strategies: SectionStatus; exceptions: SectionStatus; roles: SectionStatus } = {
-    phonology: phono.consonants.length > 0 || phono.vowels.length > 0 ? 'ok' : 'empty',
+    phonology: consonants.length > 0 || vowels.length > 0 ? 'ok' : 'empty',
     typology: typo.wordOrder ? (typo.morphology && typo.headDirection ? 'ok' : 'partial') : 'missing',
     paradigms: paradigms.length > 0 ? (paradigmPartial ? 'partial' : 'ok') : 'empty',
     strategies: strategies.length > 0 ? 'ok' : 'empty',

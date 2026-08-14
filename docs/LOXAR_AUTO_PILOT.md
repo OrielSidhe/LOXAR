@@ -107,10 +107,12 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**[ ] Fase 4 — Validador post-import + reporte.** El flujo de importación ya produce un manifiesto
-declarativo normalizado, pero todavía falta el validador dedicado (`src/services/grammar/importValidator.ts`)
-y su UI (`src/components/ImportReport.tsx`) para mostrar score, problemas y sugerencias después de
-importar gramática. Es el siguiente bloque ejecutable del plan TDD del motor de gramática.
+**[ ] Fase 5 — Strategy extractor (`strategyExtractor.ts`).** El flujo de importación ya produce un manifiesto
+declarativo normalizado validado, pero todavía falta el extractor dedicado de estrategias desde texto libre
+y su integración con el validador. Es el siguiente bloque ejecutable del plan TDD del motor de gramática.
+
+**[ ] Fase 6 — Fixture Quavanol.** Agregar un conjunto de pruebas realistas en idioma Quavanol para stress-test
+del pipeline completo (textParser → inductFromText → normalizer → postImportValidator → strategyExtractor).
 
 **[ ] Validación runtime de la persistencia controlada (2026-08-14).** La implementación está hecha
 (`ProjectBootstrapModal` + `projectDiscovery` + cableado en `App.tsx`; `.loxar` como fuente de verdad),
