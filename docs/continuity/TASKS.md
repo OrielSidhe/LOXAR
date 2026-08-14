@@ -29,6 +29,43 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - [x] **T1 — SESSION_CACHE en runtime:** `src/services/sessionCache.ts` (`loadSessionCache`/`saveSessionCache`) usando `@tauri-apps/api/core` invoke.
 - [x] **P-LOXAR — Persistencia controlada (`.loxar` como fuente de verdad):** la app YA NO guarda en silencio en appdata. Si no hay proyecto configurado al arrancar, muestra `ProjectBootstrapModal` que pide la ubicación del `.loxar` y escanea `.loxar` existentes en el equipo. Autosave (30s) + "Guardar" sincronizan el `.loxar`. Ver checkpoint 2026-08-14 abajo.
 - [ ] **Runtime (usuario, `npm run tauri dev`):** validar que en primera corrida aparece el modal de ubicación, que Crear/Abrir/Importar funcionan y que el `.loxar` sobrevive a un borrado de appdata.
+- [ ] **Auditoría de limpieza (ver `docs/AUDIT_REPORT.md`):** P0 — higiene pre-release de bajo riesgo: borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`), duplicado `src/constants/tourSteps.ts`, duplicados en raíz (`components/`, `hooks/useLexicon.ts`), `metadata.json` + `android-icon-*.png`, y descachear `docs/continuity/SESSION_CACHE.json`. Cada item tiene su prompt listo en el reporte.
+- [ ] **Auditoría de arquitectura (P1, tras typecheck verde):** renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini muertos; descomponer `App.tsx` (God Component, 1482 líneas) y los 4 componentes gigantes; migrar los 23 tests a Vitest.
+
+---
+
+## [2026-08-14] Checkpoint: Auditoría de calidad completa (READ-ONLY) + directivas de coding/awareness
+**Rama:** `main`. **Motivo:** el usuario pidió (a) añadir buenas prácticas de coding (limpio, breve,
+comentarios solo donde sea necesario) y una regla de **awareness holístico** (no arreglar cosas pequeñas
+aisladamente y romper lo conectado) a TODAS las directivas; y (b) auditar el proyecto SIN tocar código,
+dejando un reporte revisable con hallazgos, fixes, plan y prompts para implementar.
+
+**Cambios (directivas):**
+- `docs/LOXAR_OPERATING_PROTOCOL.md`: nuevas §10 (buenas prácticas de coding) y §11 (awareness del
+  proyecto / análisis de impacto — mapear callers/dependents antes de editar, no introducir fixes
+  locales que orfanden features vecinas).
+- `docs/continuity/PROTOCOL.md`: regla de oro #7 "Código limpio y visión holística" + referencia a §10-§11.
+- `~/.zcode/skills/loxar-continuity/SKILL.md`: paso 2 menciona §10-§11; paso 4b añade guarda de awareness.
+
+**Auditoría (NO se modificó código; solo se escribió `docs/AUDIT_REPORT.md`):**
+- Delegada a un subagente de exploración (SOP §2d: mantiene el contexto acotado). Veredicto: funcional
+  pero sucio en higiene; NO listo para GitHub tal como está.
+- **Top hallazgos (con evidencia):** deps muertas en `package.json` (`ws`, `dotenv`,
+  `@tauri-apps/plugin-window`, `sharp`, `jest` — este último deja 23 `*.test.ts` no ejecutables);
+  código duplicado en la raíz (`components/`, `hooks/useLexicon.ts`) y `src/constants/tourSteps.ts`;
+  `App.tsx` God Component (1482 líneas, 20 `any`); 21 `window.electronAPI` = shim vivo a Tauri que nombra
+  "Electron" y arrastra 12 stubs Gemini muertos; 240 `any`; `SESSION_CACHE.json` rastreado por git;
+  archivos sueltos en raíz (`metadata.json`, `android-icon-*.png`); 13 componentes >400 líneas.
+- **Desmentidos a sospechas del usuario:** `fontkit`/`opentype.js` NO existen en `package.json`;
+  `xlsx`/`svg2ttf` SÍ se usan; `window.electronAPI` no es código muerto (es un shim vivo), pero su
+  nombre y los stubs Gemini sí son restos.
+- El reporte incluye 12 hallazgos (H1-H12, ID/severidad/ubicación/fix), plan P0→P3, y 12 prompts
+  exactos listos para pegar para que un agente de AI implemente cada fix cuando el usuario lo indique.
+- **Aviso:** `docs/AUDIT_REPORT.md` es doc de trabajo interno y debe BORRARSE antes del release (ver P3).
+
+**Verificación:** solo edición de documentación (markdown) + reporte nuevo; no afecta typecheck/build.
+**Próximo paso sugerido:** ejecutar los P0 (limpieza de higiene, bajo riesgo) usando los prompts del
+reporte, y luego los P1 (refactor de arquitectura) tras dejar typecheck/build en verde.
 
 ---
 

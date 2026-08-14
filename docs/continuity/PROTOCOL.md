@@ -8,7 +8,8 @@ Antes de tocar **cualquier** archivo en este repositorio, es **OBLIGATORIO** lee
 Si no lo haces, romperás la continuidad del proyecto.
 
 Además de este contrato, el agente debe seguir `docs/LOXAR_OPERATING_PROTOCOL.md` (protocolo de resolución
-tipo ITIL/SDD, manejo de seguridad y regla de contexto conciso) y consultar `docs/LOXAR_AUTO_PILOT.md`
+tipo ITIL/SDD, manejo de seguridad, regla de contexto conciso, buenas prácticas de coding §10 y regla de
+awareness holístico del proyecto §11) y consultar `docs/LOXAR_AUTO_PILOT.md`
 como memoria viva del proyecto (objetivo / estado / próxima tarea).
 
 ---
@@ -28,6 +29,7 @@ como memoria viva del proyecto (objetivo / estado / próxima tarea).
 | 4 | **Estado UI persistente.** Guarda el estado de la vista (tab activa, entrada en edición) en `SESSION_CACHE.json`. | Reduce la fricción al retomar una sesión. |
 | 5 | **Checkpoint obligatorio antes de cortes largos.** Antes de una operación de IA que pueda tardar, escribe un bloque de comentario `// TODO: [CONTINUE HERE] - <descripción>` y actualiza `TASKS.md`. | Crea un punto de recuperación legible por humanos e IA. |
 | 6 | **Memoria del proyecto siempre actualizada.** Cada cambio de código o decisión se refleja en `docs/LOXAR_AUTO_PILOT.md` (Estado + Próxima tarea) y en `TASKS.md` (checkpoint) antes de cerrar. | Evita que el auto-pilot diga "todo hecho" mientras hay trabajo real pendiente (falla anterior del ciclo automatizado). |
+| 7 | **Código limpio y visión holística.** Seguir `docs/LOXAR_OPERATING_PROTOCOL.md` §10 (buenas prácticas de coding: limpio, breve, comentarios solo donde sea necesario) y §11 (awareness del proyecto: mapear callers/dependents y no introducir fixes locales que rompan lo conectado). | El repo se sube a GitHub: solo lo necesario, sin notas que ensucien. Un "arreglo" aislado no debe orfandar features vecinas. |
 
 ## 🛠️ Checklist de Validación (Ejecutar antes de cada commit)
 

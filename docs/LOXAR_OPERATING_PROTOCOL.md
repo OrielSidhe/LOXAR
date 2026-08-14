@@ -80,3 +80,18 @@ Existe `npm run test:gui` (Playwright, modo web headless) que conduce la app y d
 - Los diálogos nativos de Tauri (Guardar/Abrir `.loxar`) NO se automatizan acá; ese flujo se cubre con
   tests de lógica (`projectFile`/`projectDiscovery`) y validación manual del usuario.
 - Reportar resultado de forma concisa (pass/fail + errores) en la memoria y al usuario.
+
+## 10. Buenas prácticas de coding
+Todo código nuevo o modificado debe cumplir estándares altos (el repo se sube a GitHub; solo va lo necesario):
+- **Limpio y breve:** funciones pequeñas con una sola responsabilidad; archivos cohesionados; sin código muerto ni ramas comentadas.
+- **Comentarios solo donde sea necesario:** NO documentar el "qué" (eso lo dice el código), sino el "por qué" cuando no es obvio (constraints del dominio, compatibilidad Tauri, decisiones de arquitectura). Prohibido el comentario que solo repite el código.
+- **Nombres claros y consistentes** con el resto del proyecto; sin abreviaturas crípticas.
+- **Sin notas que ensucien el repo:** no dejar `TODO` vagos, comentarios tipo "fixme" ni documentación de trabajo dentro de `src/`. El progreso vive en la memoria (`docs/`), no en el código.
+- **Separación de responsabilidades:** UI en `src/components`, lógica en `src/services`, estado en `src/hooks`, datos estáticos en `src/data`, tipos en `src/types.ts`. No acoplar lógica de dominio a componentes.
+
+## 11. Awareness del proyecto (visión holística / análisis de impacto)
+Antes de tocar nada, el agente debe tener **conciencia del proyecto en su conjunto**, no solo resolver lo pequeño:
+- **Mapear el alcance del cambio:** identificar qué otros módulos llaman/son llamados por el código a modificar (callers/dependents). Un "arreglo local" (p. ej. una variable o identidad nueva solo válida para ese botón) puede romper partes conectadas.
+- **No introducir identidades locales que orfanden otras features:** si se renombra/agrega un campo, tipo, prop o evento, verificar que todos los consumidores lo respetan (búsqueda global, no asumir).
+- **Pensar en el sistema, no en el síntoma:** el objetivo es que el cambio mejore el proyecto sin regresiones silenciosas en lo conectado.
+- **Al dudar del impacto, preguntar** (ver §2b) o dejar un checkpoint en la memoria antes de editar.
