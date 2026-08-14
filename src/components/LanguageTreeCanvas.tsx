@@ -18,6 +18,9 @@ type LanguageTreeCanvasProps = {
   lexicon?: any[];
   profile?: any;
   onNodeClick?: (nodeId: string) => void;
+  canvasNodes?: any[];
+  canvasEdges?: any[];
+  onCanvasChange?: (nodes: any[], edges: any[]) => void;
 };
 
 const NODES: TreeNode[] = [
@@ -66,14 +69,26 @@ type Point = { x: number; y: number };
 type DragState = { id: string; offsetX: number; offsetY: number };
 type ConnectionState = { fromId: string; currentX: number; currentY: number };
 
-const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, grammar, lexicon, onNodeClick }) => {
+const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, grammar, lexicon, onNodeClick, canvasNodes, canvasEdges, onCanvasChange }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [customNodes, setCustomNodes] = useState<GraphNode[]>([]);
-  const [customEdges, setCustomEdges] = useState<GraphEdge[]>([]);
+  const [customNodes, setCustomNodes] = useState<GraphNode[]>(canvasNodes ?? []);
+  const [customEdges, setCustomEdges] = useState<GraphEdge[]>(canvasEdges ?? []);
   const [dragging, setDragging] = useState<DragState | null>(null);
   const [connecting, setConnecting] = useState<ConnectionState | null>(null);
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    setCustomNodes(canvasNodes ?? []);
+  }, [canvasNodes]);
+
+  useEffect(() => {
+    setCustomEdges(canvasEdges ?? []);
+  }, [canvasEdges]);
+
+  const emitCanvasChange = useCallback((nodes: GraphNode[], edges: GraphEdge[]) => {
+    onCanvasChange?.(nodes, edges);
+  }, [onCanvasChange]);
 
   const nodeMap = React.useMemo(() => {
     const map: Record<string, TreeNode> = {};
@@ -148,6 +163,22 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
     };
   }, []);
 
+  const setCustomNodesWithSave = useCallback((updater: React.SetStateAction<GraphNode[]>) => {
+    setCustomNodes((prev) => {
+      const next = typeof updater === 'function' ? (updater as (p: GraphNode[]) => GraphNode[])(prev) : updater;
+      emitCanvasChange(next, customEdges);
+      return next;
+    });
+  }, [customEdges, emitCanvasChange]);
+
+  const setCustomEdgesWithSave = useCallback((updater: React.SetStateAction<GraphEdge[]>) => {
+    setCustomEdges((prev) => {
+      const next = typeof updater === 'function' ? (updater as (p: GraphEdge[]) => GraphEdge[])(prev) : updater;
+      emitCanvasChange(customNodes, next);
+      return next;
+    });
+  }, [customNodes, emitCanvasChange]);
+
   const handleNodeDoubleClick = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     const label = window.prompt('Nombre del nuevo elemento:', 'Nuevo nodo');
@@ -162,8 +193,8 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
       kind: 'rule',
       description: 'Nodo personalizado',
     };
-    setCustomNodes((prev) => [...prev, newNode]);
-  }, [getPosition]);
+    setCustomNodesWithSave((prev) => [...prev, newNode]);
+  }, [getPosition, setCustomNodesWithSave]);
 
   const handleNodePointerDown = useCallback((e: React.PointerEvent, id: string) => {
     if (e.button !== 0) return;
@@ -178,7 +209,7 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
     const pos = getPosition(e);
 
     if (dragging) {
-      setCustomNodes((prev) =>
+      setCustomNodesWithSave((prev) =>
         prev.map((node) =>
           node.id === dragging.id
             ? { ...node, x: Math.max(2, Math.min(98, pos.x)), y: Math.max(2, Math.min(98, pos.y)) }
@@ -191,19 +222,19 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
     if (connecting) {
       setConnecting({ ...connecting, currentX: pos.x, currentY: pos.y });
     }
-  }, [dragging, connecting, getPosition]);
+  }, [dragging, connecting, getPosition, setCustomNodesWithSave]);
 
   const handleCanvasPointerUp = useCallback((e: React.PointerEvent) => {
     const target = e.target as HTMLElement | null;
     const nodeId = target?.closest('[data-node-id]')?.getAttribute('data-node-id');
 
     if (connecting && nodeId && nodeId !== connecting.fromId) {
-      setCustomEdges((prev) => [...prev, { from: connecting.fromId, to: nodeId, label: '' }]);
+      setCustomEdgesWithSave((prev) => [...prev, { from: connecting.fromId, to: nodeId, label: '' }]);
     }
 
     setDragging(null);
     setConnecting(null);
-  }, [connecting]);
+  }, [connecting, setCustomEdgesWithSave]);
 
   const handleCanvasDoubleClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -220,8 +251,8 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
       kind: 'rule',
       description: 'Nodo personalizado',
     };
-    setCustomNodes((prev) => [...prev, newNode]);
-  }, [getPosition]);
+    setCustomNodesWithSave((prev) => [...prev, newNode]);
+  }, [getPosition, setCustomNodesWithSave]);
 
   const startConnection = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -240,10 +271,10 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
   const closeContextMenu = useCallback(() => setContextMenu(null), []);
 
   const deleteNode = useCallback((id: string) => {
-    setCustomNodes((prev) => prev.filter((node) => node.id !== id));
-    setCustomEdges((prev) => prev.filter((edge) => edge.from !== id && edge.to !== id));
+    setCustomNodesWithSave((prev) => prev.filter((node) => node.id !== id));
+    setCustomEdgesWithSave((prev) => prev.filter((edge) => edge.from !== id && edge.to !== id));
     setContextMenu(null);
-  }, []);
+  }, [setCustomNodesWithSave, setCustomEdgesWithSave]);
 
   useEffect(() => {
     if (!contextMenu) return;

@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Avanzar ciclo LOXAR: integrar .loxar, rediseñar layout inicial y agregar interactividad al canvas.",
+    "lastPrompt": "Avanzar ciclo LOXAR: persistir canvas en .loxar y validar build.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Implementado flujo real de proyecto .loxar, layout inicial con árbol visible e interactividad en LanguageTreeCanvas. Validaciones: typecheck 0 errores, lint OK, build OK, tauri:build OK."
+  "sessionSummary": "P ersistencia del canvas integrada en .loxar, layout inicial con árbol visible y canvas interactivo con drag/conectar/crear nodos. Validaciones: typecheck 0 errores, lint OK, build OK, tauri:build OK."
 }

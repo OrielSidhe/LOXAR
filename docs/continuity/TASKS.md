@@ -210,6 +210,17 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - `npm run tauri:build` generó instaladores: MSI y NSIS en `src-tauri/target/release/bundle/`.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
 
+## [2026-08-14] Checkpoint: persistencia del canvas en .loxar y cierre de ciclo
+**Rama:** `main`. **Motivo:** completar la integración del canvas con el flujo de proyecto para que los nodos/edges no se pierdan al cerrar la app.
+**Cambios:**
+- `src/services/projectFile.ts`: agregado bloque `canvas` a `LoxarProject`.
+- `src/components/LanguageTreeCanvas.tsx`: el canvas ahora expone `canvasNodes`/`canvasEdges`/`onCanvasChange` y persiste cambios en el proyecto.
+- `src/App.tsx`: cableado de `canvasState` al proyecto, incluyendo guardado/restauración al abrir/guardar como.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, `npm run tauri:build` OK.
+- Próximo paso: validar runtime con `npm run tauri dev` que el canvas persiste entre sesiones.
+
+---
+
 ## [2026-08-14] Checkpoint: interactividad básica en LanguageTreeCanvas
 **Rama:** `main`. **Motivo:** avanzar en la visión Harness/Canvas convirtiendo el árbol en una superficie interactiva donde crear y mover elementos del conlang.
 **Cambios:**

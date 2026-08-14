@@ -126,6 +126,7 @@ const App = () => {
     const [projectPath, setProjectPath] = useState<string | null>(null);
     const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
     const [isProjectDirty, setIsProjectDirty] = useState(false);
+    const [canvasState, setCanvasState] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
     const [isTourActive, setIsTourActive] = useState(false);
     const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
     const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
@@ -414,6 +415,7 @@ const App = () => {
                 activeProfile: activeProfile ? activeProfile.sampleText.slice(0, 20) : null,
                 tourCompleted: sessionCacheData?.tourCompleted,
             },
+            canvas: canvasState,
         };
     }, [activeLexiconName, activeMetadata, lexicons, activeGrammar, activeProfile, lexiconHook, activeCustomFunctions, themeId, exportPath, activeTab, sessionCacheData]);
 
@@ -497,12 +499,18 @@ const App = () => {
                 project.customFunctions.forEach(fn => lexiconHook.addCustomFunction(fn));
             }
             if (project.session?.activeTab) setActiveTab(project.session.activeTab as any);
+            if (project.canvas) setCanvasState({ nodes: project.canvas.nodes ?? [], edges: project.canvas.edges ?? [] });
         } catch (e) {
             console.error('Failed to restore project', e);
         }
     }, [lexiconHook]);
 
     const markProjectDirty = useCallback(() => setIsProjectDirty(true), []);
+
+    const handleCanvasChange = useCallback((nodes: any[], edges: any[]) => {
+      setCanvasState({ nodes, edges });
+      markProjectDirty();
+    }, [markProjectDirty]);
 
     useEffect(() => {
         const id = setInterval(() => {
@@ -1075,6 +1083,9 @@ const App = () => {
                       grammar={activeGrammar}
                       lexicon={activeLexicon}
                       profile={activeProfile}
+                      canvasNodes={canvasState.nodes}
+                      canvasEdges={canvasState.edges}
+                      onCanvasChange={handleCanvasChange}
                       onNodeClick={(nodeId) => setActiveTab(nodeId as any)}
                     />
 

@@ -24,6 +24,10 @@ export type LoxarProject = {
     activeProfile?: string | null;
     tourCompleted?: boolean;
   };
+  canvas?: {
+    nodes?: any[];
+    edges?: any[];
+  };
 };
 
 export const LOXAR_PROJECT_VERSION = '0.1.0';
