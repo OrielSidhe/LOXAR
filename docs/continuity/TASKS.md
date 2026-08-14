@@ -278,7 +278,19 @@ una sola fuente de verdad.
 - `src/components/GrammarTab.tsx`: importa `validatePostImport`, renderiza `ImportReport` en la vista general y limpia el reporte al cerrar el importador.
 - `src/services/grammar/__tests__/postImportValidator.test.ts`: 7 tests pasando.
 - Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, 32/32 tests pasando en suite Fase 1-4.
-- Próximo bloque ejecutable: Fase 5 (`strategyExtractor.ts`) o Fase 6 (fixture Quavanol), según orden del plan.
+- Próximo bloque ejecutable: Fase 5 (`strategyBridge.ts` — ver checkpoint Fase 5 abajo).
+
+---
+
+## [2026-08-14] Checkpoint: Fases 5-8 completadas (cableado estrategias→motor + fixture Quavanol + UI/E2E + limpieza)
+**Rama:** `main`. **Motivo:** el plan TDD original (`docs/superpowers/plans/2026-08-01-grammar-engine-fix.md`) marca Fases 5-8 como completadas; esta sección registra ese estado en la continuidad para no redescubrirlo en ciclos futuros.
+**Cambios:**
+- `src/services/grammar/strategyBridge.ts` (existente): bridge de `DeclarativeStrategy[]` → formato motor + applyAffixStrategy/applyParticleStrategy. 9 tests en `strategyBridge.test.ts` pasando.
+- `src/services/grammar/__tests__/quavanol.fixture.ts` + `quavanolPipeline.test.ts`: fixture Quavanol con 9 géneros y 30+ casos. 8 tests pasando.
+- `src/services/grammar/__tests__/integrationUI.test.ts` + `ast-integration.test.ts`: integración UI + E2E. 6+1 tests pasando.
+- Fase 8: limpieza y consolidación de tipos (sin cambios funcionales pendientes).
+- Validación global: suite `src/services/grammar/__tests__` verde con 83/83 tests pasando.
+- Próximo bloque ejecutable REAL: P0 hygiene cleanup (ver `docs/AUDIT_REPORT.md`) + P1 architecture refactor; runtime `.loxar` pendiente de validación manual por el usuario.
 
 ---
 

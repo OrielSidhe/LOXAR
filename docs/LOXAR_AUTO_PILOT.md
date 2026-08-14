@@ -107,12 +107,23 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**[ ] Fase 5 — Strategy extractor (`strategyExtractor.ts`).** El flujo de importación ya produce un manifiesto
-declarativo normalizado validado, pero todavía falta el extractor dedicado de estrategias desde texto libre
-y su integración con el validador. Es el siguiente bloque ejecutable del plan TDD del motor de gramática.
+**[ ] P0 — Higiene pre-release (ver `docs/AUDIT_REPORT.md`).** Tareas de bajo riesgo sin impacto funcional:
+- Borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`).
+- Eliminar código duplicado (`src/constants/tourSteps.ts`, duplicados en raíz).
+- Limpiar archivos sueltos (`metadata.json`, `android-icon-*.png`).
+- Descachear `docs/continuity/SESSION_CACHE.json` si es necesario.
+Cada item tiene prompt listo en el reporte; ejecutar en orden P0→P1.
 
-**[ ] Fase 6 — Fixture Quavanol.** Agregar un conjunto de pruebas realistas en idioma Quavanol para stress-test
-del pipeline completo (textParser → inductFromText → normalizer → postImportValidator → strategyExtractor).
+**[ ] P1 — Auditoría de arquitectura (tras P0 + typecheck verde).** Refactors estructurales:
+- Renombrar `window.electronAPI` → `window.loxarBridge` y matar stubs Gemini muertos.
+- Descomponer `App.tsx` (God Component) y los 4 componentes gigantes.
+- Migrar tests legacy a Vitest.
+
+**[ ] Validación runtime de la persistencia controlada (2026-08-14).** La implementación está hecha
+(`ProjectBootstrapModal` + `projectDiscovery` + cableado en `App.tsx`; `.loxar` como fuente de verdad),
+pero falta validación visual del usuario con `npm run tauri dev`: confirmar que en primera corrida aparece
+el modal de ubicación, que Crear/Abrir/Importar funcionan, y que el `.loxar` sobrevive a un borrado de
+appdata. El agente headless solo valida estático (typecheck/lint/build/tauri:build).
 
 **[ ] Validación runtime de la persistencia controlada (2026-08-14).** La implementación está hecha
 (`ProjectBootstrapModal` + `projectDiscovery` + cableado en `App.tsx`; `.loxar` como fuente de verdad),
