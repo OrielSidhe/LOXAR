@@ -34,8 +34,28 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
         try {
             const parsed = JSON.parse(trimmed);
             const rawData = Array.isArray(parsed) ? parsed : [parsed];
-            const headers = Array.from(new Set(rawData.flatMap(row => Object.keys(row))));
-            return { successfulData: rawData, errorContent: null, error: null, headers, warnings };
+            const { valid, rejected } = splitRows(rawData);
+            const rejectionMessage = buildRejectionMessage(rejected);
+            if (rejectionMessage) {
+                warnings.push(rejectionMessage);
+            }
+            const headers = Array.from(new Set([...valid, ...rejected].flatMap(row => Object.keys(row))));
+            if (valid.length === 0) {
+                return {
+                    successfulData: [],
+                    errorContent: fileContent,
+                    error: "No se detectaron entradas de léxico válidas en el JSON. Revisá el formato o eliminá filas narrativas.",
+                    headers,
+                    warnings,
+                };
+            }
+            return {
+                successfulData: valid,
+                errorContent: rejected.length ? JSON.stringify(rejected) : null,
+                error: rejected.length ? "Se ignoraron filas narrativas o inválidas dentro del JSON." : null,
+                headers,
+                warnings,
+            };
         } catch (jsonError) {
             warnings.push("Initial JSON parsing failed. Attempting to repair with AI...");
             try {
@@ -79,25 +99,39 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
 
     const successfulData: any[] = [];
     const errorRows: string[] = [];
+    const narrativeRows: any[] = [];
 
     bodyRows.forEach((rowArray, index) => {
         if (rowArray.length !== headers.length) {
              warnings.push(`Row ${index + 2}: Found ${rowArray.length} columns, expected ${headers.length}. This row needs correction.`);
              errorRows.push(rowArray.join(',')); // Keep original separator for easier editing
-        } else {
-            const obj: { [key: string]: string } = {};
-            headers.forEach((header, i) => {
-                obj[header] = rowArray[i];
-            });
-            successfulData.push(obj);
+             return;
         }
+
+        const obj: { [key: string]: string } = {};
+        headers.forEach((header, i) => {
+            obj[header] = rowArray[i];
+        });
+
+        if (!isLikelyLexiconRow(obj)) {
+            narrativeRows.push({ ...obj, _rejectIndex: index + 2 });
+            return;
+        }
+
+        successfulData.push(obj);
     });
 
-    if (errorRows.length > 0) {
+    const rejectionMessage = buildRejectionMessage(narrativeRows);
+    if (rejectionMessage) {
+        warnings.push(rejectionMessage);
+    }
+
+    if (errorRows.length > 0 || narrativeRows.length > 0) {
+        const combined = [...errorRows, ...narrativeRows.map(row => JSON.stringify(row))];
         return {
             successfulData,
-            errorContent: errorRows.join('\n'),
-            error: "Some rows in your CSV have an incorrect number of columns. Please fix them below or import only the valid entries.",
+            errorContent: combined.join('\n'),
+            error: "Algunas filas fueron excluidas por formato inválido o por parecer texto narrativo. Corregilas abajo o importá solo las entradas válidas.",
             headers,
             warnings,
         };
@@ -106,6 +140,54 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
     return { successfulData, errorContent: null, error: null, headers, warnings };
 }
 
+
+const LEXICON_FIELD_KEYS = ['Léxema', 'Raíz', 'Categoría', 'Significado', 'externalID'];
+
+const hasLexiconSignal = (row: any): boolean => {
+    if (!row || typeof row !== 'object') return false;
+    return LEXICON_FIELD_KEYS.some(key => {
+        const value = row[key];
+        return typeof value === 'string' ? value.trim().length > 0 : Array.isArray(value) ? value.length > 0 : false;
+    });
+};
+
+const looksLikeNarrative = (row: any): boolean => {
+    const rawMeaning = row?.Significado;
+    if (typeof rawMeaning === 'string') {
+        const meaning = rawMeaning.trim();
+        if (meaning.length > 180) return true;
+        if (meaning.includes('\n') || meaning.includes('\r')) return true;
+        if (/[.!?]/.test(meaning) && meaning.split(/[.!?]/).length > 2) return true;
+    }
+    return false;
+};
+
+const isLikelyLexiconRow = (row: any): boolean => {
+    if (!hasLexiconSignal(row)) return false;
+    return !looksLikeNarrative(row);
+};
+
+const splitRows = (rows: any[]) => {
+    const valid: any[] = [];
+    const rejected: any[] = [];
+    rows.forEach((row, index) => {
+        if (isLikelyLexiconRow(row)) {
+            valid.push(row);
+        } else {
+            rejected.push({ ...row, _rejectIndex: index + 2 });
+        }
+    });
+    return { valid, rejected };
+};
+
+const buildRejectionMessage = (rejected: any[]): string | null => {
+    if (!rejected.length) return null;
+    const samples = rejected.slice(0, 5).map(row => {
+        const meaning = typeof row.Significado === 'string' ? row.Significado.trim() : JSON.stringify(row.Significado ?? '');
+        return `#${row._rejectIndex}: ${meaning}`;
+    }).join('\n');
+    return `Se ignoraron ${rejected.length} filas que parecen texto narrativo o fuera de formato. Ejemplo:\n${samples}`;
+};
 
 export function inferRootFromLexeme(lex: string | null | undefined): string {
     if (typeof lex === 'string' && lex) {
