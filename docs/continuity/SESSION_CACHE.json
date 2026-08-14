@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Implementar formato .loxar y rediseñar layout inicial para exponer el árbol.",
+    "lastPrompt": "Avanzar ciclo LOXAR: integrar .loxar, rediseñar layout inicial y agregar interactividad al canvas.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Implementado flujo real de proyecto .loxar: Nuevo/Abrir/Guardar/Guardar como, pickers explícitos, autosave y sessionCache con projectPath. Corregido layout inicial: el LanguageTreeCanvas queda visible cuando no hay panel abierto y ModulePanel ya no oscurece todo el canvas. Validaciones: typecheck 0 errores, lint OK, build OK."
+  "sessionSummary": "Implementado flujo real de proyecto .loxar, layout inicial con árbol visible e interactividad en LanguageTreeCanvas. Validaciones: typecheck 0 errores, lint OK, build OK, tauri:build OK."
 }

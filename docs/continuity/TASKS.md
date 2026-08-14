@@ -210,6 +210,28 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - `npm run tauri:build` generó instaladores: MSI y NSIS en `src-tauri/target/release/bundle/`.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
 
+## [2026-08-14] Checkpoint: interactividad básica en LanguageTreeCanvas
+**Rama:** `main`. **Motivo:** avanzar en la visión Harness/Canvas convirtiendo el árbol en una superficie interactiva donde crear y mover elementos del conlang.
+**Cambios:**
+- `src/components/LanguageTreeCanvas.tsx`: agregadas interacciones de usuario sobre el canvas: arrastrar nodos personalizados, crear nodos con doble clic, conectar nodos y menú contextual para editar/duplicar/eliminar.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- Próximo paso: persistir el estado del canvas en el proyecto `.loxar` y cablearlo a lexicón/gramática.
+
+---
+
+## [2026-08-14] Checkpoint: validación de `tauri:build` y estado de integraciones UI
+**Rama:** `main`. **Motivo:** cerrar el ciclo de avance confirmando que el empaquetado desktop sigue funcionando después de los cambios de `.loxar` y layout.
+**Cambios / Verificación:**
+- Integración UI confirmada:
+  - FTS5: `LexiconTable` consume `searchLexicon` desde `App.tsx` con `activeLexiconName`.
+  - `InterlinearGlossViewer`: integrado en tools mediante `activeToolView === 'interlinear-gloss'`.
+  - `SoundChangeWorkbench`: integrado en tools mediante `activeToolView === 'sound-change'`.
+- Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK, `npm run tauri:build` OK.
+- `npm run tauri:build` generó instaladores: MSI y NSIS en `src-tauri/target/release/bundle/`.
+- Próximo paso ejecutable: implementar interactividad básica en `LanguageTreeCanvas` para avanzar con la visión Harness/Canvas.
+
+---
+
 ## [2026-08-14] Checkpoint: integración real del formato .loxar y rediseño de layout principal
 **Rama:** `main`. **Motivo:** implementar guardado/carga explícito con archivo de proyecto y arreglar la vista inicial para que el árbol se vea cuando no hay panel abierto.
 **Cambios:**

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 
 type TreeNode = {
   id: string;
@@ -62,7 +62,19 @@ const GRAPH_COLORS: Record<GraphNode['kind'], { border: string; bg: string; text
 
 const safeId = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
+type Point = { x: number; y: number };
+type DragState = { id: string; offsetX: number; offsetY: number };
+type ConnectionState = { fromId: string; currentX: number; currentY: number };
+
 const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, grammar, lexicon, onNodeClick }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [customNodes, setCustomNodes] = useState<GraphNode[]>([]);
+  const [customEdges, setCustomEdges] = useState<GraphEdge[]>([]);
+  const [dragging, setDragging] = useState<DragState | null>(null);
+  const [connecting, setConnecting] = useState<ConnectionState | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+
   const nodeMap = React.useMemo(() => {
     const map: Record<string, TreeNode> = {};
     NODES.forEach((n) => { map[n.id] = n; });
@@ -122,8 +134,153 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
     return { nodes, edges };
   }, [grammar, lexicon]);
 
+  const getAllNodes = useCallback((source: GraphNode[]) => {
+    const base = NODES.map((n) => ({ ...n, kind: 'category' as GraphNode['kind'] }));
+    return [...base, ...graphData?.nodes ?? [], ...source];
+  }, [graphData]);
+
+  const getPosition = useCallback((e: React.PointerEvent | React.MouseEvent | MouseEvent): Point => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * 100,
+      y: ((e.clientY - rect.top) / rect.height) * 100,
+    };
+  }, []);
+
+  const handleNodeDoubleClick = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const label = window.prompt('Nombre del nuevo elemento:', 'Nuevo nodo');
+    if (!label?.trim()) return;
+    const pos = getPosition(e);
+    const newNode: GraphNode = {
+      id: `custom-${safeId(label)}-${Date.now()}`,
+      label,
+      x: pos.x,
+      y: pos.y,
+      status: 'partial',
+      kind: 'rule',
+      description: 'Nodo personalizado',
+    };
+    setCustomNodes((prev) => [...prev, newNode]);
+  }, [getPosition]);
+
+  const handleNodePointerDown = useCallback((e: React.PointerEvent, id: string) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const pos = getPosition(e);
+    setDragging({ id, offsetX: pos.x, offsetY: pos.y });
+    setContextMenu(null);
+  }, [getPosition]);
+
+  const handleCanvasPointerMove = useCallback((e: React.PointerEvent) => {
+    const pos = getPosition(e);
+
+    if (dragging) {
+      setCustomNodes((prev) =>
+        prev.map((node) =>
+          node.id === dragging.id
+            ? { ...node, x: Math.max(2, Math.min(98, pos.x)), y: Math.max(2, Math.min(98, pos.y)) }
+            : node
+        )
+      );
+      setDragging((prev) => (prev ? { ...prev, offsetX: pos.x, offsetY: pos.y } : prev));
+    }
+
+    if (connecting) {
+      setConnecting({ ...connecting, currentX: pos.x, currentY: pos.y });
+    }
+  }, [dragging, connecting, getPosition]);
+
+  const handleCanvasPointerUp = useCallback((e: React.PointerEvent) => {
+    const target = e.target as HTMLElement | null;
+    const nodeId = target?.closest('[data-node-id]')?.getAttribute('data-node-id');
+
+    if (connecting && nodeId && nodeId !== connecting.fromId) {
+      setCustomEdges((prev) => [...prev, { from: connecting.fromId, to: nodeId, label: '' }]);
+    }
+
+    setDragging(null);
+    setConnecting(null);
+  }, [connecting]);
+
+  const handleCanvasDoubleClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('[data-node-id]')) return;
+    const pos = getPosition(e);
+    const label = window.prompt('Nombre del nuevo elemento:', 'Nuevo nodo');
+    if (!label?.trim()) return;
+    const newNode: GraphNode = {
+      id: `custom-${safeId(label)}-${Date.now()}`,
+      label,
+      x: pos.x,
+      y: pos.y,
+      status: 'partial',
+      kind: 'rule',
+      description: 'Nodo personalizado',
+    };
+    setCustomNodes((prev) => [...prev, newNode]);
+  }, [getPosition]);
+
+  const startConnection = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const pos = getPosition(e);
+    setConnecting({ fromId: id, currentX: pos.x, currentY: pos.y });
+    setContextMenu(null);
+  }, [getPosition]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ id, x: e.clientX, y: e.clientY });
+  }, []);
+
+  const closeContextMenu = useCallback(() => setContextMenu(null), []);
+
+  const deleteNode = useCallback((id: string) => {
+    setCustomNodes((prev) => prev.filter((node) => node.id !== id));
+    setCustomEdges((prev) => prev.filter((edge) => edge.from !== id && edge.to !== id));
+    setContextMenu(null);
+  }, []);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const handler = () => closeContextMenu();
+    window.addEventListener('click', handler);
+    window.addEventListener('contextmenu', handler);
+    return () => {
+      window.removeEventListener('click', handler);
+      window.removeEventListener('contextmenu', handler);
+    };
+  }, [contextMenu, closeContextMenu]);
+
+  const allDynamicEdges = useMemo(() => {
+    const baseEdges = graphData?.edges ?? [];
+    return [...baseEdges, ...customEdges];
+  }, [graphData, customEdges]);
+
+  const allDynamicNodes = useMemo(() => getAllNodes(customNodes), [getAllNodes, customNodes]);
+
+  const baseNodeIds = useMemo(() => new Set(NODES.map((n) => n.id)), []);
+  const dynamicNodeById = useMemo(() => {
+    const map: Record<string, GraphNode> = {};
+    allDynamicNodes.forEach((node) => {
+      map[node.id] = node;
+    });
+    return map;
+  }, [allDynamicNodes]);
+
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div
+      ref={containerRef}
+      className="absolute inset-0 overflow-hidden"
+      onPointerMove={handleCanvasPointerMove}
+      onPointerUp={handleCanvasPointerUp}
+      onPointerLeave={handleCanvasPointerUp}
+      onDoubleClick={handleCanvasDoubleClick}
+    >
       {/* SVG Edges */}
       <svg className="absolute inset-0 w-full h-full opacity-60" style={{ zIndex: 0 }}>
         <defs>
@@ -132,6 +289,9 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
             <stop offset="50%" stopColor="rgba(255,255,255,0.45)" />
             <stop offset="100%" stopColor="rgba(255,255,255,0.25)" />
           </linearGradient>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="rgba(255,255,255,0.6)" />
+          </marker>
         </defs>
         {EDGES.map((edge) => {
           const from = nodeMap[edge.from];
@@ -166,6 +326,53 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
             </g>
           );
         })}
+
+        {allDynamicEdges.map((edge, idx) => {
+          const from = dynamicNodeById[edge.from];
+          const to = dynamicNodeById[edge.to];
+          if (!from || !to) return null;
+          const kind = to.kind || 'rule';
+          const colors = GRAPH_COLORS[kind] || GRAPH_COLORS.rule;
+          return (
+            <g key={`dynamic-edge-${idx}`}>
+              <line
+                x1={`${from.x}%`}
+                y1={`${from.y}%`}
+                x2={`${to.x}%`}
+                y2={`${to.y}%`}
+                stroke="url(#graphEdgeGradient)"
+                strokeWidth={1.6}
+                className={colors.line}
+                strokeDasharray="3 3"
+                markerEnd="url(#arrowhead)"
+              />
+              {edge.label && (
+                <text
+                  x={`${(from.x + to.x) / 2}%`}
+                  y={`${(from.y + to.y) / 2}%`}
+                  textAnchor="middle"
+                  className={`${colors.text} text-[9px] font-medium`}
+                  style={{ transform: 'translate(-50%, -50%)' }}
+                >
+                  {edge.label}
+                </text>
+              )}
+            </g>
+          );
+        })}
+
+        {connecting && (
+          <line
+            x1={`${dynamicNodeById[connecting.fromId]?.x ?? 0}%`}
+            y1={`${dynamicNodeById[connecting.fromId]?.y ?? 0}%`}
+            x2={`${connecting.currentX}%`}
+            y2={`${connecting.currentY}%`}
+            stroke="rgba(255,255,255,0.6)"
+            strokeWidth={1.6}
+            strokeDasharray="4 4"
+            markerEnd="url(#arrowhead)"
+          />
+        )}
       </svg>
 
       {/* Base Tree Nodes */}
@@ -177,8 +384,12 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
           return (
             <div
               key={node.id}
+              data-node-id={node.id}
               className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-2xl border px-4 py-3 backdrop-blur-md transition-all duration-500 pointer-events-auto cursor-pointer ${colors.border} ${colors.bg} ${isActive ? `${colors.glow} scale-105` : 'hover:scale-105'}`}
               style={{ left: `${node.x}%`, top: `${node.y}%` }}
+              onDoubleClick={(e) => handleNodeDoubleClick(e, node.id)}
+              onPointerDown={(e) => handleNodePointerDown(e, node.id)}
+              onContextMenu={(e) => handleContextMenu(e, node.id)}
               onClick={() => onNodeClick?.(node.id)}
               title={node.description || node.label}
             >
@@ -199,10 +410,10 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
         })}
       </div>
 
-      {/* Dynamic graph overlay: replaces old separated grammar canvas/diagram */}
+      {/* Dynamic graph overlay */}
       {graphData && (
         <>
-          <svg className="absolute inset-0 w-full h-full opacity-80" style={{ zIndex: 2 }}>
+          <svg className="absolute inset-0 w-full h-full opacity-80 pointer-events-none" style={{ zIndex: 2 }}>
             <defs>
               <linearGradient id="graphEdgeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="rgba(255,255,255,0.2)" />
@@ -210,7 +421,7 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
                 <stop offset="100%" stopColor="rgba(255,255,255,0.2)" />
               </linearGradient>
             </defs>
-            {graphData.edges.map((edge, idx) => {
+            {graphData.edges.map((edge: GraphEdge, idx: number) => {
               const from = graphData.nodes.find((n) => n.id === edge.from);
               const to = graphData.nodes.find((n) => n.id === edge.to);
               if (!from || !to) return null;
@@ -227,6 +438,7 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
                     strokeWidth={1.6}
                     className={colors.line}
                     strokeDasharray="3 3"
+                    markerEnd="url(#arrowhead)"
                   />
                   {edge.label && (
                     <text
@@ -245,15 +457,20 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
           </svg>
 
           <div className="absolute inset-0" style={{ zIndex: 3 }}>
-            {graphData.nodes.map((node) => {
+            {graphData.nodes.map((node: GraphNode) => {
               const colors = GRAPH_COLORS[node.kind || 'rule'] || GRAPH_COLORS.rule;
               const isActive = activeModule === node.id;
 
               return (
                 <div
                   key={node.id}
+                  data-node-id={node.id}
                   className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-2 backdrop-blur-md transition-all duration-500 pointer-events-auto cursor-default ${colors.border} ${colors.bg} ${isActive ? 'shadow-[0_0_20px_rgba(255,255,255,0.08)] scale-105' : 'hover:scale-105'}`}
                   style={{ left: `${node.x}%`, top: `${node.y}%` }}
+                  onDoubleClick={(e) => handleNodeDoubleClick(e, node.id)}
+                  onPointerDown={(e) => handleNodePointerDown(e, node.id)}
+                  onContextMenu={(e) => handleContextMenu(e, node.id)}
+                  onClick={() => onNodeClick?.(node.id)}
                   title={node.description || node.label}
                 >
                   <div className={`text-[11px] font-bold tracking-wide ${colors.text}`}>{node.label}</div>
@@ -263,6 +480,76 @@ const LanguageTreeCanvas: React.FC<LanguageTreeCanvasProps> = ({ activeModule, g
             })}
           </div>
         </>
+      )}
+
+      {/* Custom nodes layer */}
+      <div className="absolute inset-0" style={{ zIndex: 4 }}>
+        {customNodes.map((node: GraphNode) => {
+          const colors = GRAPH_COLORS[node.kind || 'rule'] || GRAPH_COLORS.rule;
+          const isActive = activeModule === node.id;
+          return (
+            <div
+              key={node.id}
+              data-node-id={node.id}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-3 py-2 backdrop-blur-md transition-all duration-200 pointer-events-auto cursor-grab active:cursor-grabbing ${colors.border} ${colors.bg} ${isActive ? 'shadow-[0_0_20px_rgba(255,255,255,0.08)] scale-105' : 'hover:scale-105'}`}
+              style={{ left: `${node.x}%`, top: `${node.y}%` }}
+              onDoubleClick={(e) => handleNodeDoubleClick(e, node.id)}
+              onPointerDown={(e) => handleNodePointerDown(e, node.id)}
+              onContextMenu={(e) => handleContextMenu(e, node.id)}
+              onClick={() => onNodeClick?.(node.id)}
+              title={node.description || node.label}
+            >
+              <div className={`text-[11px] font-bold tracking-wide ${colors.text}`}>{node.label}</div>
+              {node.count != null && <div className="text-[10px] text-white/60">{node.count}</div>}
+              <div className="flex gap-2 mt-1">
+                <button
+                  type="button"
+                  className="text-[10px] text-white/70 hover:text-white"
+                  onPointerDown={(e) => { e.stopPropagation(); }}
+                  onClick={(e) => { e.stopPropagation(); startConnection(e, node.id); }}
+                >
+                  Conectar
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Context menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 min-w-[160px] rounded-lg border border-white/10 bg-surface-dark/95 p-1 shadow-xl"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <button type="button" className="w-full text-left text-xs text-white/80 hover:bg-white/10 px-2 py-1.5 rounded" onClick={() => {
+            const node = customNodes.find((n) => n.id === contextMenu.id);
+            if (node) {
+              const next = window.prompt('Editar nombre:', node.label);
+              if (next !== null && next.trim()) {
+                setCustomNodes((prev) => prev.map((n) => n.id === contextMenu.id ? { ...n, label: next.trim() } : n));
+              }
+            }
+            closeContextMenu();
+          }}>Editar</button>
+          <button type="button" className="w-full text-left text-xs text-white/80 hover:bg-white/10 px-2 py-1.5 rounded" onClick={() => {
+            const pos = getPosition({ clientX: contextMenu.x, clientY: contextMenu.y } as any);
+            const newNode: GraphNode = {
+              id: `custom-${safeId('Nuevo')}-${Date.now()}`,
+              label: 'Nuevo nodo',
+              x: pos.x,
+              y: pos.y,
+              status: 'partial',
+              kind: 'rule',
+              description: 'Nodo personalizado',
+            };
+            setCustomNodes((prev) => [...prev, newNode]);
+            closeContextMenu();
+          }}>Duplicar cerca</button>
+          <div className="my-1 border-t border-white/10" />
+          <button type="button" className="w-full text-left text-xs text-danger hover:bg-danger/10 px-2 py-1.5 rounded" onClick={() => deleteNode(contextMenu.id)}>Eliminar</button>
+        </div>
       )}
     </div>
   );
