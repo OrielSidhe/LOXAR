@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T00:30:00.000Z",
+  "lastUpdated": "2026-08-14T00:45:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Avanzar ciclo LOXAR: persistir canvas en .loxar y validar build.",
+    "lastPrompt": "Avanzar ciclo LOXAR: limpiar flujo .loxar y validar build.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "P ersistencia del canvas integrada en .loxar, layout inicial con árbol visible y canvas interactivo con drag/conectar/crear nodos. Validaciones: typecheck 0 errores, lint OK, build OK, tauri:build OK, tauri:dev compila y lanza app.exe sin crashes."
+  "sessionSummary": "Nuevo proyecto ahora pide ruta explícita al crear/abrir proyecto y limpia canvas previo. Validaciones: typecheck 0 errores, lint OK, build OK, tauri:build OK."
 }

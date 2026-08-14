@@ -430,12 +430,15 @@ const App = () => {
         if (isProjectDirty && !window.confirm('Tienes cambios sin guardar. ¿Crear nuevo proyecto de todos modos?')) return;
         const name = window.prompt('Nombre del conlang para el nuevo proyecto:', 'Léxico sin nombre');
         if (!name) return;
+        const selected = await save({ filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }], defaultPath: `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'proyecto'}.loxar` });
+        if (typeof selected !== 'string' || !selected) return;
         const project = createEmptyProject(name, 'Español');
-        await writeProjectToPath(projectPath || `${name}.loxar`, project);
-        setProjectPath(projectPath || `${name}.loxar`);
-        saveSessionCache({ projectPath: projectPath || `${name}.loxar`, activeTab }).catch(console.error);
+        await writeProjectToPath(selected, project);
+        setProjectPath(selected);
+        setCanvasState({ nodes: [], edges: [] });
+        saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
         showNotification(`Proyecto "${name}" creado.`, 'success');
-    }, [isProjectDirty, projectPath, writeProjectToPath]);
+    }, [isProjectDirty, writeProjectToPath]);
 
     const handleOpenProject = useCallback(async () => {
         if (isProjectDirty && !window.confirm('Tienes cambios sin guardar. ¿Abrir otro proyecto de todos modos?')) return;
@@ -445,6 +448,7 @@ const App = () => {
             const raw = await readTextFile(selected);
             const project = projectFromJson(raw);
             if (!project) throw new Error('El archivo no es un proyecto LOXAR válido.');
+            setCanvasState({ nodes: [], edges: [] });
             await restoreProjectFromPath(selected);
             setProjectPath(selected);
             setIsProjectDirty(false);
