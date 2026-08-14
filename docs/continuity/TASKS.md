@@ -122,6 +122,16 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-14] Checkpoint: Revalidación runtime de tauri:dev y actualización de continuidad
+**Rama:** `main`. **Motivo:** confirmar que el flujo .loxar y los builds siguen estables tras cambios.
+**Cambios:**
+- `npm run tauri:dev`: compila Rust, lanza Vite en `5173` y ejecuta `target\debug\app.exe` sin crashes.
+- `npm run tauri:build`: genera bundles MSI y NSIS en `src-tauri\target\release\bundle\`.
+- `docs/continuity/SESSION_CACHE.json`: actualizado resumen de sesión.
+- Validaciones estáticas: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+
+---
+
 ## [2026-08-14] Checkpoint: Limpieza del flujo .loxar y validación de build
 **Rama:** `main`. **Motivo:** evitar guardado implícito y estados cruzados al cambiar de proyecto.
 **Cambios:**
