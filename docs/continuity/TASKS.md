@@ -231,6 +231,14 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - Commiteados: `9ef069e`, `53c7fa5`.
 
 ---
+## [2026-08-14] Checkpoint: fix de importación para evitar texto narrativo en el léxico
+**Rama:** `main`. **Motivo:** el usuario reportó que una importación metió información que no corresponde al léxico.
+**Cambios:**
+- `src/services/parser.ts`: agregada detección de filas narrativas/inválidas en CSV y JSON. Ahora separa entradas válidas de filas que parecen párrafos o contenido ajeno, y muestra una advertencia en el flujo de importación.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- Commiteado: `cab161d`.
+
+---
 ## [2026-08-13] Checkpoint: fix de z-index y legibilidad de ModulePanel
 **Rama:** `main`. **Motivo:** corregir problema visual reportado: el panel flotante quedaba detrás del ribbon superior y dejaba ver demasiado el árbol/fondo.
 **Cambios:**

@@ -17,6 +17,7 @@ interface DashboardProps {
     onNavigateFunctions?: () => void;
     onGenerateWords: () => void;
     onBackup: () => void;
+    onClose?: () => void;
     disabled?: boolean;
 }
 
@@ -59,7 +60,7 @@ const DistributionBar = ({ label, count, total, color }: { label: string, count:
     );
 };
 
-const CompletionDashboard = ({ stats, onOpenReport, onOpenAiAssistant, onGenerateWords, onBackup, onNavigateComplete, onNavigateFunctions }: DashboardProps) => {
+const CompletionDashboard = ({ stats, onOpenReport, onOpenAiAssistant, onGenerateWords, onBackup, onNavigateComplete, onNavigateFunctions, onClose }: DashboardProps) => {
     const completionRate = stats.total > 0
         ? ((stats.total - stats.totalIncomplete) / stats.total) * 100
         : 0;
@@ -85,6 +86,11 @@ const CompletionDashboard = ({ stats, onOpenReport, onOpenAiAssistant, onGenerat
                     <button onClick={onOpenAiAssistant} className="px-4 py-2 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs font-bold hover:bg-purple-500/20 transition-colors uppercase tracking-wider flex items-center gap-2">
                         <WandIcon className="w-4 h-4" /> Asistente IA
                     </button>
+                    {onClose && (
+                        <button onClick={onClose} className="px-3 py-2 bg-white/5 text-text-secondary border border-white/10 rounded-lg text-xs font-bold hover:bg-white/10 transition-colors uppercase tracking-wider">
+                            Cerrar
+                        </button>
+                    )}
                 </div>
             </div>
 

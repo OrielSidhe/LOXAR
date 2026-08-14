@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Corregido problema visual: ModulePanel ahora queda adelante del ribbon y oculta mejor el fondo. Ajustado z-index y capa de superposición. Validaciones: typecheck 0 errores, lint OK, build OK. Commiteado: 8f15afa."
+  "sessionSummary": "Corregido problema visual: ModulePanel ahora queda adelante del ribbon y oculta mejor el fondo. Ajustado z-index y capa de superposición. Validaciones: typecheck 0 errores, lint OK, build OK. Commiteado: 8f15afa. Luego se reportó importación con texto narrativo; se filtraron filas inválidas en parser.ts. Validaciones OK. Commiteado: cab161d."
 }

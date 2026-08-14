@@ -75,7 +75,7 @@ const App = () => {
     const [showSettings, setShowSettings] = useState(false);
 
     // Navigation & View State
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('table');
     const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
     const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
 
@@ -941,7 +941,7 @@ const App = () => {
                     <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth">
                         <div className="flex-grow h-full flex flex-col">
                             {activeTab === 'dashboard' && (
-                                <ModulePanel title="Panel" active={activeTab === 'dashboard'} onClose={() => setActiveTab('dashboard')}>
+                                <ModulePanel title="Panel" active={activeTab === 'dashboard'} onClose={() => setActiveTab('table')}>
                                     <CompletionDashboard
                                         stats={{ ...completionStats, wordsAddedCount: lexiconHook.wordsAddedSinceSave }}
                                         onOpenReport={() => handleOpenModal('report')}
@@ -950,6 +950,7 @@ const App = () => {
                                         onNavigateFunctions={() => { setViewFilter('incomplete'); setActiveTab('table'); }}
                                         onGenerateWords={() => handleOpenModal('ai_assistant')}
                                         onBackup={handleSaveChanges}
+                                        onClose={() => setActiveTab('table')}
                                     />
                                 </ModulePanel>
                             )}
