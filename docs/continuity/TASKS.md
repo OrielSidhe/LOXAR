@@ -235,6 +235,17 @@ una sola fuente de verdad.
 - Commiteados: `07834d0` (tests legacy), `fbd8eb3` (continuidad J1), `75245a3` (accesibilidad K1).
 
 ---
+## [2026-08-14] Checkpoint: Fase 1 completada (parser local TDD)
+**Rama:** `main`. **Motivo:** avanzar el fix del motor de gramática con implementación real y TDD.
+**Cambios:**
+- `src/services/grammar/textParser.ts`: parser local de texto → `DeclarativeManifest` + `ParseReport`.
+- `src/services/grammar/__tests__/textParser.test.ts`: 11 tests pasando.
+- `src/services/grammar/__tests__/inductFromText.test.ts`: 7 tests pasando.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- Próximo bloque ejecutable: Fase 2 (inductor LLM mejorado) o Fase 3 (normalizer + taxonomy), según orden del plan.
+
+---
+
 ## [2026-08-14] Checkpoint: Validación runtime de tauri:dev y tauri:build
 **Rama:** `main`. **Motivo:** cerrar ciclo de avance con validación real de builds.
 **Cambios:**
