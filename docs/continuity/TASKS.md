@@ -246,6 +246,18 @@ una sola fuente de verdad.
 
 ---
 
+## [2026-08-14] Checkpoint: Fase 2 completada (inductor LLM mejorado)
+**Rama:** `main`. **Motivo:** cerrar el inductor con ruta local-first, prompt declarativo, validación Zod estricta y sin `cleanseJson` como fallback.
+**Cambios:**
+- `src/services/grammar/inductFromText.ts`: ruta local-first con score >= 60; LLM solo como booster.
+- Prompt actualizado para pedir `DeclarativeManifest` explícitamente y no `FlexibleGrammar`.
+- Corrección de fallo cuando `llmOutput` es `null`: ahora cae a parser local en vez de romper.
+- `src/services/grammar/__tests__/inductFromText.test.ts`: 7 tests pasando.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- Próximo bloque ejecutable: Fase 3 (normalizer + taxonomy).
+
+---
+
 ## [2026-08-14] Checkpoint: Validación runtime de tauri:dev y tauri:build
 **Rama:** `main`. **Motivo:** cerrar ciclo de avance con validación real de builds.
 **Cambios:**

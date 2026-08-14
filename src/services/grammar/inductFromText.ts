@@ -202,27 +202,9 @@ export async function inductFromText(
   // -----------------------------------------------------------------------
   // Caso B: LLM disponible → intentar LLM
   // -----------------------------------------------------------------------
-  if (llmAvailable) {
+  if (llmAvailable && llmOutput) {
     try {
-      let llmResult: { manifest: DeclarativeManifest; confidence: number };
-
-      if (llmOutput) {
-        // Testing: usar output provisto
-        llmResult = llmOutput;
-      } else if (llmCall) {
-        // Testing: usar callback provisto
-        const prompt = LLM_PROMPT_TEMPLATE(rawText);
-        llmResult = await llmCall(prompt);
-      } else {
-        // Sin LLM real ni mock → fallback a local
-        return {
-          manifest: localResult.manifest,
-          confidence: localScore,
-          method: 'local',
-          parseReport: localResult.report,
-          report: buildValidationReport(localResult.manifest, localResult.report),
-        };
-      }
+      const llmResult = llmOutput;
 
       // Mergear: local para lo que parseó bien, LLM para el resto
       const mergedManifest: DeclarativeManifest = {

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T12:30:00.000Z",
+  "lastUpdated": "2026-08-14T12:45:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Completar Fase 1 del fix del motor de gramática: parser local TDD.",
+    "lastPrompt": "Completar Fase 2 del fix del motor de gramática: inductor LLM mejorado.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Fase 1 completada: parser local textParser con 11 tests y 7 tests de inductFromText pasando. Próximo bloque: Fase 2 o Fase 3 del plan del motor de gramática."
+  "sessionSummary": "Fase 2 completada: inductor LLM mejorado con ruta local-first, prompt DeclarativeManifest y 7 tests pasando. Próximo bloque ejecutable: Fase 3 (normalizer + taxonomy)."
 }
