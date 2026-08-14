@@ -15,6 +15,7 @@ src-tauri/target/
 # Artifacts / quarantine (preserved, not committed)
 _ARTIFACTS_NO_GIT/
 NEW VERSION/
+docs/AUDIT_REPORT.md
 
 # IDE / OS
 .idea/
