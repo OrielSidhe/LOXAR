@@ -4,6 +4,12 @@
 
 ---
 
+## Protocolo de operación
+El agente y la automatización siguen `docs/LOXAR_OPERATING_PROTOCOL.md` (SOP tipo ITIL/SDD: resolver,
+no solo validar; contexto conciso; acciones de seguridad requieren autorización). La "memoria" que se
+lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea), el `TASKS.md` y el
+`SESSION_CACHE.json`.
+
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
@@ -101,14 +107,13 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**Persistencia controlada — IMPLEMENTADA (2026-08-14).** La app ya no guarda en silencio en appdata:
-si no hay proyecto configurado al arrancar, `ProjectBootstrapModal` pide la ubicación del `.loxar` y
-escanea `.loxar` existentes; el `.loxar` (lexicons + gramática + perfiles + corpus + canvas + settings +
-sesión) es la fuente de verdad y se autoguarda cada 30s y al guardar manualmente.
+**[ ] Validación runtime de la persistencia controlada (2026-08-14).** La implementación está hecha
+(`ProjectBootstrapModal` + `projectDiscovery` + cableado en `App.tsx`; `.loxar` como fuente de verdad),
+pero falta validación visual del usuario con `npm run tauri dev`: confirmar que en primera corrida aparece
+el modal de ubicación, que Crear/Abrir/Importar funcionan, y que el `.loxar` sobrevive a un borrado de
+appdata. El agente headless solo valida estático (typecheck/lint/build/tauri:build).
 
-Próximo paso ejecutable: **validación runtime con `npm run tauri dev`** — confirmar que en primera
-corrida aparece el modal de ubicación, que Crear/Abrir/Importar funcionan, y que el `.loxar` sobrevive a
-un borrado de la carpeta de la app (appdata). Luego decidir si se elimina el espejo SQLite para tener una
-única fuente de verdad.
+Siguiente decisión pendiente (cuando el usuario la apruebe): eliminar el espejo SQLite para dejar el
+`.loxar` como única fuente de verdad (FUERA del alcance hasta confirmación, porque afecta FTS5).
 
 ---

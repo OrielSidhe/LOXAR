@@ -7,6 +7,10 @@
 Antes de tocar **cualquier** archivo en este repositorio, es **OBLIGATORIO** leer este documento y `docs/continuity/TASKS.md`.  
 Si no lo haces, romperás la continuidad del proyecto.
 
+Además de este contrato, el agente debe seguir `docs/LOXAR_OPERATING_PROTOCOL.md` (protocolo de resolución
+tipo ITIL/SDD, manejo de seguridad y regla de contexto conciso) y consultar `docs/LOXAR_AUTO_PILOT.md`
+como memoria viva del proyecto (objetivo / estado / próxima tarea).
+
 ---
 
 ## 🔍 Análisis de Root Cause (Lecciones aprendidas)
@@ -23,6 +27,7 @@ Si no lo haces, romperás la continuidad del proyecto.
 | 3 | **Trazabilidad total.** Cada cambio debe estar vinculado a una tarea en `TASKS.md` con un checkpoint descriptivo. | Permite retomar exactamente donde se quedó. |
 | 4 | **Estado UI persistente.** Guarda el estado de la vista (tab activa, entrada en edición) en `SESSION_CACHE.json`. | Reduce la fricción al retomar una sesión. |
 | 5 | **Checkpoint obligatorio antes de cortes largos.** Antes de una operación de IA que pueda tardar, escribe un bloque de comentario `// TODO: [CONTINUE HERE] - <descripción>` y actualiza `TASKS.md`. | Crea un punto de recuperación legible por humanos e IA. |
+| 6 | **Memoria del proyecto siempre actualizada.** Cada cambio de código o decisión se refleja en `docs/LOXAR_AUTO_PILOT.md` (Estado + Próxima tarea) y en `TASKS.md` (checkpoint) antes de cerrar. | Evita que el auto-pilot diga "todo hecho" mientras hay trabajo real pendiente (falla anterior del ciclo automatizado). |
 
 ## 🛠️ Checklist de Validación (Ejecutar antes de cada commit)
 

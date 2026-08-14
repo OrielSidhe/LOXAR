@@ -32,6 +32,30 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-14] Checkpoint: Overhaul del protocolo de operación (fin del ciclo "solo leer")
+**Rama:** `main`. **Motivo:** el usuario detectó que el ciclo automatizado (cron `automation-26faf8f0`)
+solo leía/validaba/commiteaba y NUNCA implementaba su pedido real. La instrucción del cron era vaga
+("prioriza completar integración UI… valida que build funciona") y no referenciaba memoria ni protocolo
+de resolución, así que el auto-pilot mentía diciendo "no hay tareas" mientras el trabajo real quedaba
+pendiente.
+
+**Cambios:**
+- `docs/LOXAR_OPERATING_PROTOCOL.md` (NUEVO): SOP canónico del agente — memoria de proyecto, startup
+  consulta, bucle de resolución ITIL/SDD (comprender → clarificar → plan → implementar → validar),
+  regla de contexto conciso, gate de seguridad (notificar riesgo/alternativas y esperar autorización),
+  loop de validación, captura de conocimiento, feedback de comunicación, detección temprana de riesgo.
+- `docs/continuity/PROTOCOL.md`: regla de oro #6 "memoria siempre actualizada" + referencia al SOP.
+- `docs/LOXAR_AUTO_PILOT.md`: sección "Protocolo de operación" + "Próxima tarea activa" honesta.
+- `~/.zcode/skills/loxar-continuity/SKILL.md`: paso 2 lee el SOP + memoria; paso 4b "resuelve e
+  implementa, NO solo valides"; gate de seguridad; no afirmar "no hay tareas" sin propuesta concreta.
+- Cron `automation-26faf8f0-1183-4c5f-9ece-c212432131c7`: prompt reescrito con directivas precisas
+  (implementar, memoria, gates de seguridad). Ya no es la instrucción deficiente original.
+
+**Verificación:** documentación (markdown) — no requiere typecheck/build. Pendiente: que la próxima
+corrida del cron siga el nuevo SOP y deje la memoria actualizada tras cada ejecución.
+
+---
+
 ## [2026-08-14] Checkpoint: Persistencia controlada — el `.loxar` es la fuente de verdad
 **Rama:** `main`. **Motivo:** el usuario reportó que la app guardaba en silencio en appdata y, si se
 limpiaba esa carpeta, se perdía todo sin copia. El auto-pilot previo marcaba todo como `[x]` pero NUNCA
