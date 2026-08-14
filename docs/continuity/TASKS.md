@@ -234,6 +234,15 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - Validaciones: `npm run lint` OK, `npm run typecheck` 0 errores, `npm run build` OK.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
 
+---
+## [2026-08-13] Checkpoint: revalidación de ciclo de avance
+**Rama:** `main`. **Motivo:** revalidar estado luego de recargar continuidad y verificar que no hay tareas ejecutables pendientes nuevas.
+**Resultado:**
+- Integraciones UI confirmadas: FTS5 en `LexiconTable`, `InterlinearGlossViewer` y `SoundChangeWorkbench` en Herramientas.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+- `docs/LOXAR_AUTO_PILOT.md`: bloques A-K cerrados; siguiente paso sigue siendo runtime manual con `npm run tauri dev`.
+- Sin cambios de código nuevos en este ciclo; continuidad actualizada.
+
 ## [2026-08-13] Checkpoint: validación de integración UI y cierre de ciclo
 **Rama:** `main`. **Motivo:** verificar que FTS5, InterlinearGlossViewer y SoundChangeWorkbench están integrados en UI y que el bloque de validación completa está verde.
 **Cambios / Verificación:**

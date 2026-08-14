@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-13T06:40:00.000Z",
+  "lastUpdated": "2026-08-13T06:45:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Ejecutar ciclo de avance: validar integración UI y builds.",
+    "lastPrompt": "Reejecutar ciclo de avance y revalidar integraciones UI y builds.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Validado ciclo completo: typecheck 0 errores, lint OK, build OK, tauri:build OK con MSI y NSIS generados. Integraciones UI confirmadas: FTS5 en LexiconTable, InterlinearGlossViewer y SoundChangeWorkbench en Tools. Próximo: runtime manual con npm run tauri dev."
+  "sessionSummary": "Reejecutado ciclo de avance. Integraciones UI confirmadas: FTS5, InterlinearGlossViewer y SoundChangeWorkbench. Validaciones: typecheck 0 errores, lint OK, build OK. docs/LOXAR_AUTO_PILOT.md mantiene bloques A-K cerrados. Próximo: runtime manual con npm run tauri dev."
 }
