@@ -210,6 +210,15 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - `npm run tauri:build` generó instaladores: MSI y NSIS en `src-tauri/target/release/bundle/`.
 - Próximo paso: validación runtime manual con `npm run tauri dev` y carga de observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
 
+## [2026-08-14] Checkpoint: validación runtime con `npm run tauri dev`
+**Rama:** `main`. **Motivo:** avanzar en la validación manual de las integraciones UI luego de cerrar los builds de empaquetado.
+**Estado:**
+- `npm run tauri:dev` lanzado correctamente; servidor Vite en `http://localhost:5173/` y app desktop en ejecución.
+- Integraciones UI presentes en el árbol actual: FTS5 en `LexiconTable`, `InterlinearGlossViewer` y `SoundChangeWorkbench` en Herramientas, y canvas interactivo con persistencia en `.loxar`.
+- Próximo paso ejecutable: validar visualmente en runtime que el árbol/canvas se ve, que los paneles principales funcionan y que FTS5 / glosado / sound change no crashean; registrar observaciones en `docs/SDD_RUNTIME_OBSERVATIONS.md`.
+
+---
+
 ## [2026-08-14] Checkpoint: persistencia del canvas en .loxar y cierre de ciclo
 **Rama:** `main`. **Motivo:** completar la integración del canvas con el flujo de proyecto para que los nodos/edges no se pierdan al cerrar la app.
 **Cambios:**
