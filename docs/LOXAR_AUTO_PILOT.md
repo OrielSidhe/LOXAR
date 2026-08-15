@@ -126,10 +126,10 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [ ] **Descomponer `App.tsx` (God Component) y los 4 componentes gigantes.**
   - Estado: P1-2f revertido; se avanza por secciones pequeñas sin reintentar `useProjectShell`.
   - Extraído de `App.tsx`: `ToastContainer`, `OfflineBanner`, `AmbientLights`,
-    `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`.
+    `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`, `TabButton`.
   - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`.
-  - Próximo paso real: seguir extrayendo subcomponentes de `EntryEditor` o avanzar con
-    `CollectionsManager`, `GrammarTab` y `SyntaxCanvas`.
+  - Próximo paso real: seguir extrayendo subcomponentes de `App.tsx` o avanzar con
+    `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.

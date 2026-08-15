@@ -262,6 +262,21 @@ uno de los 4 componentes gigantes.
   `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `TabButton` de `App.tsx` y seguir descomponiendo el God Component
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de `App.tsx`. En este paso se extrajo el componente inline `TabButton` a un
+archivo dedicado para seguir reduciendo la superficie del God Component.
+**Cambios:**
+- `src/components/TabButton.tsx` (NUEVO): componente dedicado para los botones de tab con
+  `audioService` y estilos activos/hover.
+- `src/App.tsx`: se reemplazó la definición inline de `TabButton` por el import del nuevo
+  componente y se eliminó el bloque final de `App.tsx`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `App.tsx` o avanzar con
+  `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `EntryDuplicateWarning` de `EntryEditor` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo el bloque de warning de

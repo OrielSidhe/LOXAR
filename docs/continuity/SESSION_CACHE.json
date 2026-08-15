@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "P1-2e completado: bootstrap/modal/app handlers extraídos a useAppHandlers. P1-2f revertido: useProjectShell eliminado por circularidad. Avance P1 actual: se extrajeron ToastContainer, OfflineBanner, AmbientLights, ProjectBootstrapBanner, AppToolbar y AppBatchToolbar de App.tsx; también se extrajeron SignificadoTagsInput y EntryDuplicateWarning de EntryEditor. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones pequeñas o avanzar sobre los 4 componentes gigantes."
+  "sessionSummary": "P1-2e completado: bootstrap/modal/app handlers extraídos a useAppHandlers. P1-2f revertido: useProjectShell eliminado por circularidad. Avance P1 actual: se extrajeron ToastContainer, OfflineBanner, AmbientLights, ProjectBootstrapBanner, AppToolbar, AppBatchToolbar y TabButton de App.tsx; también se extrajeron SignificadoTagsInput y EntryDuplicateWarning de EntryEditor. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones pequeñas o avanzar sobre los 4 componentes gigantes."
 }
