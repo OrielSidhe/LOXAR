@@ -170,6 +170,20 @@ canvas donde el nombre del lenguaje es el nodo central y los módulos son nodos 
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `AppWelcomeSection` de `App.tsx`
+**Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` extrayendo una sección chica y de
+bajo riesgo: splash, welcome y tour guiado.
+**Cambios:**
+- `src/components/AppWelcomeSection.tsx` (NUEVO): componente propio para `SplashScreen`,
+  `WelcomeScreen` y `GuidedTour`, con handlers tipados.
+- `src/App.tsx`: se reemplazó el bloque inline correspondiente por `<AppWelcomeSection ... />`,
+  y `AmbientLights`/`OfflineBanner` salieron del encabezado para mantener la nueva sección más
+  limpia.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos

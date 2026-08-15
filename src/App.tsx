@@ -60,6 +60,7 @@ import ModulePanel from './components/ModulePanel';
 import LanguageTreeCanvas from './components/LanguageTreeCanvas';
 import LanguageHomeCanvas from './components/LanguageHomeCanvas';
 import ProjectBootstrapModal from './components/ProjectBootstrapModal';
+import AppWelcomeSection from './components/AppWelcomeSection';
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -376,33 +377,35 @@ const App = () => {
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
-        {!splashFinished && <SplashScreen onFinish={() => setSplashFinished(true)} />}
+        <AppWelcomeSection
+          splashFinished={splashFinished}
+          onSplashFinish={() => setSplashFinished(true)}
+          showWelcome={showWelcome}
+          onCreateLexicon={handleCreateNewLexicon}
+          onContinue={() => {
+            audioService.playStartup();
+            setShowWelcome(false);
+          }}
+          onImport={content => {
+            audioService.playStartup();
+            setShowWelcome(false);
+            lexiconHook.startImportProcess(content);
+          }}
+          onStartTour={() => {
+            audioService.playStartup();
+            setShowWelcome(false);
+            handleStartTour();
+          }}
+          isTourActive={isTourActive}
+          tourSteps={currentTourSteps}
+          onTourEnd={onTourEnd}
+        />
 
         <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished ? 'opacity-100' : 'opacity-0'}`}>
           <AmbientLights />
 
           {isLoading && <LoadingOverlay message={loadingMessage} />}
           {showOfflineBanner && <OfflineBanner />}
-          {showWelcome && (
-            <WelcomeScreen
-              onCreateLexicon={handleCreateNewLexicon}
-              onContinue={() => {
-                audioService.playStartup();
-                setShowWelcome(false);
-              }}
-              onImport={content => {
-                audioService.playStartup();
-                setShowWelcome(false);
-                lexiconHook.startImportProcess(content);
-              }}
-              onStartTour={() => {
-                audioService.playStartup();
-                setShowWelcome(false);
-                handleStartTour();
-              }}
-            />
-          )}
-          {isTourActive && <GuidedTour steps={currentTourSteps} onClose={onTourEnd} />}
 
           <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
             <ModalManager
