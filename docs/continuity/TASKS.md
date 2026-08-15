@@ -2020,6 +2020,22 @@ Texto libre → textParser (local, determinista) → DeclarativeManifest
 **Próximo paso:** inicializar git (`git init`) si no existe y hacer el commit inicial, o abrir el repo en GitHub y pushear.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `EntryEditorIpaToggle` de `EntryEditor` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el toggle del teclado IPA
+de `EntryEditor` a un componente dedicado para reducir la superficie de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/EntryEditorIpaToggle.tsx` (NUEVO): componente dedicado para el toggle del
+  teclado IPA con su label y render condicional de `IPAKeyboard`.
+- `src/components/EntryEditor.tsx`: se reemplazó el bloque inline del toggle IPA por el
+  componente `<EntryEditorIpaToggle ... />`, manteniendo la lógica de estado en el componente padre.
+  Se eliminó el import de `IPAKeyboard` que ya no se usa directamente en `EntryEditor`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `EntryEditorAiBanner` de `EntryEditor` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo el banner de resultado de IA

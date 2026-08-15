@@ -20,11 +20,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Avance P1 actual: se extrajeron `ToastContainer`, `OfflineBanner`, `AmbientLights`,
   `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar` y `TabButton` de `App.tsx`,
   además de `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`,
-  `EntryEditorCompleteModeNav`, `EntryEditorHeader` y `EntryEditorAiBanner` de `EntryEditor`,
-  `ParadigmCell` de `CollectionsManager`, helpers de preview a `src/utils/grammarPreview.ts`,
-  y `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
-  `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
-  `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals` de `GrammarTab`.
+  `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner` y `EntryEditorIpaToggle`
+  de `EntryEditor`, `ParadigmCell` de `CollectionsManager`, helpers de preview a
+  `src/utils/grammarPreview.ts`, y `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`,
+  `GrammarNotesPanel`, `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`,
+  `GrammarSyntaxPanel`, `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals` de `GrammarTab`.
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica
@@ -133,7 +133,7 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
   - Extraído de `App.tsx`: `ToastContainer`, `OfflineBanner`, `AmbientLights`,
     `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`, `TabButton`.
   - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`,
-    `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner`.
+    `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner`, `EntryEditorIpaToggle`.
   - Extraído de `CollectionsManager`: `ParadigmCell`.
   - Extraído de `GrammarTab`: helpers de preview movidos a `src/utils/grammarPreview.ts`,
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,

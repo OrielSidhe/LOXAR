@@ -8,13 +8,13 @@ import SaveIcon from './icons/SaveIcon';
 import CancelIcon from './icons/CancelIcon';
 import { mergeCategoryOptions, displayOf } from '../data/standardCategories';
 import { resolveLexicalCategory } from '../data/taxonomy';
-import IPAKeyboard from './IPAKeyboard';
 import SignificadoTagsInput from './SignificadoTagsInput';
 import EntryDuplicateWarning from './EntryDuplicateWarning';
 import EntryEditorAiActions from './EntryEditorAiActions';
 import EntryEditorCompleteModeNav from './EntryEditorCompleteModeNav';
 import EntryEditorHeader from './EntryEditorHeader';
 import EntryEditorAiBanner from './EntryEditorAiBanner';
+import EntryEditorIpaToggle from './EntryEditorIpaToggle';
 
 interface EntryEditorProps {
     mode: 'add' | 'complete';
@@ -543,20 +543,10 @@ const EntryEditor = (props: EntryEditorProps) => {
                             </div>
                         </div>
 
-                        {/* IPA Keyboard toggle */}
-                        <div className="mt-2">
-                            <button
-                                type="button"
-                                onClick={() => setShowIPA(!showIPA)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-surface border border-subtle hover:bg-accent hover:text-white transition-colors"
-                                title="Toggle IPA keyboard"
-                                aria-label={showIPA ? 'Ocultar teclado IPA' : 'Mostrar teclado IPA'}
-                            >
-                                <span className="font-mono">/ɑ/</span>
-                                {showIPA ? 'Hide IPA' : 'IPA'}
-                            </button>
-                            {showIPA && <IPAKeyboard targetId="Léxema" />}
-                        </div>
+                        <EntryEditorIpaToggle
+                          showIPA={showIPA}
+                          onToggle={() => setShowIPA(!showIPA)}
+                        />
 
                         <EntryDuplicateWarning
                           duplicateLexemas={duplicateLexemas}
