@@ -3,12 +3,12 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { ElectronAPI } from './types';
+import { LoxarBridge } from './types';
 
 // Define the type for the API exposed by the preload script
 declare global {
   interface Window {
-    electronAPI: ElectronAPI;
+    loxarBridge: LoxarBridge;
   }
 }
 

@@ -107,32 +107,19 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**[ ] P0 — Higiene pre-release (ver `docs/AUDIT_REPORT.md`).** Tareas de bajo riesgo sin impacto funcional:
-- Borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`).
-- Eliminar código duplicado (`src/constants/tourSteps.ts`, duplicados en raíz).
-- Limpiar archivos sueltos (`metadata.json`, `android-icon-*.png`).
-- Descachear `docs/continuity/SESSION_CACHE.json` si es necesario.
-Cada item tiene prompt listo en el reporte; ejecutar en orden P0→P1.
+**[x] P0 — Higiene pre-release (ver `docs/AUDIT_REPORT.md`).** Completada: deps muertas eliminadas, archivos duplicados/sueltos borrados, `.gitignore` actualizado, `SESSION_CACHE.json` refrescado. Validaciones estáticas en verde.
 
-**[ ] P1 — Auditoría de arquitectura (tras P0 + typecheck verde).** Refactors estructurales:
-- Renombrar `window.electronAPI` → `window.loxarBridge` y matar stubs Gemini muertos.
-- Descomponer `App.tsx` (God Component) y los 4 componentes gigantes.
-- Migrar tests legacy a Vitest.
+**[ ] P1 — Auditoría de arquitectura.** Refactors estructurales pendientes:
+- [x] Renombrar `window.electronAPI` → `window.loxarBridge` y matar stubs Gemini muertos.
+- [ ] Descomponer `App.tsx` (God Component) y los 4 componentes gigantes.
+- [ ] Migrar tests legacy a Vitest.
 
-**[ ] Validación runtime de la persistencia controlada (2026-08-14).** La implementación está hecha
-(`ProjectBootstrapModal` + `projectDiscovery` + cableado en `App.tsx`; `.loxar` como fuente de verdad),
-pero falta validación visual del usuario con `npm run tauri dev`: confirmar que en primera corrida aparece
-el modal de ubicación, que Crear/Abrir/Importar funcionan, y que el `.loxar` sobrevive a un borrado de
-appdata. El agente headless solo valida estático (typecheck/lint/build/tauri:build).
-
-**[ ] Validación runtime de la persistencia controlada (2026-08-14).** La implementación está hecha
-(`ProjectBootstrapModal` + `projectDiscovery` + cableado en `App.tsx`; `.loxar` como fuente de verdad),
-pero falta validación visual del usuario con `npm run tauri dev`: confirmar que en primera corrida aparece
-el modal de ubicación, que Crear/Abrir/Importar funcionan, y que el `.loxar` sobrevive a un borrado de
-appdata. El agente headless solo valida estático (typecheck/lint/build/tauri:build).
-
-Siguiente decisión pendiente (cuando el usuario la apruebe): eliminar el espejo SQLite para dejar el
-`.loxar` como única fuente de verdad (FUERA del alcance hasta confirmación, porque afecta FTS5).
+**[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
+- `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.
+- `parseCategorySection` extrae formas standalone (`-k`, `-s`, etc.) cuando no hay estructura `X por -Y`.
+- `parseStrategies` detecta partículas genéricas del tipo `marker (contexto)`.
+- `diverseGrammars.test.ts` pasa con score >= 80 para 5 casos diversos.
+- Suite grammar: 122/122 tests pasando.
 
 **[ ] Validación GUI automatizada (harness listo, pendiente 1er run con autorización).** Se creó
 `tests-gui/` (Playwright, modo web headless) + `npm run test:gui`. El agente puede detectar crashes

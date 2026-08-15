@@ -154,53 +154,61 @@ interface RawSection {
 // ---------------------------------------------------------------------------
 
 const SECTION_PATTERNS: { header: string; aliases: RegExp[] }[] = [
-  { header: 'typology', aliases: [/\btipolog/i, /\btypolog/i, /\bword.?order\b/i] },
-  { header: 'phonology', aliases: [/\bfonolog/i, /\bphonolog/i, /\bsonid/i, /\binventari/i] },
-  { header: 'nouns', aliases: [/\bsustantiv/i, /\bnouns?\b/i, /\bnombre\b/i, /\bnomina\b/i] },
-  { header: 'verbs', aliases: [/\bverb/i, /\bverba\b/i] },
-  { header: 'adjectives', aliases: [/\badjetiv/i, /\badjectives?\b/i, /\badj\b/i] },
-  { header: 'exceptions', aliases: [/\bexcepcion/i, /\bexceptions?\b/i, /\bsupletiv/i, /\birregular\b/i] },
-  { header: 'strategies', aliases: [/\bestrategia/i, /\bstrateg/i, /\bmarcaje/i, /\bmarking\b/i] },
-  { header: 'roles', aliases: [/\brol\b/i, /\broles?\b/i, /\bsint[áa]xis\b/i, /\bsynta\b/i] },
+  { header: 'typology', aliases: [/\btipolog/i, /\btypolog/i, /\bword.?order\b/i, /\bvortoordo\b/i, /\bordei?\b/i, /語順/, /\bmorphology\b/i, /\bmorfolog/i, /\bhead.?direction\b/i, /\bcabeza\b/i, /\bdirecci[oó]n\b/i, /\balignment\b/i, /\balineaci[oó]n\b/i, /\bkapdirekto\b/i] },
+  { header: 'phonology', aliases: [/\bfonolog/i, /\bphonolog/i, /\bsonid/i, /\binventari/i, /\bfonetica\b/i, /\bfonetiko\b/i, /\bfon[eé]tica\b/i, /\bfonetiko\b/i] },
+  { header: 'nouns', aliases: [/\bsustantiv/i, /\bnouns?\b/i, /\bnombre\b/i, /\bnomina\b/i, /\bsubstantivo\b/i, /品詞/, /\bplural\b/i, /\bnumber\b/i, /\bsust/i, /\bsn\b/i] },
+  { header: 'verbs', aliases: [/\bverb/i, /\bverba\b/i, /動詞/, /\bpast\b/i, /\bpasado\b/i, /\bpresent\b/i, /\bpresente\b/i, /\bfuture\b/i, /\bfuturo\b/i, /\btense\b/i, /\bconjug/i] },
+  { header: 'adjectives', aliases: [/\badjetiv/i, /\badjectives?\b/i, /\badj\b/i, /\badjetivo\b/i, /形容詞/, /\badverb/i, /\badverbio\b/i] },
+  { header: 'exceptions', aliases: [/\bexcepcion/i, /\bexceptions?\b/i, /\bsupletiv/i, /\birregular\b/i, /\birregulares?\b/i] },
+  { header: 'strategies', aliases: [/\bestrategia/i, /\bstrateg/i, /\bmarcaje/i, /\bmarking\b/i, /\bstrategio\b/i, /助詞/, /marking/i, /\bparticle\b/i, /\bpart[ií]cula\b/i, /\bpart[ií]culas?\b/i] },
+  { header: 'roles', aliases: [/\brol\b/i, /\broles?\b/i, /\bsint[áa]xis\b/i, /\bsynta\b/i, /\brols\b/i, /\bgramatical\b/i, /\broles?\b/i] },
 ];
 
 function detectSections(text: string): RawSection[] {
   const lines = text.split(/\n+/);
   const sections: RawSection[] = [];
-  let currentHeader = '';
-  let currentContent: string[] = [];
+  let current: RawSection | null = null;
 
   for (const line of lines) {
     const trimmed = line.trim();
+    if (!trimmed) continue;
+
     const sectionMatch = trimmed.match(/^§\s*(.+)$/);
+    let header: string | null = null;
+    let initialContent = '';
 
     if (sectionMatch) {
-      // Guardar sección anterior
-      if (currentHeader) {
-        sections.push({ header: currentHeader, content: currentContent.join('\n') });
-      }
-      const rawHeader = sectionMatch[1].trim();
-      // Separar header de contenido inline (después de : o —)
-      const colonIndex = rawHeader.indexOf(':');
-      const dashIndex = rawHeader.indexOf(' — ');
-      const sepIndex = colonIndex >= 0 ? (dashIndex >= 0 ? Math.min(colonIndex, dashIndex) : colonIndex) : dashIndex;
-
-      if (sepIndex >= 0) {
-        currentHeader = rawHeader.substring(0, sepIndex).trim().toLowerCase();
-        currentContent = [rawHeader.substring(sepIndex + 1).trim()];
+      const raw = sectionMatch[1].trim();
+      const colon = raw.indexOf(':');
+      const dash = raw.indexOf(' — ');
+      const sep = colon >= 0 ? (dash >= 0 ? Math.min(colon, dash) : colon) : dash;
+      if (sep >= 0) {
+        header = raw.substring(0, sep).trim().toLowerCase();
+        initialContent = raw.substring(sep + 1).trim();
       } else {
-        currentHeader = rawHeader.toLowerCase();
-        currentContent = [];
+        header = raw.toLowerCase();
+        initialContent = '';
       }
-    } else if (trimmed.length > 0) {
-      currentContent.push(trimmed);
+    } else {
+      const freeMatch = trimmed.match(/^([A-Za-z\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF][A-Za-z0-9\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\s\/\-]*?):\s*(.*)?$/);
+      if (freeMatch && freeMatch[1].length < 60 && freeMatch[1].length > 1) {
+        const potentialHeader = freeMatch[1].toLowerCase();
+        if (classifySection(potentialHeader)) {
+          header = potentialHeader;
+          initialContent = freeMatch[2] || '';
+        }
+      }
+    }
+
+    if (header) {
+      if (current) sections.push(current);
+      current = { header, content: initialContent };
+    } else if (current) {
+      current.content += (current.content ? '\n' : '') + trimmed;
     }
   }
 
-  // Guardar última sección
-  if (currentHeader) {
-    sections.push({ header: currentHeader, content: currentContent.join('\n') });
-  }
+  if (current) sections.push(current);
 
   return sections;
 }
@@ -364,12 +372,11 @@ function parseCategorySection(
   const category = resolveCategory(categoryHint);
 
   // Patrón 1: "X por -Y sufijo/prefijo/infijo" (admite rasgos multi-palabra)
-  const affixPattern = /(.+?)\s+por\s+(-[\w]+)\s+(sufijo|prefijo|infijo|circunfijo)/i;
+  const affixPattern = /(.+?)\s+por\s+(-[\w']+)\s+(sufijo|prefijo|infijo|circunfijo)/i;
   const matches = content.matchAll(new RegExp(affixPattern.source, 'gi'));
 
   for (const match of matches) {
     const featureRaw = match[1].trim();
-    // Filtrar frases que no son rasgos
     if (featureRaw.length < 2 || featureRaw.length > 40) continue;
     const feature = resolveFeatureLocal(featureRaw);
     const form = match[2].trim();
@@ -389,7 +396,7 @@ function parseCategorySection(
   }
 
   // Patrón 2: "tiempo1 -form1, tiempo2 -form2" (verbos)
-  const tensePattern = /(\w+)\s+(-[\w]+)/g;
+  const tensePattern = /(\w+)\s+(-[\w']+)/g;
   const tenseMatches = content.matchAll(tensePattern);
 
   // Si ya tenemos paradigmas del patrón 1, no duplicar
@@ -398,9 +405,39 @@ function parseCategorySection(
     for (const match of tenseMatches) {
       const feature = resolveFeatureLocal(match[1]);
       const form = match[2].trim();
-      // Filtrar palabras comunes que no son tiempos
       if (['por', 'con', 'y', 'o', 'la', 'el', 'los', 'las', 'un', 'una'].includes(feature)) continue;
       if (feature.length < 2) continue;
+
+      paradigms.push({
+        category,
+        slots: [
+          {
+            id: `${category}_${feature}`,
+            feature,
+            order: order++,
+            realization: { kind: 'affix', form, position: 'suffix' },
+          },
+        ],
+      });
+    }
+  }
+
+  // Patrón 3: "-form" standalone o "feature: -form" / "suffix -form"
+  if (paradigms.length === 0) {
+    const standaloneForms = content.matchAll(/(-[\w']+)/g);
+    let order = 0;
+    for (const match of standaloneForms) {
+      const form = match[1];
+      // Buscar feature en el contenido
+      const featureCandidates = ['plural', 'past', 'present', 'future', 'singular', 'number', 'tense', 'modo', 'gender', 'case'];
+      let feature = 'default';
+      for (const candidate of featureCandidates) {
+        if (content.toLowerCase().includes(candidate)) {
+          feature = resolveFeatureLocal(candidate);
+          break;
+        }
+      }
+      if (feature === 'default') feature = resolveFeatureLocal(categoryHint);
 
       paradigms.push({
         category,
@@ -517,6 +554,24 @@ function parseStrategies(content: string): { strategies: DeclarativeStrategy[]; 
     const marker = match[3].trim();
     if (addedMarkers.has(marker)) continue;
     const context = match[2].trim();
+    strategies.push({
+      id: `strat_${strategies.length}`,
+      name: `Partícula ${marker}`,
+      type: 'particle',
+      particleRule: { marker, relativePosition: 'before' },
+      appliesToCategories: [resolveCategory(context)],
+    });
+    addedMarkers.add(marker);
+  }
+
+  // Patrón E: "X marker Y (contexto)" o "X: Y" genérico para partículas
+  const genericParticlePattern = /([\w\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF]+)\s+(\S+)\s+\(([^)]+)\)/g;
+  const genericMatches = content.matchAll(new RegExp(genericParticlePattern.source, 'gi'));
+
+  for (const match of genericMatches) {
+    const marker = match[2].trim();
+    if (addedMarkers.has(marker)) continue;
+    const context = match[3].trim();
     strategies.push({
       id: `strat_${strategies.length}`,
       name: `Partícula ${marker}`,

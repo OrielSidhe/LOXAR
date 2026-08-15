@@ -441,24 +441,9 @@ export interface GrammarManifest {
     typologicalProfile?: TypologicalProfile;
 }
 
-// ── Electron / Tauri Bridge ──────────────────────────────────────────────────
+// ── Loxar Bridge ─────────────────────────────────────────────────────────────
 
-export interface ElectronAPI {
-    // Gemini services
-    completeEntry: (data: { partialEntry: any, lexiconSample: LexiconEntry[], profile: GenerativeProfile }) => Promise<any>;
-    generateRootAndLexeme: (data: { significado: string, categoria: string, lexiconSample: LexiconEntry[], profile: GenerativeProfile, modes: GenerationMode[], fullLexicon: LexiconEntry[] }) => Promise<{ raiz: string; lexema: string }>;
-    categorizeWords: (words: string[]) => Promise<MissingWord[]>;
-    generateBatchWords: (data: { words: MissingWord[], lexiconSample: LexiconEntry[], profile: GenerativeProfile }) => Promise<Omit<NewLexiconEntry, 'extraData' | 'externalID'>[]>;
-    batchDetermineCategory: (entries: {id: string, significado: string}[]) => Promise<{id: string, categoria: string}[]>;
-    correctSignificado: (significado: string) => Promise<string>;
-    cleanseJson: (text: string) => Promise<string>;
-    generateLanguageSample: (data: { profile: GenerativeProfile, lexiconSample: LexiconEntry[] }) => Promise<LanguageSample>;
-    conlangAgentChat: (data: { message: string, history: { role: 'user' | 'assistant', content: string }[], lexicon: LexiconEntry[], grammar: GrammarManifest }) => Promise<{ reply: string, analysis?: { completeness: number, gaps: string[], suggestions: string[] } }>;
-
-    // Non-gemini services
-    analyzePhonemes: (lexicon: LexiconEntry[]) => Promise<{ vowels: string[], consonants: string[], syllableStructures: string[], consonantClusters: string[], vowelClusters: string[] }>;
-    analyzeAffixes: (lexicon: LexiconEntry[]) => Promise<DerivationalAffix[]>;
-
+export interface LoxarBridge {
     // File system and app control
     getAppVersion: () => Promise<string>;
     getDirectoryPath: () => Promise<string | null>;

@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { ElectronAPI } from './types';
+import { LoxarBridge } from './types';
 
 // Tauri API imports
 import { getVersion } from '@tauri-apps/api/app';
@@ -15,16 +15,16 @@ import { emit, listen } from '@tauri-apps/api/event';
 // Define the type for the API exposed by the preload script
 declare global {
     interface Window {
-        electronAPI: ElectronAPI;
+        loxarBridge: LoxarBridge;
     }
 }
 
-// Polyfill window.electronAPI to map to Tauri native functionalities
+// Polyfill window.loxarBridge to map to Tauri native functionalities
 // We keep the "electronAPI" name string to avoid refactoring hundreds of React hooks
 const isTauriContext = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 if (isTauriContext) {
-    const tauriAPI: Partial<ElectronAPI> = {
+    const tauriAPI: Partial<LoxarBridge> = {
         getAppVersion: async () => await getVersion(),
         getDirectoryPath: async () => {
             const dir = await open({ directory: true });
@@ -93,43 +93,17 @@ if (isTauriContext) {
             return () => {
                 if (unlistenFn) unlistenFn();
             };
-        },
-        
-        // Stubs for Gemini functions (these are now handled natively inside geminiService.ts,
-        // but Typescript requires them for `ElectronAPI` compatibility interface).
-        completeEntry: () => Promise.resolve(null),
-        generateRootAndLexeme: () => Promise.resolve({ raiz: '', lexema: '' }),
-        categorizeWords: () => Promise.resolve([]),
-        generateBatchWords: () => Promise.resolve([]),
-        batchDetermineCategory: () => Promise.resolve([]), // Updated name based on interface
-        correctSignificado: (s) => Promise.resolve(s),
-        cleanseJson: (t) => Promise.resolve(t),
-        generateLanguageSample: () => Promise.resolve({ text: '', translation: '', newWords: [] }),
-        conlangAgentChat: () => Promise.resolve({ reply: '' }),
-        analyzePhonemes: () => Promise.resolve({ vowels: [], consonants: [], syllableStructures: [], consonantClusters: [], vowelClusters: [] }),
-        analyzeAffixes: () => Promise.resolve([]),
-        compileFont: () => Promise.resolve({ success: true, message: "Fuente compilada exitosamente (Simulado via Tauri)" })
+        }
     };
-    
-    window.electronAPI = tauriAPI as ElectronAPI;
+
+    window.loxarBridge = tauriAPI as LoxarBridge;
 } else {
     console.warn("Tauri API not found. Using simple web preview mock.");
     // Insert simple web mock
     const WEB_PREVIEW_ERROR = "Feature not available in web preview.";
     const reject = () => Promise.reject(new Error(WEB_PREVIEW_ERROR));
 
-    window.electronAPI = {
-        completeEntry: reject,
-        generateRootAndLexeme: reject,
-        categorizeWords: () => Promise.resolve([]),
-        generateBatchWords: () => Promise.resolve([]),
-        batchDetermineCategory: () => Promise.resolve([]),
-        correctSignificado: (s:string) => Promise.resolve(s),
-        cleanseJson: (t:string) => Promise.resolve(t),
-        generateLanguageSample: reject,
-        conlangAgentChat: reject,
-        analyzePhonemes: () => Promise.resolve({ vowels: [], consonants: [], syllableStructures: [], consonantClusters: [], vowelClusters: [] }),
-        analyzeAffixes: () => Promise.resolve([]),
+    window.loxarBridge = {
         getAppVersion: () => Promise.resolve('web'),
         getDirectoryPath: () => Promise.resolve(null),
         exportFile: reject,
@@ -141,7 +115,7 @@ if (isTauriContext) {
         send: () => {},
         on: () => () => {},
         compileFont: () => Promise.resolve({ success: false, error: WEB_PREVIEW_ERROR })
-    } as unknown as ElectronAPI;
+    } as unknown as LoxarBridge;
 }
 
 const rootElement = document.getElementById('root');

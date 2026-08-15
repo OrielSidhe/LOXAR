@@ -183,7 +183,7 @@ const App = () => {
         // Initialize App
         const timer = setTimeout(() => setIsAppLoaded(true), 1500);
         if (exportPath) {
-            window.electronAPI.listBackups(exportPath).then(setBackups).catch(console.error);
+            window.loxarBridge.listBackups(exportPath).then(setBackups).catch(console.error);
         }
         return () => clearTimeout(timer);
     }, [exportPath, activeLexiconName]);
@@ -253,9 +253,9 @@ const App = () => {
 
     // Widget inflection listener
     useEffect(() => {
-        const removeListener = window.electronAPI?.on?.('main:inflect-request', (entry: LexiconEntry) => {
+        const removeListener = window.loxarBridge?.on?.('main:inflect-request', (entry: LexiconEntry) => {
             if (!entry || !lexiconHook.activeInflectionProfile) {
-                window.electronAPI.send('main:inflect-result', []);
+                window.loxarBridge.send('main:inflect-result', []);
                 return;
             }
 
@@ -265,7 +265,7 @@ const App = () => {
                 forms: generateInflectedForms(entry, paradigm, lexiconHook.activeInflectionProfile)
             }));
 
-            window.electronAPI.send('main:inflect-result', results);
+            window.loxarBridge.send('main:inflect-result', results);
         });
 
         return () => {
@@ -275,14 +275,14 @@ const App = () => {
 
     // Widget search listener
     useEffect(() => {
-        const removeListener = window.electronAPI?.on?.('widget:search', (term: string) => {
+        const removeListener = window.loxarBridge?.on?.('widget:search', (term: string) => {
             if (!activeLexicon || !term || typeof term !== 'string') {
-                window.electronAPI.send('widget:search-result', null);
+                window.loxarBridge.send('widget:search-result', null);
                 return;
             }
             const normalizedTerm = normalizeText(term.trim());
             if (!normalizedTerm) {
-                window.electronAPI.send('widget:search-result', null);
+                window.loxarBridge.send('widget:search-result', null);
                 return;
             }
             const results = activeLexicon.filter(entry =>
@@ -290,7 +290,7 @@ const App = () => {
                 entry.Léxema.some(l => normalizeText(l).includes(normalizedTerm)) ||
                 (entry.Raíz && normalizeText(entry.Raíz).includes(normalizedTerm))
             );
-            window.electronAPI.send('widget:search-result', results.length > 0 ? results[0] : null);
+            window.loxarBridge.send('widget:search-result', results.length > 0 ? results[0] : null);
         });
 
         return () => {
@@ -317,7 +317,7 @@ const App = () => {
     // Widget Data emitter
     useEffect(() => {
         if (activeLexicon && lexiconHook.activeInflectionProfile && activeMetadata) {
-            window.electronAPI?.send?.('widget:lexicon-data', {
+            window.loxarBridge?.send?.('widget:lexicon-data', {
                 entries: activeLexicon,
                 inflectionProfile: lexiconHook.activeInflectionProfile,
                 metadata: activeMetadata
@@ -407,7 +407,7 @@ const App = () => {
             }
             else content = activeLexicon.map(e => `${e.Léxema.join(', ')} (${e.Categoría}): ${e.Significado.join(', ')}`).join('\n');
 
-            const { success, error } = await window.electronAPI.exportFile({ filePath: `${exportPath}/${fileName}`, content });
+            const { success, error } = await window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content });
             if (success) showNotification(`¡Éxito! Léxico exportado a ${fileName}`, 'success');
             else showNotification(`Error de exportación: ${error}`, 'error');
         } catch (e) {
@@ -417,7 +417,7 @@ const App = () => {
     }, [activeLexicon, activeLexiconName, exportPath, showNotification]);
 
     const handleSetExportPath = async () => {
-        const path = await window.electronAPI.getDirectoryPath();
+        const path = await window.loxarBridge.getDirectoryPath();
         if (path) {
             setExportPath(path);
             saveSessionCache({ exportPath: path, activeTab }).catch(console.error);
@@ -637,11 +637,11 @@ const App = () => {
             const safeName = activeLexiconName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             const backupPath = `${exportPath}/backup_${safeName}_${date}.json`;
             const content = JSON.stringify(lexicons[activeLexiconName]);
-            window.electronAPI.saveBackup({ backupPath, content })
+            window.loxarBridge.saveBackup({ backupPath, content })
                 .then(({ success }) => {
                     if (success) {
                         showNotification(`Copia de seguridad de ${safeName} creada.`, "success");
-                        window.electronAPI.listBackups(exportPath).then(setBackups);
+                        window.loxarBridge.listBackups(exportPath).then(setBackups);
                     }
                 }).catch(e => console.error("Auto-backup failed", e));
         }
@@ -663,7 +663,7 @@ const App = () => {
 
     const handleQuit = useCallback(() => {
         if (confirmDiscardUnsaved("Tienes cambios sin guardar. ¿Seguro que quieres salir?")) {
-            window.electronAPI.quitApp();
+            window.loxarBridge.quitApp();
         }
     }, [confirmDiscardUnsaved]);
 
@@ -684,7 +684,7 @@ const App = () => {
         try {
             // Fix path separators for Windows (exportPath uses backslashes on Windows)
             const normalizedPath = exportPath.replace(/\\/g, '/');
-            const content = await window.electronAPI.readBackupFile(`${normalizedPath}/${fileName}`);
+            const content = await window.loxarBridge.readBackupFile(`${normalizedPath}/${fileName}`);
             await lexiconHook.startImportProcess(content);
             setActiveModal('none');
         } catch (e) {
@@ -1137,7 +1137,7 @@ const App = () => {
                     <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
                 )}
 
-                <Header wordsAddedCount={lexiconHook.wordsAddedSinceSave} onOpenWidget={() => window.electronAPI.openWidget()} onShowTour={handleStartTour} onOpenSettings={() => setShowSettings(true)} themeId={themeId} onThemeChange={(id) => setThemeId(id as any)} />
+                <Header wordsAddedCount={lexiconHook.wordsAddedSinceSave} onOpenWidget={() => window.loxarBridge.openWidget()} onShowTour={handleStartTour} onOpenSettings={() => setShowSettings(true)} themeId={themeId} onThemeChange={(id) => setThemeId(id as any)} />
 
                 <div className="flex items-center justify-between px-6 py-4 bg-surface-dark/90 backdrop-blur-md border-b border-border-dark flex-wrap gap-4 z-30 relative">
                     <LexiconSelector 
@@ -1190,7 +1190,7 @@ const App = () => {
                     <VerticalSidebar
                       active={activeTab}
                       onChange={(id) => setActiveTab(id as any)}
-                      onOpenWidget={() => window.electronAPI.openWidget()}
+                      onOpenWidget={() => window.loxarBridge.openWidget()}
                       onOpenSettings={() => setShowSettings(true)}
                       onShowTour={handleStartTour}
                     />
@@ -1329,7 +1329,7 @@ const App = () => {
                                         const date = new Date().toISOString().split('T')[0];
                                         const fileName = `${safeName}_${date}.loxar-grammar.json`;
                                         const content = JSON.stringify(manifest, null, 2);
-                                        window.electronAPI.exportFile({ filePath: `${exportPath}/${fileName}`, content })
+                                        window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content })
                                             .then(({ success, error }) => {
                                                 if (success) showNotification(`Gramática exportada a ${fileName}`, 'success');
                                                 else showNotification(`Error de exportación: ${error}`, 'error');

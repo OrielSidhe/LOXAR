@@ -30,7 +30,30 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - [x] **P-LOXAR — Persistencia controlada (`.loxar` como fuente de verdad):** la app YA NO guarda en silencio en appdata. Si no hay proyecto configurado al arrancar, muestra `ProjectBootstrapModal` que pide la ubicación del `.loxar` y escanea `.loxar` existentes en el equipo. Autosave (30s) + "Guardar" sincronizan el `.loxar`. Ver checkpoint 2026-08-14 abajo.
 - [ ] **Runtime (usuario, `npm run tauri dev`):** validar que en primera corrida aparece el modal de ubicación, que Crear/Abrir/Importar funcionan y que el `.loxar` sobrevive a un borrado de appdata.
 - [ ] **Auditoría de limpieza (ver `docs/AUDIT_REPORT.md`):** P0 — higiene pre-release de bajo riesgo: borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`), duplicado `src/constants/tourSteps.ts`, duplicados en raíz (`components/`, `hooks/useLexicon.ts`), `metadata.json` + `android-icon-*.png`, y descachear `docs/continuity/SESSION_CACHE.json`. Cada item tiene su prompt listo en el reporte.
-- [ ] **Auditoría de arquitectura (P1, tras typecheck verde):** renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini muertos; descomponer `App.tsx` (God Component, 1482 líneas) y los 4 componentes gigantes; migrar los 23 tests a Vitest.
+- [ ] **Auditoría de arquitectura (P1, tras typecheck verde):** 
+  - [x] Renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini muertos.
+  - [ ] Descomponer `App.tsx` (God Component, 1482 líneas) y los 4 componentes gigantes.
+  - [ ] Migrar los 23 tests legacy a Vitest.
+
+---
+
+## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
+**Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
+shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos
+que ahora viven en `src/services/geminiService.ts`. Se renombró la interfaz a `LoxarBridge` conservando solo
+los métodos reales de bridge (`getAppVersion`, `getDirectoryPath`, `exportFile`, `saveBackup`,
+`listBackups`, `readBackupFile`, `compileFont`, `quitApp`, `openWidget`, `send`, `on`).
+**Cambios:**
+- `src/types.ts`: `ElectronAPI` → `LoxarBridge`, eliminados stubs Gemini de la interfaz.
+- `src/main.tsx`: polyfill renombrado a `window.loxarBridge`, eliminados stubs Gemini de contexto Tauri
+  y del mock web preview. Comentarios actualizados.
+- `src/index.tsx`: declaración global `Window.loxarBridge: LoxarBridge`.
+- `src/App.tsx`: reemplazadas 18 referencias `window.electronAPI` por `window.loxarBridge`.
+- No quedan referencias a métodos stub eliminados; los callers de Gemini ya usaban `geminiService.ts`
+  directamente.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: P1-2/P1-3 — descomponer `App.tsx` y migrar tests legacy a Vitest.
 
 ---
 
@@ -326,7 +349,21 @@ una sola fuente de verdad.
 
 ---
 
-## [2026-08-14] Checkpoint: Limpieza del flujo .loxar y validación de build
+## [2026-08-14] Checkpoint: textParser ampliado para gramáticas diversas en texto libre
+**Rama:** `main`. **Motivo:** el importador de gramática solo obtenía ~40/100 con gramáticas reales en texto libre porque `detectSections` ignoraba encabezados libres multilingües y los parsers de sección no extraían contenido no estructurado. Se amplió el parser local para reconocer encabezados libres en inglés, español, esperanto y japonés, y se mejoraron las extracciones de categorías y estrategias.
+**Cambios:**
+- `src/services/grammar/textParser.ts`:
+  - `detectSections` ahora reconoce tanto secciones `§` como encabezados libres terminados en `:`, incluyendo CJK (`\u4E00-\u9FFF`, `\u3040-\u309F`, `\u30A0-\u30FF`).
+  - Los encabezados libres solo se aceptan si `classifySection` los clasifica como una sección de gramática conocida, evitando secciones basura.
+  - Se expandieron `SECTION_PATTERNS` con alias para tipología/fonología/sustantivos/verbos/adjetivos/estrategias/roles en múltiples idiomas.
+  - `parseCategorySection` añadió patrones para `-form` standalone y rasgos implícitos cuando no hay estructura `X por -Y`.
+  - `parseStrategies` añadió patrón genérico para partículas del tipo `marker (contexto)`.
+- `src/services/grammar/__tests__/diverseGrammars.test.ts`: 5 casos diversos (Klingon-like, Esperanto-like, Spanish, English, Japanese-like) ahora pasan con score >= 80.
+- Se eliminaron archivos de debug temporales: `diverseGrammarsDebug.test.ts`, `diverseGrammarsDebug2.test.ts`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, suite grammar 122/122 tests pasando.
+- Próximo bloque ejecutable: continuar con P1 architecture audit o validación GUI automatizada (opt-in).
+
+---
 **Rama:** `main`. **Motivo:** evitar guardado implícito y estados cruzados al cambiar de proyecto.
 **Cambios:**
 - `handleNewProject` y `handleOpenProject` en `App.tsx` ahora piden/usan ruta explícita y limpian `canvasState` antes de restaurar.

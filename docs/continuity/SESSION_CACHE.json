@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T17:11:00.000Z",
+  "lastUpdated": "2026-08-14T20:10:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Completar Fase 4 del fix del motor de gramática: validador post-import + reporte UI.",
+    "lastPrompt": "Renombrar window.electronAPI → window.loxarBridge y eliminar stubs Gemini muertos (P1-1).",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Fase 4 completada: validador post-import cableado a GrammarTab + GrammarImporterModal con ImportReport UI. Próximo bloque ejecutable: Fase 5 (strategyExtractor.ts) o Fase 6 (fixture Quavanol)."
+  "sessionSummary": "P1-1 completado: window.electronAPI renombrado a window.loxarBridge, stubs Gemini eliminados de main.tsx/types.ts/index.tsx/App.tsx. Validaciones estáticas en verde (typecheck 0 errores, lint OK, build OK, 122/122 tests). Próximo bloque: descomponer App.tsx y migrar tests legacy a Vitest."
 }
