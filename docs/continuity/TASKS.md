@@ -147,6 +147,26 @@ gramática en el hook de handlers de app.
   y `handleToolsFillMissing`.
 - Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
   `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar con el rediseño de la pantalla inicial/navegación tipo canvas o auditoría de limpieza si el usuario lo autoriza.
+
+---
+
+## [2026-08-14] Checkpoint: Implementar `LanguageHomeCanvas` y rediseñar pantalla inicial tipo canvas Stitch
+**Rama:** `main`. **Motivo:** transformar la vista inicial/dashboard en una interfaz navegable tipo
+canvas donde el nombre del lenguaje es el nodo central y los módulos son nodos conectados.
+**Cambios:**
+- `src/components/LanguageHomeCanvas.tsx` (NUEVO): canvas de pantalla inicial con nodo central
+  de lenguaje, módulos como nodos satélite (`grammar`, `phonology`, `syntax`, `lexicon`,
+  `neography`, `semantics`, `translator`, `workbench`, `collections`), edges SVG, estados
+  visuales por completitud y feedback de hover/active. Recibe `conlangName`, `activeModule`,
+  `stats` y `onModuleClick`.
+- `src/App.tsx`: se reemplazó el contenido del tab `dashboard` por `<LanguageHomeCanvas ... />`,
+  eliminando el `ModulePanel` + `CompletionDashboard` anterior. Se cambió el `activeTab` inicial
+  de `'table'` a `'dashboard'` para mostrar el canvas al abrir la app. Se eliminó el
+  `<LanguageTreeCanvas>` del layout principal; el componente legacy queda en el código por si
+  se quiere reutilizar en otra vista.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
 
 ---
 

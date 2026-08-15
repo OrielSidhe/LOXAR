@@ -27,7 +27,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `GrammarSyntaxPanel`, `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals` de `GrammarTab`,
   y `WorkbenchTab` y `ToolsTab` de `App.tsx` con tipos de handlers alineados,
   `AiMapperModal` de `SyntaxCanvas.tsx`, soporte Unicode corregido en importación,
-  error de Suspense en modales lazy resuelto, y exportación de gramática movida a `useAppHandlers`.
+  error de Suspense en modales lazy resuelto, exportación de gramática movida a `useAppHandlers`,
+  y pantalla inicial rediseñada como `LanguageHomeCanvas` tipo canvas Stitch con nodo central
+  de lenguaje y módulos satélite navegables.
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica

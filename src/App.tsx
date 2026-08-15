@@ -58,6 +58,7 @@ import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
 import LanguageTreeCanvas from './components/LanguageTreeCanvas';
+import LanguageHomeCanvas from './components/LanguageHomeCanvas';
 import ProjectBootstrapModal from './components/ProjectBootstrapModal';
 
 // Data & Helpers
@@ -87,7 +88,7 @@ const App = () => {
   const [isAppLoaded, setIsAppLoaded] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('table');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('dashboard');
   const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
 
   const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
@@ -495,17 +496,6 @@ const App = () => {
           />
 
           <div className="flex flex-1 min-h-0 relative">
-            <LanguageTreeCanvas
-              activeModule={activeTab}
-              grammar={activeGrammar}
-              lexicon={activeLexicon}
-              profile={activeProfile}
-              canvasNodes={canvasState.nodes}
-              canvasEdges={canvasState.edges}
-              onCanvasChange={handleCanvasChange}
-              onNodeClick={nodeId => setActiveTab(nodeId as any)}
-            />
-
             <VerticalSidebar
               active={activeTab}
               onChange={id => setActiveTab(id as any)}
@@ -517,18 +507,20 @@ const App = () => {
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
               <div className="flex-grow h-full flex flex-col">
                 {activeTab === 'dashboard' && (
-                  <ModulePanel title="Panel" active={activeTab === 'dashboard'} onClose={() => setActiveTab('table')}>
-                    <CompletionDashboard
-                      stats={{ ...completionStats, wordsAddedCount: lexiconHook.wordsAddedSinceSave }}
-                      onOpenReport={() => handleOpenModal('report')}
-                      onOpenAiAssistant={() => handleOpenModal('ai_assistant')}
-                      onNavigateComplete={() => { setViewFilter('incomplete'); setActiveTab('table'); }}
-                      onNavigateFunctions={() => { setViewFilter('incomplete'); setActiveTab('table'); }}
-                      onGenerateWords={() => handleOpenModal('ai_assistant')}
-                      onBackup={handleSaveChanges}
-                      onClose={() => setActiveTab('table')}
+                  <div className="h-full w-full">
+                    <LanguageHomeCanvas
+                      conlangName={activeMetadata?.conlangName}
+                      activeModule={activeTab}
+                      stats={{
+                        grammar: activeGrammar ? {
+                          rules: (activeGrammar as any)?.morphology?.rules?.length + (activeGrammar as any)?.syntax?.rules?.length + (activeGrammar as any)?.phonology?.rules?.length,
+                          categories: (activeGrammar as any)?.categories?.length,
+                        } : undefined,
+                        lexicon: { entries: activeLexicon.length },
+                      }}
+                      onModuleClick={(moduleId) => setActiveTab(moduleId as any)}
                     />
-                  </ModulePanel>
+                  </div>
                 )}
                 {activeTab === 'table' && (
                   <LexiconTable
