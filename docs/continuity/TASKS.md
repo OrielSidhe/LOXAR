@@ -278,6 +278,42 @@ componentes gigantes.
   `GrammarTab`, `SyntaxCanvas` o `EntryEditor`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `GrammarOverview` y `GrammarPhonologyPanel` de `GrammarTab` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajeron dos bloques de
+`GrammarTab`: la vista de overview y el panel de fonología, a componentes dedicados para reducir
+la superficie de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/GrammarOverview.tsx` (NUEVO): componente dedicado para la vista de overview
+  con progreso general, métricas, resumen de roles/estrategias y reporte de validación.
+- `src/components/GrammarPhonologyPanel.tsx` (NUEVO): componente dedicado para el panel de
+  fonología con inputs de consonantes, vocales y estructuras silábicas.
+- `src/components/GrammarTab.tsx`: se reemplazaron los bloques inline de `renderOverview` y
+  `renderPhonology` por los componentes dedicados, manteniendo la lógica de estado y cálculo
+  en el componente padre.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `GrammarTab`,
+  `SyntaxCanvas` o `EntryEditor`.
+
+---
+## [2026-08-14] Checkpoint: Extraer `GrammarOverview` de `GrammarTab` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo la vista de overview de
+`GrammarTab` a un componente dedicado para reducir la superficie de uno de los 4 componentes
+gigantes.
+**Cambios:**
+- `src/components/GrammarOverview.tsx` (NUEVO): componente dedicado para la vista de overview
+  con progreso general, métricas, resumen de roles/estrategias y reporte de validación.
+- `src/components/GrammarTab.tsx`: se reemplazó el bloque inline de `renderOverview` por el
+  componente `<GrammarOverview ... />`, manteniendo la lógica de cálculo de progreso y estado
+  en el componente padre.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `GrammarTab`,
+  `SyntaxCanvas` o `EntryEditor`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer helpers de preview de `GrammarTab` a `utils/grammarPreview.ts`
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de `GrammarTab`. En este paso se extrajeron las funciones de preview y

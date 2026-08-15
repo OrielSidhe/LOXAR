@@ -129,7 +129,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
     `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`, `TabButton`.
   - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`.
   - Extraído de `CollectionsManager`: `ParadigmCell`.
-  - Extraído de `GrammarTab`: helpers de preview movidos a `src/utils/grammarPreview.ts`.
+  - Extraído de `GrammarTab`: helpers de preview movidos a `src/utils/grammarPreview.ts`,
+    `GrammarOverview` y `GrammarPhonologyPanel`.
   - Próximo paso real: seguir extrayendo subcomponentes de `App.tsx` o avanzar con
     `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
 

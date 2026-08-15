@@ -21,6 +21,8 @@ import { cloneClauseAST, realizeEditedTree } from '../services/grammar/ast-view'
 import { isAiAvailable } from '../services/geminiService';
 import { validatePostImport } from '../services/grammar/postImportValidator';
 import ImportReport from './ImportReport';
+import GrammarOverview from './GrammarOverview';
+import GrammarPhonologyPanel from './GrammarPhonologyPanel';
 import { normalizeCategory, getEntryLabel, getEntryForm, getDefaultPreviewEntries, buildPreviewSentence, DEFAULT_TYPOLOGY, isMeaningfulTypology } from '../utils/grammarPreview';
 
 interface GrammarTabProps {
@@ -320,66 +322,14 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     };
 
     const renderOverview = () => (
-        <div className="space-y-6">
-            <div className="bg-background rounded-lg p-6 border border-border-dark">
-                <h3 className="text-xl font-bold text-white mb-4">Progreso General</h3>
-                <div className="flex items-center gap-4 mb-4">
-                    <div className="flex-1 bg-surface rounded-full h-4 overflow-hidden">
-                        <div 
-                            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-                            style={{ width: `${calculateProgress.overallProgress}%` }}
-                        />
-                    </div>
-                    <span className="text-2xl font-bold text-white">{calculateProgress.overallProgress}%</span>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    {calculateProgress.metrics.map(metric => (
-                        <div key={metric.category} className="bg-surface rounded-lg p-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-semibold text-text-primary">{metric.category}</span>
-                                <span className="text-xs text-text-secondary">{metric.completed}/{metric.total}</span>
-                            </div>
-                            <div className="bg-background rounded-full h-2 overflow-hidden">
-                                <div 
-                                    className="h-full bg-primary transition-all duration-300"
-                                    style={{ width: `${(metric.completed / metric.total) * 100}%` }}
-                                />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="bg-background rounded-lg p-6 border border-border-dark">
-                <h3 className="text-xl font-bold text-white mb-4">
-                    Resumen
-                    <InfoHint text="El resumen es un vistazo general al progreso de la gramática de tu conlang: cuántas piezas (roles, estrategias, paradigmas) ya definiste. No es un área para escribir, solo te muestra dónde vas." />
-                </h3>
-                <div className="space-y-3 text-sm">
-                    <div className="flex justify-between">
-                        <span className="text-text-secondary">Roles definidos:</span>
-                        <span className="text-white font-semibold">{editedManifest.roles.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-text-secondary">Estrategias definidas:</span>
-                        <span className="text-white font-semibold">{editedManifest.strategies.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span className="text-text-secondary">Última actualización:</span>
-                        <span className="text-white font-semibold">
-                            {editedManifest.meta.lastUpdated ? new Date(editedManifest.meta.lastUpdated).toLocaleDateString() : 'Nunca'}
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            {importReport && (
-                <div className="bg-background rounded-lg p-6 border border-border-dark">
-                    <h3 className="text-xl font-bold text-white mb-2">Reporte de validación</h3>
-                    <ImportReport report={importReport} />
-                </div>
-            )}
-        </div>
+        <GrammarOverview
+            overallProgress={calculateProgress.overallProgress}
+            metrics={calculateProgress.metrics}
+            rolesCount={editedManifest.roles.length}
+            strategiesCount={editedManifest.strategies.length}
+            lastUpdated={editedManifest.meta.lastUpdated}
+            importReport={importReport}
+        />
     );
 
     const renderSyntax = () => {
@@ -686,68 +636,10 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     );
 
     const renderPhonology = () => (
-        <div className="space-y-4">
-            <div className="bg-background rounded-lg p-6 border border-border-dark space-y-4">
-                <h3 className="text-xl font-bold text-white mb-4">
-                    Fonología
-                    <InfoHint text="La fonología define los sonidos que existen en tu idioma: las consonantes y las vocales, y las reglas fonotácticas (cómo se agrupan en sílabas, p.ej. 'CV' = consonante+vocal). El preview avisa si una palabra rompe estas reglas." />
-                </h3>
-                <div>
-                    <label className="block text-sm font-semibold text-text-secondary mb-2">Consonantes</label>
-                    <input
-                        type="text"
-                        value={editedManifest.phonology?.inventory?.consonants?.join(', ') || ''}
-                        onChange={(e) => updateManifest({ 
-                            phonology: { 
-                                inventory: { 
-                                    consonants: e.target.value.split(',').map(s => s.trim()).filter(Boolean), 
-                                    vowels: editedManifest.phonology?.inventory?.vowels || []
-                                },
-                                phonotactics: editedManifest.phonology?.phonotactics || { syllableStructures: [], maxConsonantClusters: 0 }
-                            } 
-                        })}
-                        className="w-full bg-surface border border-border-dark rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none"
-                        placeholder="p, t, k, b, d, g..."
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-semibold text-text-secondary mb-2">Vocales</label>
-                    <input
-                        type="text"
-                        value={editedManifest.phonology?.inventory?.vowels?.join(', ') || ''}
-                        onChange={(e) => updateManifest({ 
-                            phonology: { 
-                                inventory: { 
-                                    consonants: editedManifest.phonology?.inventory?.consonants || [],
-                                    vowels: e.target.value.split(',').map(s => s.trim()).filter(Boolean)
-                                },
-                                phonotactics: editedManifest.phonology?.phonotactics || { syllableStructures: [], maxConsonantClusters: 0 }
-                            } 
-                        })}
-                        className="w-full bg-surface border border-border-dark rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none"
-                        placeholder="a, e, i, o, u..."
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-semibold text-text-secondary mb-2">Estructura Silábica</label>
-                    <input
-                        type="text"
-                        value={editedManifest.phonology?.phonotactics?.syllableStructures?.join(', ') || ''}
-                        onChange={(e) => updateManifest({ 
-                            phonology: { 
-                                inventory: editedManifest.phonology?.inventory || { consonants: [], vowels: [] },
-                                phonotactics: { 
-                                    syllableStructures: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
-                                    maxConsonantClusters: editedManifest.phonology?.phonotactics?.maxConsonantClusters || 0
-                                } 
-                            } 
-                        })}
-                        className="w-full bg-surface border border-border-dark rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none"
-                        placeholder="CVC, CV, CCV..."
-                    />
-                </div>
-            </div>
-        </div>
+        <GrammarPhonologyPanel
+            manifest={editedManifest}
+            onChange={(updates) => updateManifest(updates)}
+        />
     );
 
     const renderMorphology = () => (
