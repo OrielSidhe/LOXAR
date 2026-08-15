@@ -1,20 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { LexiconEntry, NewLexiconEntry, GenerationMode, LexiconMetadata } from '../types';
-import ArrowLeftIcon from './icons/ArrowLeftIcon';
-import ArrowRightIcon from './icons/ArrowRightIcon';
 import { inferRootFromLexeme } from '../services/parser';
-import Tooltip from './Tooltip';
-import SaveIcon from './icons/SaveIcon';
-import CancelIcon from './icons/CancelIcon';
 import { mergeCategoryOptions, displayOf } from '../data/standardCategories';
 import { resolveLexicalCategory } from '../data/taxonomy';
-import SignificadoTagsInput from './SignificadoTagsInput';
-import EntryDuplicateWarning from './EntryDuplicateWarning';
-import EntryEditorAiActions from './EntryEditorAiActions';
 import EntryEditorCompleteModeNav from './EntryEditorCompleteModeNav';
 import EntryEditorHeader from './EntryEditorHeader';
 import EntryEditorAiBanner from './EntryEditorAiBanner';
-import EntryEditorIpaToggle from './EntryEditorIpaToggle';
+import EntryEditorCompleteWarning from './EntryEditorCompleteWarning';
+import EntryEditorForm from './EntryEditorForm';
 
 interface EntryEditorProps {
     mode: 'add' | 'complete';
@@ -448,140 +441,50 @@ const EntryEditor = (props: EntryEditorProps) => {
                         />
                     )}
 
-                    {mode === 'complete' && isCompleteWarning && (
-                        <div className="mb-4 p-2 bg-success/10 border border-success/30 text-success text-xs rounded-md text-center italic">
-                            Esta entrada ya está completa. Editando modo revisión.
-                        </div>
-                    )}
+                    {mode === 'complete' && <EntryEditorCompleteWarning isCompleteWarning={isCompleteWarning} />}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Row 1: Significado (ancho completo: es la semilla del concepto) */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="md:col-span-4">
-                                <label htmlFor="Significado" className="flex items-center text-[10px] font-bold text-text-secondary mb-1 uppercase tracking-widest">
-                                    {activeMetadata?.mainLanguage || 'Significado'}
-                                    <Tooltip text="Escribe y presiona Enter o coma para añadir varios significados a la vez." />
-                                </label>
-                                <div ref={significadoInputRef} onKeyDown={handleSignificadoKeyDown}>
-                                    <SignificadoTagsInput
-                                        id="Significado"
-                                        values={significados}
-                                        onChange={vals => { setSignificados(vals); setIsAiPopulated(false); setError(null); }}
-                                        placeholder={`ej: ${activeMetadata?.mainLanguage ? activeMetadata.mainLanguage.toLowerCase() : 'bosque'}`}
-                                        disabled={disabled}
-                                        hasError={duplicateSignificados.length > 0}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Row 2: Categoría + Raíz (mitad y mitad: la raíz gana presencia) */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="md:col-span-2">
-                                <label htmlFor="Categoría" className="flex items-center text-[10px] font-bold text-text-secondary mb-1 uppercase tracking-widest">
-                                    Categoría
-                                    <Tooltip text="Escribe para filtrar las opciones (ej. 's' para sustantivo, 'v' para verbo)." />
-                                </label>
-                                {isAddingCategory ? (
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="text"
-                                            id="newCategoryInput"
-                                            name="newCategoryInput"
-                                            value={newCategoryInput}
-                                            onChange={e => setNewCategoryInput(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleConfirmNewCategory(); } if (e.key === 'Escape') handleCancelNewCategory(); }}
-                                            placeholder="Nueva..." autoFocus
-                                            className="w-full bg-background border border-accent rounded px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                        />
-                                        <button type="button" onClick={handleConfirmNewCategory} className="p-2 text-success hover:bg-success/10 rounded"><SaveIcon className="h-5 w-5"/></button>
-                                        <button type="button" onClick={handleCancelNewCategory} className="p-2 text-danger hover:bg-danger/10 rounded"><CancelIcon className="h-5 w-5"/></button>
-                                    </div>
-                                ) : (
-                                    <select
-                                        id="Categoría" name="Categoría"
-                                        ref={categoriaSelectRef}
-                                        value={formData.Categoría} onChange={handleChange}
-                                        onKeyDown={handleCategoriaKeyDown}
-                                        tabIndex={2}
-                                        className="w-full bg-background border border-subtle rounded px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                    >
-                                        <option value="">Selecciona...</option>
-                                        {allCategories.map(cat => <option key={cat} value={cat}>{displayOf(cat)}</option>)}
-                                        <option value="add_new">+ Añadir nueva</option>
-                                    </select>
-                                )}
-                            </div>
-                            <div className="md:col-span-2">
-                                <label htmlFor="Raíz" className="block text-[10px] font-bold text-text-secondary mb-1 uppercase tracking-widest">Raíz (Etimo)</label>
-                                <input
-                                    ref={raizInputRef}
-                                    type="text" id="Raíz" name="Raíz"
-                                    value={formData.Raíz}
-                                    onChange={handleChange}
-                                    onKeyDown={handleRaizKeyDown}
-                                    placeholder="ej: BSK"
-                                    tabIndex={3}
-                                    className={`w-full bg-background border rounded px-3 py-2 text-text-primary font-mono text-center uppercase focus:outline-none focus:ring-2 focus:ring-accent ${duplicateRaices.length > 0 ? 'border-warning ring-1 ring-warning' : 'border-subtle'}`}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Row 3: Léxema (ancho completo: es la palabra resultante) */}
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                            <div className="md:col-span-4">
-                                <label htmlFor="Léxema" className="block text-[10px] font-bold text-text-secondary mb-1 uppercase tracking-widest">{activeMetadata?.conlangName || 'Léxema'}</label>
-                                <input
-                                    ref={lexemaInputRef}
-                                    type="text" id="Léxema" name="Léxema"
-                                    value={formData.Léxema} onChange={handleChange}
-                                    onKeyDown={handleLexemaKeyDown}
-                                    placeholder="ej: boskel"
-                                    tabIndex={4}
-                                    className={`w-full bg-background border rounded px-3 py-2 text-accent font-bold text-xl focus:outline-none focus:ring-2 focus:ring-accent ${duplicateLexemas.length > 0 ? 'border-warning ring-1 ring-warning' : 'border-subtle'}`}
-                                />
-                            </div>
-                        </div>
-
-                        <EntryEditorIpaToggle
-                          showIPA={showIPA}
-                          onToggle={() => setShowIPA(!showIPA)}
-                        />
-
-                        <EntryDuplicateWarning
-                          duplicateLexemas={duplicateLexemas}
-                          duplicateRaices={duplicateRaices}
-                          duplicateSignificados={duplicateSignificados}
-                        />
-                        {error && <p className="text-danger text-sm">{error}</p>}
-
-                        {/* Row 3: Actions */}
-                        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                            <button
-                                ref={submitButtonRef}
-                                type="submit"
-                                disabled={isActionDisabled}
-                                tabIndex={5}
-                                className="flex-1 py-2.5 bg-accent text-white font-bold rounded-md shadow-lg hover:bg-accent-hover active:scale-95 transition-all disabled:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 uppercase tracking-widest text-sm"
-                            >
-                                <SaveIcon className="h-5 w-5" />
-                                {isSubmitting ? 'Guardando...' : (mode === 'add' ? 'Registrar Palabra' : 'Actualizar y Seguir')}
-                            </button>
-
-                            <EntryEditorAiActions
-                              generationModes={generationModes}
-                              onToggleGenerationMode={handleToggleGenerationMode}
-                              onGenerate={handleAiGenerate}
-                              onComplete={handleAiComplete}
-                              isGenerating={isGenerating}
-                              isCompleting={isCompleting}
-                              isAiDisabled={isAiButtonDisabled}
-                              hasCategory={!!formData.Categoría}
-                              activeModeDescription={activeModeDescription}
-                              generationModeOptions={generationModeOptions}
-                            />
-                        </div>
-                    </form>
+                    <EntryEditorForm
+                      mode={mode}
+                      onSubmit={handleSubmit}
+                      isSubmitting={isSubmitting}
+                      isActionDisabled={isActionDisabled}
+                      submitButtonRef={submitButtonRef}
+                      onSignificadoKeyDown={handleSignificadoKeyDown}
+                      onCategoriaKeyDown={handleCategoriaKeyDown}
+                      onRaizKeyDown={handleRaizKeyDown}
+                      onLexemaKeyDown={handleLexemaKeyDown}
+                      activeMetadata={activeMetadata}
+                      disabled={disabled}
+                      significados={significados}
+                      onSignificadosChange={vals => { setSignificados(vals); setIsAiPopulated(false); setError(null); }}
+                      significadoInputRef={significadoInputRef}
+                      duplicateSignificados={duplicateSignificados}
+                      isAddingCategory={isAddingCategory}
+                      newCategoryInput={newCategoryInput}
+                      onNewCategoryInputChange={setNewCategoryInput}
+                      onConfirmNewCategory={handleConfirmNewCategory}
+                      onCancelNewCategory={handleCancelNewCategory}
+                      formData={formData}
+                      onChange={handleChange}
+                      allCategories={allCategories}
+                      categoriaSelectRef={categoriaSelectRef}
+                      duplicateRaices={duplicateRaices}
+                      raizInputRef={raizInputRef}
+                      duplicateLexemas={duplicateLexemas}
+                      lexemaInputRef={lexemaInputRef}
+                      showIPA={showIPA}
+                      onToggleIPA={() => setShowIPA(!showIPA)}
+                      error={error}
+                      generationModes={generationModes}
+                      onToggleGenerationMode={handleToggleGenerationMode}
+                      onAiGenerate={handleAiGenerate}
+                      onAiComplete={handleAiComplete}
+                      isGenerating={isGenerating}
+                      isCompleting={isCompleting}
+                      isAiButtonDisabled={isAiButtonDisabled}
+                      activeModeDescription={activeModeDescription}
+                      generationModeOptions={generationModeOptions}
+                    />
                 </div>
             </fieldset>
         </div>

@@ -20,8 +20,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Avance P1 actual: se extrajeron `ToastContainer`, `OfflineBanner`, `AmbientLights`,
   `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar` y `TabButton` de `App.tsx`,
   además de `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`,
-  `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner` y `EntryEditorIpaToggle`
-  de `EntryEditor`, `ParadigmCell` de `CollectionsManager`, helpers de preview a
+  `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner`, `EntryEditorIpaToggle`
+  y `EntryEditorForm` de `EntryEditor`, `ParadigmCell` de `CollectionsManager`, helpers de preview a
   `src/utils/grammarPreview.ts`, y `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`,
   `GrammarNotesPanel`, `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`,
   `GrammarSyntaxPanel`, `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals` de `GrammarTab`.

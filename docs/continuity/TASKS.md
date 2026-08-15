@@ -45,6 +45,27 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `EntryEditorForm` de `EntryEditor` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el formulario inline de
+`EntryEditor` a un componente dedicado para reducir la superficie de uno de los 4 componentes
+gigantes.
+**Cambios:**
+- `src/components/EntryEditorForm.tsx` (NUEVO): componente dedicado para el formulario de edición
+  con campos Significado, Categoría, Raíz y Léxema, además de IPA toggle, warnings de duplicados,
+  acciones de guardado y botones de IA.
+- `src/components/EntryEditor.tsx`: se reemplazó el bloque inline del formulario por
+  `<EntryEditorForm ... />` y se eliminaron imports de `Tooltip`, `SaveIcon`, `CancelIcon`,
+  `SignificadoTagsInput`, `EntryDuplicateWarning` y `EntryEditorAiActions` que ya no se usan
+  directamente en este archivo. Se restauraron imports de `mergeCategoryOptions`, `displayOf`
+  y `resolveLexicalCategory` que el componente padre aún usa en handlers locales.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos
