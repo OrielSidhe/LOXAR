@@ -40,7 +40,8 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
   - [x] Extraer work queue de `App.tsx` a `src/hooks/useWorkQueue.ts` (P1-2b).
   - [x] Extraer handlers de IA/sugerencias de `App.tsx` a `src/hooks/useAiHandlers.ts` (P1-2c).
   - [x] Extraer project operations de `App.tsx` a `src/hooks/useProjectOperations.ts` (P1-2d).
-  - [ ] Descomponer `App.tsx` (God Component, ~1136 líneas) y los 4 componentes gigantes.
+  - [x] Extraer bootstrap/modal/app handlers de `App.tsx` a `src/hooks/useAppHandlers.ts` (P1-2e).
+  - [ ] Descomponer `App.tsx` (God Component, ~930 líneas) y los 4 componentes gigantes.
 
 ---
 
@@ -111,6 +112,28 @@ adicionales de lógica de dominio a hooks dedicados, reduciendo acoplamiento y m
 - Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
   `npx vitest run` 122 passed.
 - Nota: igual que en P1-2b, `tests-gui/smoke.spec.ts` queda como suite GUI separada pendiente de
+  autorización por SOP §9; no se considera fallo de regresión.
+
+---
+
+## [2026-08-14] Checkpoint: Extraer bootstrap/modal/app handlers de `App.tsx` a hook dedicado (P1-2e)
+**Rama:** `main`. **Motivo:** reducir aún más la superficie de `App.tsx` moviendo handlers de
+bootstrap, modales, tour, canvas, widget y selección a `src/hooks/useAppHandlers.ts`.
+**Cambios:**
+- `src/hooks/useAppHandlers.ts` (NUEVO): hook con handlers de app:
+  `handleOpenModal`, `handleConfirmCreateLexicon`, `handleRenameLexicon`, `handleDeleteLexicon`,
+  `confirmDiscardUnsaved`, `handleQuit`, `handleResetApp`, `handleRestoreBackup`, `handleStartTour`,
+  `onTourEnd`, `handleCanvasChange`, `handleBootstrapOpenFound`, `handleBootstrapCreate`,
+  `handleBootstrapOpenOther`, `handleBootstrapDismiss`, `handleBootstrapImportLocal`,
+  `handleWidgetAddWord`, `handleWidgetAddInflection`, `handleWidgetSearch`, `handleInflectRequest`,
+  `handleLookupForCompletion`, `handleManageFunctions`, `handleManageHyphens`,
+  `handleToggleSelectAll`, `handleAddLexicalException`, `handleToggleSelection`,
+  `handleBatchDelete`, `handleBatchChangeFunction`, `handleNavigateIncomplete`.
+- `src/App.tsx`: se eliminaron las declaraciones locales duplicadas de handlers y ahora consume
+  `useAppHandlers(...)`. `incompleteEntries` se movió antes del hook para evitar redeclaraciones.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Nota: igual que en P1-2b/c/d, `tests-gui/smoke.spec.ts` queda como suite GUI separada pendiente de
   autorización por SOP §9; no se considera fallo de regresión.
 
 ---
