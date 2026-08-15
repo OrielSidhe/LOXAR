@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { LexiconEntry, NewLexiconEntry, GenerationMode, LexiconMetadata } from '../types';
-import WrenchIcon from './icons/WrenchIcon';
 import ArrowLeftIcon from './icons/ArrowLeftIcon';
 import ArrowRightIcon from './icons/ArrowRightIcon';
 import { inferRootFromLexeme } from '../services/parser';
@@ -14,6 +13,8 @@ import SignificadoTagsInput from './SignificadoTagsInput';
 import EntryDuplicateWarning from './EntryDuplicateWarning';
 import EntryEditorAiActions from './EntryEditorAiActions';
 import EntryEditorCompleteModeNav from './EntryEditorCompleteModeNav';
+import EntryEditorHeader from './EntryEditorHeader';
+import EntryEditorAiBanner from './EntryEditorAiBanner';
 
 interface EntryEditorProps {
     mode: 'add' | 'complete';
@@ -418,16 +419,11 @@ const EntryEditor = (props: EntryEditorProps) => {
     return (
         <div className={`bg-surface rounded-lg shadow-lg border border-subtle flex flex-col animate-fade-in ${disabled ? 'opacity-50' : ''}`}>
             <fieldset disabled={disabled} className="flex flex-col">
-                <header className="p-4 border-b border-subtle flex items-center justify-between bg-background/30">
-                    <div className="flex items-center gap-3">
-                        <WrenchIcon className="h-6 w-6 text-accent" />
-                        <h2 id="entry-editor-heading" className="text-lg font-bold text-text-primary uppercase tracking-tight">Workbench</h2>
-                    </div>
-                    <div className="flex items-center gap-1 p-1 bg-background rounded-md border border-subtle">
-                        <button onClick={() => onModeChange('add')} className={`px-4 py-1.5 text-xs font-bold rounded transition-all ${mode === 'add' ? 'bg-accent text-white shadow-[0_0_15px_-3px_rgba(225,29,72,0.4)]' : 'text-text-secondary hover:text-text-primary'}`}>NUEVA</button>
-                        <button onClick={() => onModeChange('complete')} className={`px-4 py-1.5 text-xs font-bold rounded transition-all ${mode === 'complete' ? 'bg-accent text-white shadow-[0_0_15px_-3px_rgba(225,29,72,0.4)]' : 'text-text-secondary hover:text-text-primary'}`}>COMPLETAR ({incompleteCount})</button>
-                    </div>
-                </header>
+                <EntryEditorHeader
+                  mode={mode}
+                  onModeChange={onModeChange}
+                  incompleteCount={incompleteCount}
+                />
 
                 {mode === 'complete' && isCompleteWarning && (
                     <div className="mb-4 p-3 bg-success/20 border border-success text-green-300 rounded-md text-sm" role="status">
@@ -436,20 +432,11 @@ const EntryEditor = (props: EntryEditorProps) => {
                 )}
 
                 <div className="p-5">
-                    {aiBanner && (
-                        <div className={`mb-4 p-3 rounded-md border text-sm flex items-center justify-between gap-3 ${aiBanner.success ? 'bg-accent/10 border-accent/40 text-accent' : 'bg-danger/10 border-danger/40 text-danger'}`}>
-                            <div className="flex items-center gap-2 min-w-0">
-                                <span className="shrink-0">{aiBanner.success ? '✦' : '⚠'}</span>
-                                <span className="truncate">{aiBanner.success ? 'Resultado de IA aplicado a los campos. Revisa y guarda, o regenera.' : (aiBanner.message || 'Error de la IA')}</span>
-                            </div>
-                            {aiBanner.success && (
-                                <div className="flex items-center gap-2 shrink-0">
-                                    <button type="button" onClick={regenerateAi} className="px-2.5 py-1 rounded bg-accent/20 hover:bg-accent/30 text-accent font-bold text-xs transition-colors">Regenerar</button>
-                                    <button type="button" onClick={() => setAiBanner(null)} className="px-2.5 py-1 rounded bg-surface hover:bg-subtle text-text-secondary text-xs transition-colors">Quitar</button>
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <EntryEditorAiBanner
+                      aiBanner={aiBanner}
+                      onRegenerateAi={regenerateAi}
+                      onDismissAiBanner={() => setAiBanner(null)}
+                    />
                     {mode === 'complete' && (
                         <EntryEditorCompleteModeNav
                           lookupTerm={lookupTerm}

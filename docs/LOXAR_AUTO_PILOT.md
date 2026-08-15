@@ -19,7 +19,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
 - Avance P1 actual: se extrajeron `ToastContainer`, `OfflineBanner`, `AmbientLights`,
   `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar` y `TabButton` de `App.tsx`,
-  además de `SignificadoTagsInput`, `EntryDuplicateWarning` y `EntryEditorAiActions` de `EntryEditor`,
+  además de `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`,
+  `EntryEditorCompleteModeNav`, `EntryEditorHeader` y `EntryEditorAiBanner` de `EntryEditor`,
   `ParadigmCell` de `CollectionsManager`, helpers de preview a `src/utils/grammarPreview.ts`,
   y `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
   `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
@@ -131,7 +132,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
   - Estado: P1-2f revertido; se avanza por secciones pequeñas sin reintentar `useProjectShell`.
   - Extraído de `App.tsx`: `ToastContainer`, `OfflineBanner`, `AmbientLights`,
     `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`, `TabButton`.
-  - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`.
+  - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`,
+    `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner`.
   - Extraído de `CollectionsManager`: `ParadigmCell`.
   - Extraído de `GrammarTab`: helpers de preview movidos a `src/utils/grammarPreview.ts`,
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,

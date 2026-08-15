@@ -2020,6 +2020,40 @@ Texto libre → textParser (local, determinista) → DeclarativeManifest
 **Próximo paso:** inicializar git (`git init`) si no existe y hacer el commit inicial, o abrir el repo en GitHub y pushear.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `EntryEditorAiBanner` de `EntryEditor` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el banner de resultado de IA
+de `EntryEditor` a un componente dedicado para reducir la superficie de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/EntryEditorAiBanner.tsx` (NUEVO): componente dedicado para renderizar el banner
+  de éxito/error de IA con botones de regenerar/quitar.
+- `src/components/EntryEditor.tsx`: se reemplazó el bloque inline del banner de IA por el
+  componente `<EntryEditorAiBanner ... />`, manteniendo la lógica de estado y handlers en el
+  componente padre.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
+## [2026-08-14] Checkpoint: Extraer `EntryEditorHeader` de `EntryEditor` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el header del editor
+(título Workbench + botones NUEVA/COMPLETAR) de `EntryEditor` a un componente dedicado para reducir
+la superficie de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/EntryEditorHeader.tsx` (NUEVO): componente dedicado para el header del editor
+  con título y selector de modo.
+- `src/components/EntryEditor.tsx`: se reemplazó el bloque inline del header por el
+  componente `<EntryEditorHeader ... />`, manteniendo la lógica de estado y handlers en el
+  componente padre. Se eliminó el import de `WrenchIcon` que ya no se usa directamente en
+  `EntryEditor`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `EntryEditorCompleteModeNav` de `EntryEditor` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo el bloque de navegación del
