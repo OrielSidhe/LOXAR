@@ -128,6 +128,7 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
   - Extraído de `App.tsx`: `ToastContainer`, `OfflineBanner`, `AmbientLights`,
     `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`, `TabButton`.
   - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`.
+  - Extraído de `CollectionsManager`: `ParadigmCell`.
   - Próximo paso real: seguir extrayendo subcomponentes de `App.tsx` o avanzar con
     `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
 

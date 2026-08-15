@@ -262,6 +262,22 @@ uno de los 4 componentes gigantes.
   `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `ParadigmCell` de `CollectionsManager` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo la celda de paradigma
+de `CollectionsManager` a un componente dedicado para reducir la superficie de uno de los 4
+componentes gigantes.
+**Cambios:**
+- `src/components/ParadigmCell.tsx` (NUEVO): componente dedicado para la celda de paradigma
+  con lógica de match en léxico, sugerencia por paradigma, edición local y push al léxico.
+- `src/components/CollectionsManager.tsx`: se reemplazó la definición inline de `ParadigmCell`
+  por el import del nuevo componente, manteniendo el resto de la lógica de colecciones intacta.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `CollectionsManager`,
+  `GrammarTab`, `SyntaxCanvas` o `EntryEditor`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `TabButton` de `App.tsx` y seguir descomponiendo el God Component
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de `App.tsx`. En este paso se extrajo el componente inline `TabButton` a un
