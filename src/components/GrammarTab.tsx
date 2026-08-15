@@ -23,6 +23,7 @@ import GrammarTypologyPanel from './GrammarTypologyPanel';
 import GrammarNotesPanel from './GrammarNotesPanel';
 import GrammarStrategiesPanel from './GrammarStrategiesPanel';
 import GrammarMorphologyPanel from './GrammarMorphologyPanel';
+import GrammarRolesPanel from './GrammarRolesPanel';
 import { normalizeCategory, getEntryLabel, getEntryForm, getDefaultPreviewEntries, buildPreviewSentence, DEFAULT_TYPOLOGY, isMeaningfulTypology } from '../utils/grammarPreview';
 
 interface GrammarTabProps {
@@ -458,48 +459,12 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     );
 
     const renderRoles = () => (
-        <div className="space-y-4">
-            <div className="bg-background rounded-lg p-6 border border-border-dark">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-white">
-                        Roles Sintácticos
-                        <InfoHint text="Los roles son los papeles que juegan las palabras en una acción: quien hace (agente/sujeto), quien lo recibe (paciente/objeto), etc. Son la base para que el motor ordene la frase." />
-                    </h3>
-                    <button onClick={addRole} className="flex items-center gap-2 bg-primary hover:bg-primary-dark px-3 py-2 rounded-lg text-sm font-semibold text-white transition-colors">
-                        <PlusIcon className="w-4 h-4" />
-                        Añadir Rol
-                    </button>
-                </div>
-                <div className="space-y-2">
-                    {editedManifest.roles.map(role => (
-                        <div key={role.id} className="bg-surface rounded-lg p-4 flex gap-4 items-start">
-                            <input
-                                type="text"
-                                value={role.name}
-                                onChange={(e) => updateRole(role.id, 'name', e.target.value)}
-                                className="flex-1 bg-transparent border-b border-border-dark focus:border-primary outline-none text-white"
-                                placeholder="Nombre del rol..."
-                            />
-                            <input
-                                type="text"
-                                value={role.description || ''}
-                                onChange={(e) => updateRole(role.id, 'description', e.target.value)}
-                                className="flex-2 bg-transparent border-b border-border-dark focus:border-primary outline-none text-text-secondary text-sm"
-                                placeholder="Descripción (opcional)..."
-                            />
-                            <button onClick={() => removeRole(role.id)} className="p-1 text-text-secondary hover:text-red-400 transition-colors">
-                                <TrashIcon className="w-4 h-4" />
-                            </button>
-                        </div>
-                    ))}
-                    {editedManifest.roles.length === 0 && (
-                        <div className="text-center text-text-secondary py-8 italic">
-                            No hay roles definidos. Añade roles para empezar.
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
+        <GrammarRolesPanel
+            roles={editedManifest.roles}
+            onAddRole={addRole}
+            onRemoveRole={removeRole}
+            onUpdateRole={updateRole}
+        />
     );
 
     const renderStrategies = () => (
