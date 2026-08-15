@@ -46,6 +46,7 @@ import WorkQueueBar from './components/WorkQueueBar';
 import BatchActionToolbar from './components/BatchActionToolbar';
 import SplashScreen from './components/SplashScreen';
 import ToastContainer from './components/ToastContainer';
+import OfflineBanner from './components/OfflineBanner';
 import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -371,17 +372,7 @@ const App = () => {
           <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[60%] bg-emerald-500/5 rounded-full blur-[130px] animate-move-lights animation-delay-4000 opacity-40"></div>
 
           {isLoading && <LoadingOverlay message={loadingMessage} />}
-          {showOfflineBanner && (
-            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-4 mx-4 mt-4 rounded-md shadow-sm">
-              <div className="flex items-center">
-                <AlertTriangleIcon className="h-5 w-5 mr-2 flex-shrink-0" />
-                <div>
-                  <p className="font-semibold">Grammar engine running offline</p>
-                  <p className="text-sm">AI assistance is disabled. The local grammar engine is available for basic operations.</p>
-                </div>
-              </div>
-            </div>
-          )}
+          {showOfflineBanner && <OfflineBanner />}
           {showWelcome && (
             <WelcomeScreen
               onCreateLexicon={handleCreateNewLexicon}

@@ -172,6 +172,20 @@ dedicado para reducir la superficie del God Component.
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `OfflineBanner` y seguir descomponiendo `App.tsx`
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de `App.tsx`. En este paso se extrajo el banner offline a un componente
+dedicado para seguir reduciendo la superficie del God Component.
+**Cambios:**
+- `src/components/OfflineBanner.tsx` (NUEVO): componente dedicado para el banner offline.
+- `src/App.tsx`: se reemplazó el bloque inline del banner offline por `<OfflineBanner />`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar descomponiendo `App.tsx` por otras secciones pequeñas o
+  avanzar sobre los 4 componentes gigantes.
+
+---
+
 ## [2026-08-14] Checkpoint: Auditoría de calidad completa (READ-ONLY) + directivas de coding/awareness
 **Rama:** `main`. **Motivo:** el usuario pidió (a) añadir buenas prácticas de coding (limpio, breve,
 comentarios solo donde sea necesario) y una regla de **awareness holístico** (no arreglar cosas pequeñas
