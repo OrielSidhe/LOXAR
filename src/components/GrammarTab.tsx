@@ -23,6 +23,7 @@ import { validatePostImport } from '../services/grammar/postImportValidator';
 import ImportReport from './ImportReport';
 import GrammarOverview from './GrammarOverview';
 import GrammarPhonologyPanel from './GrammarPhonologyPanel';
+import GrammarTypologyPanel from './GrammarTypologyPanel';
 import { normalizeCategory, getEntryLabel, getEntryForm, getDefaultPreviewEntries, buildPreviewSentence, DEFAULT_TYPOLOGY, isMeaningfulTypology } from '../utils/grammarPreview';
 
 interface GrammarTabProps {
@@ -451,32 +452,10 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     };
 
     const renderTypology = () => (
-        <div className="space-y-4">
-            <div className="bg-background rounded-lg p-6 border border-border-dark space-y-4">
-                <h3 className="text-xl font-bold text-white mb-4">
-                    Tipología
-                    <InfoHint text="La tipología son los grandes rasgos de tu idioma: el orden por defecto de las palabras (SVO, SOV...), cómo se marcan los roles (Alineamiento) y cuánto se pegan los trocitos de significado (Morfología: aislante, aglutinante, fusional o polisintético)." />
-                </h3>
-                {[
-                    { field: 'wordOrder' as const, label: 'Orden de Palabras', options: ['SVO', 'SOV', 'VSO', 'VOS', 'OVS', 'OSV', 'Libre'] },
-                    { field: 'alignment' as const, label: 'Alineamiento', options: ['Nominativo-Acusativo', 'Ergativo-Absolutivo', 'Split-Ergativo', 'Activo-Estativo'] },
-                    { field: 'morphology' as const, label: 'Tipo Morfológico', options: ['Aislante', 'Aglutinante', 'Fusional', 'Polisintético'] },
-                    { field: 'headDirection' as const, label: 'Dirección del Núcleo', options: ['Head-Initial', 'Head-Final', 'Mixed'] }
-                ].map(({ field, label, options }) => (
-                    <div key={field}>
-                        <label className="block text-sm font-semibold text-text-secondary mb-2">{label}</label>
-                        <select
-                            value={editedManifest.typology[field]}
-                            onChange={(e) => updateManifest({ typology: { ...editedManifest.typology, [field]: e.target.value } })}
-                            className="w-full bg-surface border border-border-dark rounded-lg px-4 py-2 text-white focus:border-primary focus:outline-none"
-                        >
-                            <option value="">Seleccionar...</option>
-                            {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
-                    </div>
-                ))}
-            </div>
-        </div>
+        <GrammarTypologyPanel
+            manifest={editedManifest}
+            onChange={(updates) => updateManifest(updates)}
+        />
     );
 
     const renderRoles = () => (
