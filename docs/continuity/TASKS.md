@@ -314,6 +314,24 @@ gigantes.
   `SyntaxCanvas` o `EntryEditor`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `GrammarStrategiesPanel` de `GrammarTab` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el panel de estrategias
+de `GrammarTab` a un componente dedicado para reducir la superficie de uno de los 4 componentes
+gigantes.
+**Cambios:**
+- `src/components/GrammarStrategiesPanel.tsx` (NUEVO): componente dedicado para el panel de
+  estrategias morfosintácticas con formularios de nombre, tipo, roles, categorías, posición,
+  forma y notas.
+- `src/components/GrammarTab.tsx`: se reemplazó el bloque inline de `renderStrategies` por el
+  componente `<GrammarStrategiesPanel ... />`, manteniendo la lógica de estado y actualización
+  del manifiesto en el componente padre.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `GrammarTab`,
+  `SyntaxCanvas` o `EntryEditor`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `GrammarOverview` de `GrammarTab` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo la vista de overview de
