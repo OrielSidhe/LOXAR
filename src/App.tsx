@@ -47,6 +47,7 @@ import BatchActionToolbar from './components/BatchActionToolbar';
 import SplashScreen from './components/SplashScreen';
 import ToastContainer from './components/ToastContainer';
 import OfflineBanner from './components/OfflineBanner';
+import AmbientLights from './components/AmbientLights';
 import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -367,9 +368,7 @@ const App = () => {
         {!splashFinished && <SplashScreen onFinish={() => setSplashFinished(true)} />}
 
         <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] animate-move-lights opacity-60"></div>
-          <div className="absolute top-[40%] right-[0%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[100px] animate-move-lights animation-delay-2000 opacity-50"></div>
-          <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[60%] bg-emerald-500/5 rounded-full blur-[130px] animate-move-lights animation-delay-4000 opacity-40"></div>
+          <AmbientLights />
 
           {isLoading && <LoadingOverlay message={loadingMessage} />}
           {showOfflineBanner && <OfflineBanner />}
