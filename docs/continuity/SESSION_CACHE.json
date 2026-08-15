@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Se extrajo AppWelcomeSection de App.tsx (SplashScreen + WelcomeScreen + GuidedTour) y se eliminó AmbientLights/OfflineBanner del encabezado. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones chicas o avanzar en el rediseño del canvas de inicio."
+  "sessionSummary": "Se extrajo AppWelcomeSection de App.tsx (SplashScreen + WelcomeScreen + GuidedTour) y se envolvió el layer de toasts en AppToastLayer. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones chicas o avanzar en el rediseño del canvas de inicio."
 }

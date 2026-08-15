@@ -45,7 +45,6 @@ import ToolsTab from './components/ToolsTab';
 import AppBatchToolbar from './components/AppBatchToolbar';
 import TabButton from './components/TabButton';
 import SplashScreen from './components/SplashScreen';
-import ToastContainer from './components/ToastContainer';
 import OfflineBanner from './components/OfflineBanner';
 import AmbientLights from './components/AmbientLights';
 import ProjectBootstrapBanner from './components/ProjectBootstrapBanner';
@@ -61,6 +60,7 @@ import LanguageTreeCanvas from './components/LanguageTreeCanvas';
 import LanguageHomeCanvas from './components/LanguageHomeCanvas';
 import ProjectBootstrapModal from './components/ProjectBootstrapModal';
 import AppWelcomeSection from './components/AppWelcomeSection';
+import AppToastLayer from './components/AppToastLayer';
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -690,9 +690,9 @@ const App = () => {
             />
           )}
 
-          <ToastContainer
+          <AppToastLayer
             notifications={notifications}
-            onDismiss={id => setNotifications(prev => prev.filter(n => n.id !== id))}
+            onDismissNotification={id => setNotifications(prev => prev.filter(n => n.id !== id))}
           />
         </div>
 
