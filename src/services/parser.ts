@@ -191,8 +191,8 @@ const buildRejectionMessage = (rejected: any[]): string | null => {
 
 export function inferRootFromLexeme(lex: string | null | undefined): string {
     if (typeof lex === 'string' && lex) {
-        // Infer from lexeme: take first 4 chars, remove non-letters, or return empty
-        return (lex.substring(0, 4).replace(/[^a-zA-Z]/g, '') || '').toUpperCase();
+        // Infer from lexeme: take first 4 chars, keep Unicode letters only, or return empty
+        return (lex.substring(0, 4).replace(/[^\p{L}]/gu, '') || '').toUpperCase();
     }
     // Return empty string if no lexeme is provided
     return '';

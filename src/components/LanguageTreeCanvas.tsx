@@ -63,7 +63,7 @@ const GRAPH_COLORS: Record<GraphNode['kind'], { border: string; bg: string; text
   lexicon: { border: 'border-emerald-400/60', bg: 'bg-emerald-500/10', text: 'text-emerald-200', line: 'text-emerald-300/70' },
 };
 
-const safeId = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const safeId = (value: string) => value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+|-+$/g, '');
 
 type Point = { x: number; y: number };
 type DragState = { id: string; offsetX: number; offsetY: number };

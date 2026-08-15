@@ -422,7 +422,8 @@ const App = () => {
           )}
           {isTourActive && <GuidedTour steps={currentTourSteps} onClose={onTourEnd} />}
 
-          <ModalManager
+          <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
+            <ModalManager
             activeModal={activeModal}
             entryToEditInModal={entryToEditInModal}
             entryToInflect={entryToInflect}
@@ -489,8 +490,11 @@ const App = () => {
             }}
             showNotification={showNotification}
           />
+          </Suspense>
 
-          {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
+          <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
+            {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
+          </Suspense>
           {showSettings && <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />}
 
           <Header

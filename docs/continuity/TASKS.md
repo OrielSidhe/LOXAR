@@ -102,6 +102,22 @@ autocontenido sin estado compartido, para reducir la superficie del componente.
 
 ---
 
+## [2026-08-14] Checkpoint: Corregir caracteres especiales en importación y error Suspense en modales
+**Rama:** `main`. **Motivo:** resolver problemas operativos reportados: importación con `Ñ`/caracteres
+de conlang y error de Suspense al abrir modales lazy.
+**Cambios:**
+- `src/services/parser.ts`: `inferRootFromLexeme` ahora usa `/[^\p{L}]/gu` para conservar letras
+  Unicode, incluyendo `Ñ` y caracteres de conlangs, en vez de `/[^a-zA-Z]/g`.
+- `src/components/LanguageTreeCanvas.tsx`: `safeId` ahora usa `/[^\p{L}\p{N}]+/gu` para admitir
+  IDs con caracteres Unicode y no romper nodos del canvas por `Ñ` u otros símbolos.
+- `src/App.tsx`: `ModalManager` y `AiSettingsModal` ahora están envueltos en `<Suspense>`
+  boundaries con fallback de carga, evitando el error de React 18 al suspender durante apertura
+  síncrona de modales.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos
