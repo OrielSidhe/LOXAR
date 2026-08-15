@@ -28,9 +28,7 @@ import TableIcon from './components/icons/TableIcon';
 import PenToolIcon from './components/icons/PenToolIcon';
 import SettingsIcon from './components/icons/SettingsIcon';
 import SparkleIcon from './components/icons/SparkleIcon';
-import CheckCircleIcon from './components/icons/CheckCircleIcon';
 import AlertTriangleIcon from './components/icons/AlertTriangleIcon';
-import XCircleIcon from './components/icons/XCircleIcon';
 import InfoIcon from './components/icons/InfoIcon';
 
 // Components
@@ -47,6 +45,7 @@ import WorkbenchRightPanel from './components/WorkbenchRightPanel';
 import WorkQueueBar from './components/WorkQueueBar';
 import BatchActionToolbar from './components/BatchActionToolbar';
 import SplashScreen from './components/SplashScreen';
+import ToastContainer from './components/ToastContainer';
 import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -792,17 +791,10 @@ const App = () => {
             />
           )}
 
-          <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
-            {notifications.map(notification => (
-              <div key={notification.id} className={`glass-toast pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-r-lg shadow-glow animate-fade-in ${notification.type === 'error' ? '!border-danger !bg-danger/10' : ''}`}>
-                {notification.type === 'success' ? <CheckCircleIcon className="h-5 w-5 text-accent" /> : <AlertTriangleIcon className="h-5 w-5 text-danger" />}
-                <span className="font-medium text-sm text-white">{notification.message}</span>
-                <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))} className="ml-2 hover:bg-white/10 rounded-full p-1 transition-colors text-text-secondary hover:text-white">
-                  <XCircleIcon className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+          <ToastContainer
+            notifications={notifications}
+            onDismiss={id => setNotifications(prev => prev.filter(n => n.id !== id))}
+          />
         </div>
 
         {isAppLoaded && showProjectBootstrap && (

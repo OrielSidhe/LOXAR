@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T03:15:00.000Z",
+  "lastUpdated": "2026-08-14T03:20:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "P1-2e completado: bootstrap/modal/app handlers extraídos a useAppHandlers. P1-2f revertido: useProjectShell generaba dependencias circulares y fue eliminado; App.tsx estabilizado. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx o los 4 componentes gigantes."
+  "sessionSummary": "P1-2e completado: bootstrap/modal/app handlers extraídos a useAppHandlers. P1-2f revertido: useProjectShell eliminado por circularidad. Avance P1 actual: se extrajo ToastContainer de App.tsx. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones pequeñas o avanzar sobre los 4 componentes gigantes."
 }
