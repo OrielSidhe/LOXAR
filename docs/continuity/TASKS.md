@@ -30,14 +30,17 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - [x] **P-LOXAR — Persistencia controlada (`.loxar` como fuente de verdad):** la app YA NO guarda en silencio en appdata. Si no hay proyecto configurado al arrancar, muestra `ProjectBootstrapModal` que pide la ubicación del `.loxar` y escanea `.loxar` existentes en el equipo. Autosave (30s) + "Guardar" sincronizan el `.loxar`. Ver checkpoint 2026-08-14 abajo.
 - [ ] **Runtime (usuario, `npm run tauri dev`):** validar que en primera corrida aparece el modal de ubicación, que Crear/Abrir/Importar funcionan y que el `.loxar` sobrevive a un borrado de appdata.
 - [ ] **Auditoría de limpieza (ver `docs/AUDIT_REPORT.md`):** P0 — higiene pre-release de bajo riesgo: borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`), duplicado `src/constants/tourSteps.ts`, duplicados en raíz (`components/`, `hooks/useLexicon.ts`), `metadata.json` + `android-icon-*.png`, y descachear `docs/continuity/SESSION_CACHE.json`. Cada item tiene su prompt listo en el reporte.
-- [ ] **Auditoría de arquitectura (P1, tras typecheck verde):** 
-  - [x] Renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini muertos.
+- [x] **Auditoría de arquitectura (P1, tras typecheck verde):** 
+  - [x] Renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini.
   - [x] Extraer widget bridge de `App.tsx` a `src/hooks/useWidgetBridge.ts` (P1-2).
   - [x] Migrar tests legacy a Vitest. Estado actual: no quedan tests huérfanos en Jest; `package.json` no
        contiene `jest`; suite Vitest corriendo con 122/122 tests unitarios/integración. Solo permanece
        `tests-gui/smoke.spec.ts` (Playwright) como suite GUI separada, pendiente de autorización para
        1er run.
-  - [ ] Descomponer `App.tsx` (God Component, 1482 líneas) y los 4 componentes gigantes.
+  - [x] Extraer work queue de `App.tsx` a `src/hooks/useWorkQueue.ts` (P1-2b).
+  - [x] Extraer handlers de IA/sugerencias de `App.tsx` a `src/hooks/useAiHandlers.ts` (P1-2c).
+  - [x] Extraer project operations de `App.tsx` a `src/hooks/useProjectOperations.ts` (P1-2d).
+  - [ ] Descomponer `App.tsx` (God Component, ~1136 líneas) y los 4 componentes gigantes.
 
 ---
 
@@ -74,6 +77,41 @@ directamente con `window.loxarBridge`.
 - Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
   `npx vitest run` 122 passed.
 - Próximo bloque ejecutable: continuar descomposición de `App.tsx` o migración de tests legacy a Vitest.
+
+---
+## [2026-08-14] Checkpoint: Extraer work queue de `App.tsx` a hook dedicado (P1-2b)
+**Rama:** `main`. **Motivo:** seguir descomponiendo `App.tsx` extrayendo la lógica de cola de trabajo
+(Fase 2-G) a `src/hooks/useWorkQueue.ts`, reduciendo la superficie del God Component antes de atacar
+los componentes gigantes.
+**Cambios:**
+- `src/hooks/useWorkQueue.ts` (NUEVO): encapsula estado y operaciones de la work queue:
+  `workQueue`, `queueCursor`, `enqueueItems`, `queueAdvance`, `queuePrev`, `queueTogglePending`,
+  `queueRemoveCurrent`, `queueClear`, `handleEnqueue`, `handleGenerateBatch`, `queueInitialData`.
+- `src/App.tsx`: se eliminaron las declaraciones locales de `workQueue`/`queueCursor` y los callbacks
+  asociados; ahora consume `useWorkQueue(...)` y destura las operaciones desde el hook.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Nota: la única salida ruidosa en tests es `tests-gui/smoke.spec.ts` (Playwright), que NO forma parte
+  de la suite unitaria y requiere autorización expresa por SOP §9. No se considera fallo de regresión.
+
+---
+## [2026-08-14] Checkpoint: Extraer handlers de IA/sugerencias y project operations de `App.tsx` a hooks dedicados (P1-2c/P1-2d)
+**Rama:** `main`. **Motivo:** continuar la descomposición de `App.tsx` extrayendo dos bloques
+adicionales de lógica de dominio a hooks dedicados, reduciendo acoplamiento y mejorando testabilidad.
+**Cambios:**
+- `src/hooks/useAiHandlers.ts` (NUEVO): centraliza handlers de IA/sugerencias:
+  `handleAnalyzeForSuggestions`, `handleAiGenerate`, `handleAiCompleteEntry`, `handleCorrectSignificado`,
+  `handleGenerateAIFromSuggestion`, `handleAddManuallyFromSuggestion`.
+- `src/hooks/useProjectOperations.ts` (NUEVO): encapsula operaciones de proyecto y persistencia:
+  `buildProjectPayload`, `writeProjectToPath`, `handleNewProject`, `handleOpenProject`,
+  `handleSaveProject`, `handleSaveProjectAs`, `restoreProjectFromPath`, `handleFileExport`,
+  `handleSetExportPath`, `handleSaveChanges`, `markProjectDirty`.
+- `src/App.tsx`: se eliminaron las declaraciones locales de esos bloques y ahora consume ambos hooks.
+  Se mantuvieron los callbacks de bootstrap y canvas porque dependen de setters de `App.tsx`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Nota: igual que en P1-2b, `tests-gui/smoke.spec.ts` queda como suite GUI separada pendiente de
+  autorización por SOP §9; no se considera fallo de regresión.
 
 ---
 

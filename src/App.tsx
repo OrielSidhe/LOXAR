@@ -5,6 +5,9 @@ import FileControls from './components/FileControls';
 import LexiconSelector from './components/LexiconSelector';
 import { useLexicon } from './hooks/useLexicon';
 import { useWidgetBridge } from './hooks/useWidgetBridge';
+import { useWorkQueue } from './hooks/useWorkQueue';
+import { useAiHandlers } from './hooks/useAiHandlers';
+import { useProjectOperations } from './hooks/useProjectOperations';
 import { generateRootAndLexeme, normalizeText, completeEntry, correctSignificado } from './services/geminiService';
 import { filterParadigmsForFunction, generateInflectedForms } from './services/inflectionService';
 import { searchLexicon } from './services/ftsSearch';
@@ -99,8 +102,6 @@ const App = () => {
     const [generationModes, setGenerationModes] = useState<GenerationMode[]>(['generative']);
 
     // Cola de trabajo (Fase 2-G): selecciones que avanzan en el workbench
-    const [workQueue, setWorkQueue] = useState<WorkQueueItem[]>([]);
-    const [queueCursor, setQueueCursor] = useState(0);
     const [entryToComplete, setEntryToComplete] = useState<LexiconEntry | null>(null);
     const [entryToEditInModal, setEntryToEditInModal] = useState<LexiconEntry | null>(null);
     const [entryToInflect, setEntryToInflect] = useState<LexiconEntry | null>(null);
@@ -147,10 +148,52 @@ const App = () => {
     }, []);
 
     const lexiconHook = useLexicon(showNotification, setIsLoading, setLoadingMessage);
-    const { 
-        activeLexicon, activeLexiconName, activeProfile, activeMetadata, 
+    const {
+        activeLexicon, activeLexiconName, activeProfile, activeMetadata,
         activeCustomFunctions, lexicons, isDirty, activeGrammar
     } = lexiconHook;
+
+    const projectOps = useProjectOperations({
+        activeLexicon,
+        activeLexiconName,
+        activeMetadata,
+        activeGrammar,
+        activeProfile,
+        activeCustomFunctions,
+        themeId,
+        exportPath,
+        projectPath,
+        isProjectDirty,
+        isDirty,
+        canvasState,
+        sessionCacheData,
+        activeTab,
+        showNotification,
+        setIsLoading,
+        setLoadingMessage,
+        setProjectPath,
+        setCanvasState,
+        setIsProjectDirty,
+        setProjectLastSaved,
+        setActiveTab,
+        setExportPath,
+        setBackups,
+        lexicons,
+        lexiconHook,
+    });
+    const {
+        buildProjectPayload,
+        writeProjectToPath,
+        handleNewProject,
+        handleOpenProject,
+        handleSaveProject,
+        handleSaveProjectAs,
+        restoreProjectFromPath,
+        handleFileExport,
+        handleSetExportPath,
+        handleSaveChanges,
+        markProjectDirty,
+    } = projectOps;
 
     // Dynamic title/favicon
     useEffect(() => {
@@ -308,281 +351,6 @@ const App = () => {
         }
     }, [lexiconHook, showNotification]);
 
-    const handleFileExport = useCallback(async (format: 'csv' | 'json' | 'txt') => {
-        if (!exportPath || !activeLexiconName) {
-            showNotification("Establece una carpeta de exportación primero.", "error"); return;
-        }
-        setIsLoading(true); setLoadingMessage(`Exportando a ${format.toUpperCase()}...`);
-        try {
-            let content = '';
-            const safeName = activeLexiconName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const fileName = `${safeName}_${new Date().toISOString().split('T')[0]}.${format}`;
-
-            if (format === 'json') content = JSON.stringify(activeLexicon, null, 2);
-            else if (format === 'csv') {
-                const rows = activeLexicon.map(e => ({
-                    ID: e.ID,
-                    Raíz: e.Raíz,
-                    Léxema: e.Léxema.join(';'),
-                    Categoría: e.Categoría,
-                    Significado: e.Significado.join(';'),
-                    externalID: e.externalID || '',
-                }));
-                // BOM para que Excel detecte UTF-8 y muestre acentos/ñ correctamente
-                content = '\uFEFF' + Papa.unparse(rows);
-            }
-            else content = activeLexicon.map(e => `${e.Léxema.join(', ')} (${e.Categoría}): ${e.Significado.join(', ')}`).join('\n');
-
-            const { success, error } = await window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content });
-            if (success) showNotification(`¡Éxito! Léxico exportado a ${fileName}`, 'success');
-            else showNotification(`Error de exportación: ${error}`, 'error');
-        } catch (e) {
-            showNotification(`Error: ${e instanceof Error ? e.message : "Ocurrió un error desconocido."}`, 'error');
-        }
-        finally { setIsLoading(false); }
-    }, [activeLexicon, activeLexiconName, exportPath, showNotification]);
-
-    const handleSetExportPath = async () => {
-        const path = await window.loxarBridge.getDirectoryPath();
-        if (path) {
-            setExportPath(path);
-            saveSessionCache({ exportPath: path, activeTab }).catch(console.error);
-            showNotification('Carpeta de exportación establecida.', 'success');
-        }
-    };
-
-    const buildProjectPayload = useCallback((): LoxarProject => {
-        return {
-            version: LOXAR_PROJECT_VERSION,
-            conlangName: activeMetadata?.conlangName || activeLexiconName || 'Léxico sin nombre',
-            mainLanguage: activeMetadata?.mainLanguage || 'Español',
-            updatedAt: new Date().toISOString(),
-            lexicons: lexicons,
-            grammar: activeGrammar,
-            generativeProfile: activeProfile,
-            neographyProfile: lexiconHook.activeNeographyProfile,
-            inflectionProfile: lexiconHook.activeInflectionProfile,
-            corpus: lexiconHook.activeCorpus,
-            customFunctions: activeCustomFunctions,
-            settings: {
-                themeId,
-                soundsEnabled: true,
-                autoBackupEnabled: !!exportPath,
-                autoBackupMinutes: 15,
-            },
-            session: {
-                activeTab,
-                activeProfile: activeProfile ? activeProfile.sampleText.slice(0, 20) : null,
-                tourCompleted: sessionCacheData?.tourCompleted,
-            },
-            canvas: canvasState,
-        };
-    }, [activeLexiconName, activeMetadata, lexicons, activeGrammar, activeProfile, lexiconHook, activeCustomFunctions, themeId, exportPath, activeTab, sessionCacheData]);
-
-    const writeProjectToPath = useCallback(async (path: string, payload: LoxarProject) => {
-        const content = projectToJson(payload);
-        await writeTextFile(path, content);
-        setProjectLastSaved(new Date());
-        setIsProjectDirty(false);
-    }, []);
-
-    const handleNewProject = useCallback(async () => {
-        if (isProjectDirty && !window.confirm('Tienes cambios sin guardar. ¿Crear nuevo proyecto de todos modos?')) return;
-        const name = window.prompt('Nombre del conlang para el nuevo proyecto:', 'Léxico sin nombre');
-        if (!name) return;
-        const selected = await save({ filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }], defaultPath: `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'proyecto'}.loxar` });
-        if (typeof selected !== 'string' || !selected) return;
-        const project = createEmptyProject(name, 'Español');
-        await writeProjectToPath(selected, project);
-        setProjectPath(selected);
-        setCanvasState({ nodes: [], edges: [] });
-        saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
-        showNotification(`Proyecto "${name}" creado.`, 'success');
-    }, [isProjectDirty, writeProjectToPath]);
-
-    const handleOpenProject = useCallback(async () => {
-        if (isProjectDirty && !window.confirm('Tienes cambios sin guardar. ¿Abrir otro proyecto de todos modos?')) return;
-        try {
-            const selected = await open({ multiple: false, filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }] });
-            if (typeof selected !== 'string' || !selected) return;
-            const raw = await readTextFile(selected);
-            const project = projectFromJson(raw);
-            if (!project) throw new Error('El archivo no es un proyecto LOXAR válido.');
-            setCanvasState({ nodes: [], edges: [] });
-            await restoreProjectFromPath(selected);
-            setProjectPath(selected);
-            setIsProjectDirty(false);
-            setProjectLastSaved(new Date());
-            saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
-            showNotification(`Proyecto "${project.conlangName}" abierto.`, 'success');
-        } catch (e) {
-            showNotification(e instanceof Error ? e.message : 'No se pudo abrir el proyecto.', 'error');
-        }
-    }, [isProjectDirty]);
-
-    const handleSaveProject = useCallback(async () => {
-        if (!projectPath) {
-            const selected = await save({ filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }], defaultPath: `${activeMetadata?.conlangName || 'proyecto'}.loxar` });
-            if (typeof selected !== 'string' || !selected) return;
-            setProjectPath(selected);
-            await writeProjectToPath(selected, buildProjectPayload());
-            saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
-            showNotification('Proyecto guardado.', 'success');
-            return;
-        }
-        await writeProjectToPath(projectPath, buildProjectPayload());
-        saveSessionCache({ projectPath, activeTab }).catch(console.error);
-        showNotification('Cambios guardados en el proyecto.', 'success');
-    }, [projectPath, buildProjectPayload, writeProjectToPath, activeMetadata?.conlangName, activeTab]);
-
-    const handleSaveProjectAs = useCallback(async () => {
-        const selected = await save({ filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }], defaultPath: `${activeMetadata?.conlangName || 'proyecto'}.loxar` });
-        if (typeof selected !== 'string' || !selected) return;
-        setProjectPath(selected);
-        await writeProjectToPath(selected, buildProjectPayload());
-        saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
-        showNotification('Proyecto guardado como.', 'success');
-    }, [buildProjectPayload, writeProjectToPath, activeMetadata?.conlangName, activeTab]);
-
-    const restoreProjectFromPath = useCallback(async (path: string) => {
-        try {
-            const raw = await readTextFile(path);
-            const project = projectFromJson(raw);
-            if (!project) return;
-            if (project.lexicons) {
-                Object.entries(project.lexicons).forEach(([name, data]) => {
-                    lexiconHook.upsertLexiconData(name, data);
-                });
-            }
-            if (project.grammar) lexiconHook.updateGrammarManifest(project.grammar);
-            if (project.generativeProfile) lexiconHook.updateGenerativeProfile(project.generativeProfile);
-            if (project.neographyProfile) lexiconHook.updateNeographyProfile(project.neographyProfile);
-            if (project.inflectionProfile) lexiconHook.updateInflectionProfile(project.inflectionProfile);
-            if (project.corpus?.length) lexiconHook.updateCorpus(project.corpus);
-            if (project.customFunctions?.length) {
-                project.customFunctions.forEach(fn => lexiconHook.addCustomFunction(fn));
-            }
-            if (project.session?.activeTab) setActiveTab(project.session.activeTab as any);
-            if (project.canvas) setCanvasState({ nodes: project.canvas.nodes ?? [], edges: project.canvas.edges ?? [] });
-        } catch (e) {
-            console.error('Failed to restore project', e);
-        }
-    }, [lexiconHook]);
-
-    const markProjectDirty = useCallback(() => setIsProjectDirty(true), []);
-
-    // --- Bootstrap de proyecto (primera corrida / sin proyecto configurado) ---
-    const handleBootstrapOpenFound = useCallback(async (p: string) => {
-        try {
-            setProjectPath(p);
-            await restoreProjectFromPath(p);
-            setIsProjectDirty(false);
-            saveSessionCache({ projectPath: p, activeTab }).catch(console.error);
-            showNotification('Proyecto abierto.', 'success');
-        } catch (e) {
-            showNotification(e instanceof Error ? e.message : 'No se pudo abrir el proyecto.', 'error');
-        } finally {
-            setShowProjectBootstrap(false);
-        }
-    }, [restoreProjectFromPath, activeTab, showNotification]);
-
-    const handleBootstrapCreate = useCallback(() => {
-        setShowProjectBootstrap(false);
-        handleNewProject();
-    }, [handleNewProject]);
-
-    const handleBootstrapOpenOther = useCallback(() => {
-        setShowProjectBootstrap(false);
-        handleOpenProject();
-    }, [handleOpenProject]);
-
-    const handleBootstrapDismiss = useCallback(() => {
-        setShowProjectBootstrap(false);
-        setBootstrapDismissed(true);
-        showNotification('Tus datos se guardan solo en este equipo. Usá "Nuevo"/"Abrir Proyecto" para fijar una ubicación segura.', 'error');
-    }, [showNotification]);
-
-    const handleBootstrapImportLocal = useCallback(async () => {
-        setShowProjectBootstrap(false);
-        const selected = await save({
-            filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }],
-            defaultPath: 'proyecto-importado.loxar',
-        });
-        if (typeof selected !== 'string' || !selected) return;
-        try {
-            const names = await listLexiconNames();
-            const project = createEmptyProject('Proyecto importado', 'Español');
-            for (const name of names) {
-                const data = await loadLexicon(name);
-                if (data) project.lexicons[name] = data;
-            }
-            await writeProjectToPath(selected, project);
-            setProjectPath(selected);
-            await restoreProjectFromPath(selected);
-            setIsProjectDirty(false);
-            saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
-            showNotification(`Proyecto creado con ${names.length} léxico(s) importado(s).`, 'success');
-        } catch (e) {
-            showNotification(e instanceof Error ? e.message : 'No se pudo importar.', 'error');
-        }
-    }, [writeProjectToPath, restoreProjectFromPath, activeTab, showNotification]);
-
-    const handleCanvasChange = useCallback((nodes: any[], edges: any[]) => {
-      setCanvasState({ nodes, edges });
-      markProjectDirty();
-    }, [markProjectDirty]);
-
-    useEffect(() => {
-        const id = setInterval(() => {
-            if (!isProjectDirty || !projectPath) return;
-            writeProjectToPath(projectPath, buildProjectPayload()).catch(() => {});
-        }, 30000);
-        return () => clearInterval(id);
-    }, [isProjectDirty, projectPath, buildProjectPayload, writeProjectToPath]);
-
-    useEffect(() => {
-        const handler = (event: BeforeUnloadEvent) => {
-            if (isDirty || isProjectDirty) {
-                event.preventDefault();
-                event.returnValue = '';
-            }
-        };
-        window.addEventListener('beforeunload', handler);
-        return () => window.removeEventListener('beforeunload', handler);
-    }, [isDirty, isProjectDirty]);
-
-    const handleSaveChanges = useCallback(() => {
-        lexiconHook.saveChanges();
-        showNotification("Cambios guardados.", 'success');
-        // El archivo .loxar es la fuente de verdad: siempre se sincroniza al guardar.
-        if (projectPath) {
-            writeProjectToPath(projectPath, buildProjectPayload()).catch(() => {});
-        }
-        if (exportPath && activeLexiconName && lexicons[activeLexiconName]) {
-            const date = new Date().toISOString().replace(/:/g, '-');
-            const safeName = activeLexiconName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const backupPath = `${exportPath}/backup_${safeName}_${date}.json`;
-            const content = JSON.stringify(lexicons[activeLexiconName]);
-            window.loxarBridge.saveBackup({ backupPath, content })
-                .then(({ success }) => {
-                    if (success) {
-                        showNotification(`Copia de seguridad de ${safeName} creada.`, "success");
-                        window.loxarBridge.listBackups(exportPath).then(setBackups);
-                    }
-                }).catch(e => console.error("Auto-backup failed", e));
-        }
-    }, [lexiconHook, showNotification, exportPath, activeLexiconName, lexicons, projectPath, buildProjectPayload, writeProjectToPath]);
-
-    useEffect(() => {
-        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-            if (!isDirty) return;
-            event.preventDefault();
-            event.returnValue = '';
-        };
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-    }, [isDirty]);
-
     const confirmDiscardUnsaved = useCallback((message = "Tienes cambios sin guardar. ¿Quieres continuar de todos modos?") => {
         return !isDirty || window.confirm(message);
     }, [isDirty]);
@@ -619,92 +387,25 @@ const App = () => {
         finally { setIsLoading(false); }
     }, [exportPath, showNotification, lexiconHook]);
 
-    const handleAnalyzeForSuggestions = useCallback((listName: string) => {
-        setAiStatus('working');
-        setSuggestionListName(listName);
-        setActiveTab('tools');
+    const aiHandlers = useAiHandlers({
+        activeLexicon,
+        showNotification,
+        getLexiconSample: lexiconHook.getLexiconSample,
+        generativeProfile,
+        setAiStatus,
+        setSuggestionListName,
+        setActiveTab,
+        setSuggestions,
+        setInitialDataForAdd,
+        setEditorMode,
+    });
 
-        try {
-            const list = WORD_LISTS[listName];
-            if (!list) throw new Error("Lista no encontrada");
-            const lexiconMeanings = new Set(activeLexicon.map(e => normalizeText(e.Significado[0])));
-            const missing = list.filter(item => !lexiconMeanings.has(normalizeText(item.palabra)));
-
-            // Las listas ya traen su categoría gramatical por defecto precargada;
-            // usamos esa categoría directamente en lugar de pedirsela a la IA
-            // (que antes fallaba y dejaba "desconocido" como fallback).
-            const suggestions: MissingWord[] = missing.map(item => ({
-                Significado: item.palabra,
-                Categoría: item.categoría?.trim() || 'sustantivo',
-            }));
-
-            setSuggestions(suggestions);
-            setAiStatus('complete');
-            showNotification(`Análisis completado: ${suggestions.length} sugerencias encontradas.`, 'success');
-        } catch (e) {
-            setAiStatus('error');
-            showNotification(e instanceof Error ? e.message : "Ocurrió un error al analizar para sugerencias.", 'error');
-        }
-    }, [activeLexicon, showNotification]);
-
-    const handleAiGenerate = useCallback(async (significado: string, categoría: string, modes: any[]) => {
-        setAiStatus('working');
-        try {
-            const sample = lexiconHook.getLexiconSample(30);
-            const res = await generateRootAndLexeme(significado, categoría, sample, generativeProfile, modes, activeLexicon);
-            setAiStatus('complete');
-            return res;
-        } catch (e) {
-            setAiStatus('error');
-            return null;
-        }
-    }, [lexiconHook, generativeProfile, activeLexicon]);
-
-    const handleAiCompleteEntry = useCallback(async (partialEntry: any) => {
-        setAiStatus('working');
-        try {
-            const sample = lexiconHook.getLexiconSample(30);
-            const res = await completeEntry(partialEntry, sample, generativeProfile);
-            setAiStatus('complete');
-            return res;
-        } catch (e) {
-            setAiStatus('error');
-            return null;
-        }
-    }, [lexiconHook, generativeProfile]);
-
-    const handleCorrectSignificado = useCallback(async (significado: string) => {
-        try {
-            return await correctSignificado(significado);
-        } catch (e) {
-            return significado;
-        }
-    }, []);
-
-    const handleGenerateAIFromSuggestion = useCallback(async (word: MissingWord) => {
-        const category = word.Categoría || (word as any).Función || 'desconocida';
-        const result = await handleAiGenerate(word.Significado, category, ['generative', 'etymological']);
-        if (result) {
-            setInitialDataForAdd({
-                Significado: [word.Significado],
-                Categoría: category,
-                Raíz: result.raiz,
-                Léxema: [result.lexema],
-                extraData: { aiGenerated: true }
-            });
-            setEditorMode('add');
-            setActiveTab('workbench');
-            setSuggestions(prev => prev.filter(s => s.Significado !== word.Significado));
-        }
-    }, [handleAiGenerate]);
-
-    const handleAddManuallyFromSuggestion = useCallback((word: MissingWord) => {
-        const category = word.Categoría || (word as any).Función || 'desconocida';
-        setInitialDataForAdd({ Significado: [word.Significado], Categoría: category });
-        setEditorMode('add');
-        setActiveTab('workbench');
-        setSuggestions(prev => prev.filter(s => s.Significado !== word.Significado));
-    }, []);
+    const handleAnalyzeForSuggestions = aiHandlers.handleAnalyzeForSuggestions;
+    const handleAiGenerate = aiHandlers.handleAiGenerate;
+    const handleAiCompleteEntry = aiHandlers.handleAiCompleteEntry;
+    const handleCorrectSignificado = aiHandlers.handleCorrectSignificado;
+    const handleGenerateAIFromSuggestion = aiHandlers.handleGenerateAIFromSuggestion;
+    const handleAddManuallyFromSuggestion = aiHandlers.handleAddManuallyFromSuggestion;
 
     const handleToggleSelectAll = useCallback((ids: string[]) => {
         setSelectedIds(prev => {
@@ -750,92 +451,30 @@ const App = () => {
     }, [incompleteEntries.length]);
 
     // --- Cola de trabajo (Fase 2-G) ---
-    const queueActive = workQueue.length > 0;
-    const currentQueueItem = queueActive ? workQueue[Math.min(queueCursor, workQueue.length - 1)] : null;
-
-    const enqueueItems = useCallback((items: { Significado: string; Categoría: string; Raíz?: string; Léxema?: string[] }[]) => {
-        if (items.length === 0) return;
-        setWorkQueue(prev => {
-            const wasEmpty = prev.length === 0;
-            const newItems: WorkQueueItem[] = items.map(it => ({
-                key: `wq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                ...it,
-            }));
-            if (wasEmpty) setQueueCursor(0);
-            return [...prev, ...newItems];
-        });
-    }, []);
-
-    const queueAdvance = useCallback(() => {
-        setQueueCursor(prev => Math.min(prev + 1, Math.max(0, workQueue.length - 1)));
-    }, [workQueue.length]);
-
-    const queuePrev = useCallback(() => setQueueCursor(prev => Math.max(0, prev - 1)), []);
-
-    const queueTogglePending = useCallback((key: string) => {
-        setWorkQueue(prev => prev.map(it => it.key === key ? { ...it, pending: !it.pending } : it));
-    }, []);
-
-    const queueRemoveCurrent = useCallback(() => {
-        setWorkQueue(prev => {
-            const idx = Math.min(queueCursor, prev.length - 1);
-            const next = prev.filter((_, i) => i !== idx);
-            setQueueCursor(c => Math.min(c, Math.max(0, next.length - 1)));
-            return next;
-        });
-    }, [queueCursor]);
-
-    const queueClear = useCallback(() => {
-        setWorkQueue([]);
-        setQueueCursor(0);
-    }, []);
-
-    const handleEnqueue = useCallback((items: MissingWord[]) => {
-        enqueueItems(items.map(it => ({ Significado: it.Significado, Categoría: it.Categoría || 'desconocida' })));
-        setActiveTab('workbench');
-    }, [enqueueItems]);
-
-    // Fase 2-E: generación por lotes (tandas de 10) aplicando el modo activo
-    const handleGenerateBatch = useCallback(async (items: MissingWord[], modes: GenerationMode[]) => {
-        if (items.length === 0) return;
-        setAiStatus('working');
-        try {
-            const sample = lexiconHook.getLexiconSample(30);
-            const CHUNK = 10;
-            const results: { Significado: string; Categoría: string; Raíz?: string; Léxema?: string[] }[] = [];
-            for (let i = 0; i < items.length; i += CHUNK) {
-                const chunk = items.slice(i, i + CHUNK);
-                const chunkRes = await Promise.all(chunk.map(async (w) => {
-                    const cat = w.Categoría || 'desconocida';
-                    try {
-                        const r = await generateRootAndLexeme(w.Significado, cat, sample, generativeProfile, modes, activeLexicon);
-                        return { Significado: w.Significado, Categoría: cat, Raíz: r?.raiz || '', Léxema: r?.lexema ? [r.lexema] : [] };
-                    } catch {
-                        return { Significado: w.Significado, Categoría: cat, Raíz: '', Léxema: [] as string[] };
-                    }
-                }));
-                results.push(...chunkRes);
-            }
-            setAiStatus('complete');
-            enqueueItems(results);
-            showNotification(`Lote generado: ${results.length} palabra(s) en la cola de trabajo.`, 'success');
-            setActiveTab('workbench');
-        } catch (e) {
-            setAiStatus('error');
-            showNotification('Error generando el lote.', 'error');
-        }
-    }, [generativeProfile, activeLexicon, lexiconHook, enqueueItems, showNotification]);
-
-    // initialDataForAdd derivado de la cola cuando está activa
-    const queueInitialData = useMemo(() => {
-        if (!currentQueueItem) return null;
-        return {
-            Significado: [currentQueueItem.Significado],
-            Categoría: currentQueueItem.Categoría,
-            Raíz: currentQueueItem.Raíz || '',
-            Léxema: currentQueueItem.Léxema && currentQueueItem.Léxema.length ? currentQueueItem.Léxema : [],
-        };
-    }, [currentQueueItem]);
+    const workQueueState = useWorkQueue({
+        getLexiconSample: lexiconHook.getLexiconSample,
+        activeInflectionProfile: lexiconHook.activeInflectionProfile,
+        activeLexicon,
+        generativeProfile,
+        showNotification,
+        setActiveTab,
+        setAiStatus,
+    });
+    const {
+        workQueue,
+        queueCursor,
+        queueActive,
+        currentQueueItem,
+        enqueueItems,
+        queueAdvance,
+        queuePrev,
+        queueTogglePending,
+        queueRemoveCurrent,
+        queueClear,
+        handleEnqueue,
+        handleGenerateBatch,
+        queueInitialData,
+    } = workQueueState;
 
     const effectiveInitialDataForAdd = queueActive ? queueInitialData : initialDataForAdd;
 
@@ -913,6 +552,67 @@ const App = () => {
     const handleBackToToolDashboard = useCallback(() => {
         setActiveToolView('dashboard');
     }, []);
+
+    const handleCanvasChange = useCallback((nodes: any[], edges: any[]) => {
+      setCanvasState({ nodes, edges });
+      markProjectDirty();
+    }, [markProjectDirty]);
+
+    // --- Bootstrap de proyecto (primera corrida / sin proyecto configurado) ---
+    const handleBootstrapOpenFound = useCallback(async (p: string) => {
+        try {
+            setProjectPath(p);
+            await restoreProjectFromPath(p);
+            setIsProjectDirty(false);
+            saveSessionCache({ projectPath: p, activeTab }).catch(console.error);
+            showNotification('Proyecto abierto.', 'success');
+        } catch (e) {
+            showNotification(e instanceof Error ? e.message : 'No se pudo abrir el proyecto.', 'error');
+        } finally {
+            setShowProjectBootstrap(false);
+        }
+    }, [restoreProjectFromPath, activeTab, showNotification]);
+
+    const handleBootstrapCreate = useCallback(() => {
+        setShowProjectBootstrap(false);
+        handleNewProject();
+    }, [handleNewProject]);
+
+    const handleBootstrapOpenOther = useCallback(() => {
+        setShowProjectBootstrap(false);
+        handleOpenProject();
+    }, [handleOpenProject]);
+
+    const handleBootstrapDismiss = useCallback(() => {
+        setShowProjectBootstrap(false);
+        setBootstrapDismissed(true);
+        showNotification('Tus datos se guardan solo en este equipo. Usá "Nuevo"/"Abrir Proyecto" para fijar una ubicación segura.', 'error');
+    }, [showNotification]);
+
+    const handleBootstrapImportLocal = useCallback(async () => {
+        setShowProjectBootstrap(false);
+        const selected = await save({
+            filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }],
+            defaultPath: 'proyecto-importado.loxar',
+        });
+        if (typeof selected !== 'string' || !selected) return;
+        try {
+            const names = await listLexiconNames();
+            const project = createEmptyProject('Proyecto importado', 'Español');
+            for (const name of names) {
+                const data = await loadLexicon(name);
+                if (data) project.lexicons[name] = data;
+            }
+            await writeProjectToPath(selected, project);
+            setProjectPath(selected);
+            await restoreProjectFromPath(selected);
+            setIsProjectDirty(false);
+            saveSessionCache({ projectPath: selected, activeTab }).catch(console.error);
+            showNotification(`Proyecto creado con ${names.length} léxico(s) importado(s).`, 'success');
+        } catch (e) {
+            showNotification(e instanceof Error ? e.message : 'No se pudo importar.', 'error');
+        }
+    }, [writeProjectToPath, restoreProjectFromPath, activeTab, showNotification]);
 
     const handleWidgetAddWord = useCallback((word: string) => {
         lexiconHook.addWord({ Raíz: word, Léxema: [word], Categoría: 'sustantivo', Significado: ['[Pendiente]'], extraData: {} });
