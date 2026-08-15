@@ -18,8 +18,12 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
 - Avance P1 actual: se extrajeron `ToastContainer`, `OfflineBanner`, `AmbientLights`,
-  `ProjectBootstrapBanner`, `AppToolbar` y `AppBatchToolbar` de `App.tsx`, además de
-  `SignificadoTagsInput` de `EntryEditor`, como pasos de descomposición posteriores a P1-2e
+  `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar` y `TabButton` de `App.tsx`,
+  además de `SignificadoTagsInput` y `EntryDuplicateWarning` de `EntryEditor`,
+  `ParadigmCell` de `CollectionsManager`, helpers de preview a `src/utils/grammarPreview.ts`,
+  y `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
+  `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel` y `GrammarSyntaxPanel`
+  de `GrammarTab`.
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica
@@ -130,7 +134,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
   - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`.
   - Extraído de `CollectionsManager`: `ParadigmCell`.
   - Extraído de `GrammarTab`: helpers de preview movidos a `src/utils/grammarPreview.ts`,
-    `GrammarOverview` y `GrammarPhonologyPanel`.
+    `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
+    `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel` y `GrammarSyntaxPanel`.
   - Próximo paso real: seguir extrayendo subcomponentes de `App.tsx` o avanzar con
     `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
 

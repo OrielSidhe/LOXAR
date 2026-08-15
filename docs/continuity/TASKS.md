@@ -349,6 +349,24 @@ gigantes.
   `SyntaxCanvas` o `EntryEditor`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `GrammarSyntaxPanel` de `GrammarTab` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el panel de sintaxis
+de `GrammarTab` a un componente dedicado para reducir la superficie de uno de los 4
+componentes gigantes.
+**Cambios:**
+- `src/components/GrammarSyntaxPanel.tsx` (NUEVO): componente dedicado para el panel de
+  sintaxis con tabs AST/Preview, editor de árbol editable y regeneración desde gramática.
+- `src/components/GrammarTab.tsx`: se reemplazó el bloque inline de `renderSyntax` por el
+  componente `<GrammarSyntaxPanel ... />`, manteniendo la lógica de estado y actualización
+  del manifiesto en el componente padre. Se ajustaron tipos de props para alinear `preview`
+  y `onUpdatePreview` con la forma extendida usada por `GrammarTab`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `GrammarTab`,
+  `SyntaxCanvas` o `EntryEditor`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `GrammarRolesPanel` de `GrammarTab` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo el panel de roles
