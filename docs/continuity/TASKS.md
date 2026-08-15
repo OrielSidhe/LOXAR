@@ -32,6 +32,7 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - [ ] **Auditoría de limpieza (ver `docs/AUDIT_REPORT.md`):** P0 — higiene pre-release de bajo riesgo: borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`), duplicado `src/constants/tourSteps.ts`, duplicados en raíz (`components/`, `hooks/useLexicon.ts`), `metadata.json` + `android-icon-*.png`, y descachear `docs/continuity/SESSION_CACHE.json`. Cada item tiene su prompt listo en el reporte.
 - [ ] **Auditoría de arquitectura (P1, tras typecheck verde):** 
   - [x] Renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini muertos.
+  - [x] Extraer widget bridge de `App.tsx` a `src/hooks/useWidgetBridge.ts` (P1-2).
   - [ ] Descomponer `App.tsx` (God Component, 1482 líneas) y los 4 componentes gigantes.
   - [ ] Migrar los 23 tests legacy a Vitest.
 
@@ -54,6 +55,22 @@ los métodos reales de bridge (`getAppVersion`, `getDirectoryPath`, `exportFile`
 - Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
   `npx vitest run` 122 passed.
 - Próximo bloque ejecutable: P1-2/P1-3 — descomponer `App.tsx` y migrar tests legacy a Vitest.
+
+---
+
+## [2026-08-14] Checkpoint: Extraer widget bridge de `App.tsx` a hook dedicado (P1-2)
+**Rama:** `main`. **Motivo:** reducir acoplamiento en `App.tsx` moviendo la lógica de widget/eventos a
+`src/hooks/useWidgetBridge.ts`. Ahora `App.tsx` consume el hook en vez de manejar listeners/emitters
+directamente con `window.loxarBridge`.
+**Cambios:**
+- `src/hooks/useWidgetBridge.ts` (NUEVO): hook que registra listeners de widget/add-word/add-inflection/search/inflect
+  y expone `sendLexiconData`, `sendSearchResult`, `sendInflectionResult`, `openWidget`.
+- `src/App.tsx`: se eliminaron listeners directos y el efecto emisor de datos del widget ahora usa el hook.
+  Se mantuvieron los callbacks `handleWidgetAddWord`, `handleWidgetAddInflection`, `handleWidgetSearch`,
+  `handleInflectRequest` y se movieron `completionStats`/`entryBeingEdited` al orden correcto.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar descomposición de `App.tsx` o migración de tests legacy a Vitest.
 
 ---
 

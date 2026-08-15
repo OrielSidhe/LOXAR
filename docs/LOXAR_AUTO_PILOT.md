@@ -111,6 +111,7 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 **[ ] P1 — Auditoría de arquitectura.** Refactors estructurales pendientes:
 - [x] Renombrar `window.electronAPI` → `window.loxarBridge` y matar stubs Gemini muertos.
+- [x] Extraer widget bridge de `App.tsx` a `src/hooks/useWidgetBridge.ts` (P1-2).
 - [ ] Descomponer `App.tsx` (God Component) y los 4 componentes gigantes.
 - [ ] Migrar tests legacy a Vitest.
 

@@ -4,6 +4,7 @@ import LexiconTable from './components/LexiconTable';
 import FileControls from './components/FileControls';
 import LexiconSelector from './components/LexiconSelector';
 import { useLexicon } from './hooks/useLexicon';
+import { useWidgetBridge } from './hooks/useWidgetBridge';
 import { generateRootAndLexeme, normalizeText, completeEntry, correctSignificado } from './services/geminiService';
 import { filterParadigmsForFunction, generateInflectedForms } from './services/inflectionService';
 import { searchLexicon } from './services/ftsSearch';
@@ -60,7 +61,6 @@ import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
 import { isAiAvailable } from './services/geminiService';
 import { validateGrammarEngine } from './validation/runtimeValidation';
-import { listen } from '@tauri-apps/api/event';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
@@ -250,80 +250,6 @@ const App = () => {
     useEffect(() => {
         saveSessionCache({ activeTab, exportPath, projectPath }).catch(console.error);
     }, [activeTab, exportPath, projectPath]);
-
-    // Widget inflection listener
-    useEffect(() => {
-        const removeListener = window.loxarBridge?.on?.('main:inflect-request', (entry: LexiconEntry) => {
-            if (!entry || !lexiconHook.activeInflectionProfile) {
-                window.loxarBridge.send('main:inflect-result', []);
-                return;
-            }
-
-            const applicableParadigms = filterParadigmsForFunction(lexiconHook.activeInflectionProfile.paradigms || [], entry.Categoría);
-            const results = applicableParadigms.map(paradigm => ({
-                paradigmName: paradigm.name,
-                forms: generateInflectedForms(entry, paradigm, lexiconHook.activeInflectionProfile)
-            }));
-
-            window.loxarBridge.send('main:inflect-result', results);
-        });
-
-        return () => {
-            removeListener?.();
-        };
-    }, [lexiconHook.activeInflectionProfile]);
-
-    // Widget search listener
-    useEffect(() => {
-        const removeListener = window.loxarBridge?.on?.('widget:search', (term: string) => {
-            if (!activeLexicon || !term || typeof term !== 'string') {
-                window.loxarBridge.send('widget:search-result', null);
-                return;
-            }
-            const normalizedTerm = normalizeText(term.trim());
-            if (!normalizedTerm) {
-                window.loxarBridge.send('widget:search-result', null);
-                return;
-            }
-            const results = activeLexicon.filter(entry =>
-                entry.Significado.some(s => normalizeText(s).includes(normalizedTerm)) ||
-                entry.Léxema.some(l => normalizeText(l).includes(normalizedTerm)) ||
-                (entry.Raíz && normalizeText(entry.Raíz).includes(normalizedTerm))
-            );
-            window.loxarBridge.send('widget:search-result', results.length > 0 ? results[0] : null);
-        });
-
-        return () => {
-            removeListener?.();
-        };
-    }, [activeLexicon]);
-
-    // Global search shortcut: Ctrl/Cmd + K focuses lexicon search
-    useEffect(() => {
-        const handler = (event: KeyboardEvent) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-                event.preventDefault();
-                const searchInput = document.getElementById('lexicon-search');
-                if (searchInput && !searchInput.hasAttribute('disabled')) {
-                    searchInput.focus();
-                    searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }
-        };
-        window.addEventListener('keydown', handler);
-        return () => window.removeEventListener('keydown', handler);
-    }, []);
-
-    // Widget Data emitter
-    useEffect(() => {
-        if (activeLexicon && lexiconHook.activeInflectionProfile && activeMetadata) {
-            window.loxarBridge?.send?.('widget:lexicon-data', {
-                entries: activeLexicon,
-                inflectionProfile: lexiconHook.activeInflectionProfile,
-                metadata: activeMetadata
-            });
-        }
-    }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata]);
 
     useEffect(() => {
         if (activeLexiconName) {
@@ -988,30 +914,41 @@ const App = () => {
         setActiveToolView('dashboard');
     }, []);
 
-    useEffect(() => {
-        let unlistenAddWord: (() => void) | undefined;
-        let unlistenAddInflection: (() => void) | undefined;
-
-        const setupListeners = async () => {
-            unlistenAddWord = await listen('widget:request-add-word', (event: any) => {
-                const word = event.payload;
-                lexiconHook.addWord({ Raíz: word, Léxema: [word], Categoría: 'sustantivo', Significado: ['[Pendiente]'], extraData: {} });
-                showNotification(`Palabra "${word}" añadida desde el Widget.`, 'success');
-            });
-
-            unlistenAddInflection = await listen('widget:request-add-inflection', (event: any) => {
-                const { word, originalMeaning, formName } = event.payload;
-                lexiconHook.addWord({ Raíz: word, Léxema: [word], Categoría: 'desconocida', Significado: [`${formName} de ${originalMeaning}`], extraData: {} });
-                showNotification(`Flexión "${word}" añadida.`, 'success');
-            });
-        };
-
-        setupListeners();
-        return () => {
-            if (unlistenAddWord) unlistenAddWord();
-            if (unlistenAddInflection) unlistenAddInflection();
-        };
+    const handleWidgetAddWord = useCallback((word: string) => {
+        lexiconHook.addWord({ Raíz: word, Léxema: [word], Categoría: 'sustantivo', Significado: ['[Pendiente]'], extraData: {} });
+        showNotification(`Palabra "${word}" añadida desde el Widget.`, 'success');
     }, [lexiconHook.addWord]);
+
+    const handleWidgetAddInflection = useCallback((payload: { word: string; originalMeaning: string; formName: string }) => {
+        lexiconHook.addWord({ Raíz: payload.word, Léxema: [payload.word], Categoría: 'desconocida', Significado: [`${payload.formName} de ${payload.originalMeaning}`], extraData: {} });
+        showNotification(`Flexión "${payload.word}" añadida.`, 'success');
+    }, [lexiconHook.addWord]);
+
+    const handleWidgetSearch = useCallback((term: string) => {
+        if (!activeLexicon || !term || typeof term !== 'string') {
+            return null;
+        }
+        const normalizedTerm = normalizeText(term.trim());
+        if (!normalizedTerm) {
+            return null;
+        }
+        return activeLexicon.find(entry =>
+            entry.Significado.some(s => normalizeText(s).includes(normalizedTerm)) ||
+            entry.Léxema.some(l => normalizeText(l).includes(normalizedTerm)) ||
+            (entry.Raíz && normalizeText(entry.Raíz).includes(normalizedTerm))
+        ) || null;
+    }, [activeLexicon]);
+
+    const handleInflectRequest = useCallback((entry: LexiconEntry) => {
+        if (!entry || !lexiconHook.activeInflectionProfile) {
+            return [];
+        }
+        const applicableParadigms = filterParadigmsForFunction(lexiconHook.activeInflectionProfile.paradigms || [], entry.Categoría);
+        return applicableParadigms.map(paradigm => ({
+            paradigmName: paradigm.name,
+            forms: generateInflectedForms(entry, paradigm, lexiconHook.activeInflectionProfile)
+        }));
+    }, [lexiconHook.activeInflectionProfile]);
 
     const completionStats = useMemo(() => ({
         total: activeLexicon.length,
@@ -1021,7 +958,24 @@ const App = () => {
 
     const entryBeingEdited = useMemo(() => editorMode === 'complete' ? entryToComplete : null, [editorMode, entryToComplete]);
 
-    if (!isAppLoaded) return <LoadingOverlay message="Cargando léxicos..." />;
+    const widgetBridge = useWidgetBridge({
+        onAddWord: handleWidgetAddWord,
+        onAddInflection: handleWidgetAddInflection,
+        onSearch: handleWidgetSearch,
+        onInflectRequest: handleInflectRequest,
+        openWidget: () => window.loxarBridge.openWidget(),
+    });
+
+    // Widget Data emitter
+    useEffect(() => {
+        if (activeLexicon && lexiconHook.activeInflectionProfile && activeMetadata) {
+            widgetBridge.sendLexiconData({
+                entries: activeLexicon,
+                inflectionProfile: lexiconHook.activeInflectionProfile,
+                metadata: activeMetadata
+            });
+        }
+    }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
 
     return (
         <ErrorBoundary>

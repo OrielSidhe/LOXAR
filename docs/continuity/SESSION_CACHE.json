@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T20:10:00.000Z",
+  "lastUpdated": "2026-08-14T20:25:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Renombrar window.electronAPI → window.loxarBridge y eliminar stubs Gemini muertos (P1-1).",
+    "lastPrompt": "Extraer widget bridge de App.tsx a hook dedicado (P1-2) y preparar siguiente paso de descomposición.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "P1-1 completado: window.electronAPI renombrado a window.loxarBridge, stubs Gemini eliminados de main.tsx/types.ts/index.tsx/App.tsx. Validaciones estáticas en verde (typecheck 0 errores, lint OK, build OK, 122/122 tests). Próximo bloque: descomponer App.tsx y migrar tests legacy a Vitest."
+  "sessionSummary": "P1-2 completado: widget bridge extraído a src/hooks/useWidgetBridge.ts, App.tsx reduce listeners directos y usa el hook. Validaciones estáticas en verde (typecheck 0 errores, lint OK, build OK, 122/122 tests). Próximo bloque: seguir descomponiendo App.tsx o migrar tests legacy a Vitest."
 }
