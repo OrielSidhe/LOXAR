@@ -2020,6 +2020,23 @@ Texto libre → textParser (local, determinista) → DeclarativeManifest
 **Próximo paso:** inicializar git (`git init`) si no existe y hacer el commit inicial, o abrir el repo en GitHub y pushear.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `EntryEditorCompleteModeNav` de `EntryEditor` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el bloque de navegación del
+modo completar (búsqueda + controles anterior/siguiente) de `EntryEditor` a un componente dedicado
+para reducir la superficie de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/EntryEditorCompleteModeNav.tsx` (NUEVO): componente dedicado para la navegación
+  del modo completar con formulario de búsqueda y controles de entrada incompleta.
+- `src/components/EntryEditor.tsx`: se reemplazó el bloque inline de navegación del modo completar
+  por el componente `<EntryEditorCompleteModeNav ... />`, manteniendo la lógica de estado y handlers
+  en el componente padre. Se eliminó la función `handleLookupSubmit` que ya no se usa en este archivo.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `EntryEditorAiActions` de `EntryEditor` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo el bloque de acciones de IA
