@@ -1,10 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
 import { GrammarManifest, SyntacticRole, MorphosyntacticStrategy, StrategyType, LexiconEntry, GrammarAffix } from '../types';
-import SaveIcon from './icons/SaveIcon';
-import PlusIcon from './icons/PlusIcon';
-import TrashIcon from './icons/TrashIcon';
-import SparkleIcon from './icons/SparkleIcon';
-import DownloadIcon from './icons/DownloadIcon';
 const GrammarImporterModal = lazy(() => import('./GrammarImporterModal'));
 import { FlexibleGrammar } from '../types/grammar-flexible';
 import GrammarWizard from './GrammarWizard';
@@ -25,6 +20,7 @@ import GrammarRolesPanel from './GrammarRolesPanel';
 import GrammarSyntaxPanel from './GrammarSyntaxPanel';
 import { normalizeCategory, getEntryForm, getDefaultPreviewEntries, isMeaningfulTypology } from '../utils/grammarPreview';
 import GrammarModuleSidebar from './GrammarModuleSidebar';
+import GrammarTabHeader from './GrammarTabHeader';
 
 interface GrammarTabProps {
     manifest: GrammarManifest;
@@ -455,52 +451,14 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
 
             {/* Contenido Principal */}
             <div className="flex-1 flex flex-col bg-surface-dark rounded-r-xl overflow-hidden relative border border-border-dark">
-                <div className="bg-surface border-b border-border-dark p-4 flex justify-between items-center shadow-md z-10">
-                    <h2 className="text-xl font-bold text-white">
-                        {activeModule === 'overview' && 'Resumen'}
-                        {activeModule === 'phonology' && 'Fonología'}
-                        {activeModule === 'typology' && 'Tipología'}
-                        {activeModule === 'morphology' && 'Morfología'}
-                        {activeModule === 'syntax' && 'Sintaxis'}
-                        {activeModule === 'semantics' && 'Semántica'}
-                        {activeModule === 'roles' && 'Roles Sintácticos'}
-                        {activeModule === 'strategies' && 'Estrategias Morfosintácticas'}
-                        {activeModule === 'notes' && 'Notas'}
-                    </h2>
-                    <div className="flex items-center gap-2">
-                        <button
-                            onClick={() => setIsWizardOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-accent/15 text-accent border border-accent/30 hover:bg-accent/25"
-                        >
-                            <SparkleIcon className="w-4 h-4" />
-                            Asistente de gramática
-                        </button>
-                        <button
-                            onClick={() => setIsImporterOpen(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-primary/15 text-primary border border-primary/30 hover:bg-primary/25"
-                        >
-                            <SparkleIcon className="w-4 h-4" />
-                            Importar
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            disabled={!isDirty}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${isDirty ? 'bg-accent text-white shadow-accent/20 hover:bg-accent-hover' : 'bg-surface-light text-text-secondary cursor-not-allowed opacity-50'}`}
-                        >
-                            <SaveIcon className="w-4 h-4" />
-                            Guardar
-                        </button>
-                        {onExportGrammar && (
-                            <button
-                                onClick={handleExportGrammar}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all bg-surface-light text-text-secondary border border-subtle hover:bg-subtle"
-                            >
-                                <DownloadIcon className="w-4 h-4" />
-                                Exportar Gramática
-                            </button>
-                        )}
-                    </div>
-                </div>
+                <GrammarTabHeader
+                  activeModule={activeModule}
+                  onOpenWizard={() => setIsWizardOpen(true)}
+                  onOpenImporter={() => setIsImporterOpen(true)}
+                  onSave={handleSave}
+                  isDirty={isDirty}
+                  onExportGrammar={onExportGrammar}
+                />
                 <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                     {renderContent()}
                 </div>

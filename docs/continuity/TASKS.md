@@ -349,6 +349,24 @@ gigantes.
   `SyntaxCanvas` o `EntryEditor`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `GrammarTabHeader` de `GrammarTab` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el header principal de
+`GrammarTab` a un componente dedicado para reducir la superficie de uno de los 4 componentes
+gigantes.
+**Cambios:**
+- `src/components/GrammarTabHeader.tsx` (NUEVO): componente dedicado para el header dinámico
+  con título por módulo y botones de Asistente/Importar/Guardar/Exportar.
+- `src/components/GrammarTab.tsx`: se reemplazó el bloque inline del header por el
+  componente `<GrammarTabHeader ... />`, manteniendo el estado y las acciones en el
+  componente padre. Se limpiaron imports de íconos que ya no se usan directamente en
+  `GrammarTab`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `GrammarTab`,
+  `SyntaxCanvas` o `EntryEditor`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `GrammarModuleSidebar` de `GrammarTab` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo la barra lateral de
