@@ -262,6 +262,23 @@ uno de los 4 componentes gigantes.
   `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `EntryDuplicateWarning` de `EntryEditor` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el bloque de warning de
+duplicados de `EntryEditor` a un componente dedicado para reducir la superficie de uno de los 4
+componentes gigantes.
+**Cambios:**
+- `src/components/EntryDuplicateWarning.tsx` (NUEVO): componente dedicado para renderizar la
+  advertencia de coincidencias detectadas por léxema, raíz y significado.
+- `src/components/EntryEditor.tsx`: se reemplazó el bloque inline del warning de duplicados por
+  `<EntryDuplicateWarning ... />` y se eliminaron imports de `AlertTriangleIcon` y `XCircleIcon`
+  que ya no se usan en este archivo.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
 
 ## [2026-08-14] Checkpoint: Auditoría de calidad completa (READ-ONLY) + directivas de coding/awareness
 **Rama:** `main`. **Motivo:** el usuario pidió (a) añadir buenas prácticas de coding (limpio, breve,
