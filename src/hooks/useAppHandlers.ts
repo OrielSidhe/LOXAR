@@ -39,6 +39,9 @@ export interface UseAppHandlersOptions {
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
   setEntryToEditInModal: React.Dispatch<React.SetStateAction<LexiconEntry | null>>;
   setEntryToInflect: React.Dispatch<React.SetStateAction<LexiconEntry | null>>;
+  setAiStatus: React.Dispatch<React.SetStateAction<'idle' | 'working' | 'complete' | 'error'>>;
+  setAiProgress: React.Dispatch<React.SetStateAction<{ processed: number; total: number } | null>>;
+  setLastAiResult: React.Dispatch<React.SetStateAction<any>>;
 
   activeTab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools';
   exportPath: string | null;
@@ -47,6 +50,9 @@ export interface UseAppHandlersOptions {
   sessionCacheData: { tourCompleted?: boolean } | null;
   generationModes: GenerationMode[];
   activeLexicon: LexiconEntry[];
+  activeGrammar: any;
+  activeMetadata: any;
+  activeCustomFunctions: any[];
   incompleteEntries: LexiconEntry[];
   selectedIds: Set<string>;
 
@@ -88,6 +94,9 @@ export interface UseAppHandlersResult {
   handleBatchDelete: () => void;
   handleBatchChangeFunction: (newFunction: string) => void;
   handleNavigateIncomplete: (dir: 'prev' | 'next') => void;
+  handleExportGrammar: () => void;
+  handleAiCompleteFunctions: (listName: string, successMessage?: string) => Promise<void>;
+  handleAiFillMissing: (listName: string, successMessage?: string) => Promise<void>;
 }
 
 export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersResult => {
@@ -124,9 +133,15 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     sessionCacheData,
     generationModes,
     activeLexicon,
+    activeGrammar,
+    activeMetadata,
+    activeCustomFunctions,
     incompleteEntries,
     selectedIds,
     showNotification,
+    setAiStatus,
+    setAiProgress,
+    setLastAiResult,
   } = options;
 
   const handleOpenModal = useCallback((modal: any) => setActiveModal(modal), [setActiveModal]);
@@ -402,6 +417,48 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     else setIncompleteIndex(prev => Math.min(incompleteEntries.length - 1, prev + 1));
   }, [incompleteEntries.length]);
 
+  const handleExportGrammar = useCallback(() => {
+    const manifest = activeGrammar;
+    const safeName = (activeMetadata?.conlangName || 'gramatica').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const date = new Date().toISOString().split('T')[0];
+    const fileName = `${safeName}_${date}.loxar-grammar.json`;
+    const content = JSON.stringify(manifest, null, 2);
+    window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content })
+      .then(({ success, error }) => {
+        if (success) showNotification(`Gramática exportada a ${fileName}`, 'success');
+        else showNotification(`Error de exportación: ${error}`, 'error');
+      })
+      .catch(e => showNotification(`Error: ${e instanceof Error ? e.message : 'desconocido'}`, 'error'));
+  }, [activeGrammar, activeMetadata, exportPath, showNotification]);
+
+  const handleAiCompleteFunctions = useCallback(async (listName: string, successMessage = 'Funciones completadas') => {
+    try {
+      setAiStatus('working');
+      setAiProgress(null);
+      const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
+      setLastAiResult(res.count);
+      setAiStatus('complete');
+      showNotification(successMessage, 'success');
+    } catch (e) {
+      setAiStatus('error');
+      setAiProgress(null);
+    }
+  }, [lexiconHook, activeCustomFunctions, showNotification, setAiStatus, setAiProgress, setLastAiResult]);
+
+  const handleAiFillMissing = useCallback(async (listName: string, successMessage = 'Campos completados') => {
+    try {
+      setAiStatus('working');
+      setAiProgress(null);
+      const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
+      setLastAiResult(result);
+      setAiStatus('complete');
+      showNotification(successMessage, 'success');
+    } catch (e) {
+      setAiStatus('error');
+      setAiProgress(null);
+    }
+  }, [lexiconHook, showNotification, setAiStatus, setAiProgress, setLastAiResult]);
+
   return {
     handleOpenModal,
     handleCloseModal,
@@ -437,5 +494,8 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     handleBatchDelete,
     handleBatchChangeFunction,
     handleNavigateIncomplete,
+    handleExportGrammar,
+    handleAiCompleteFunctions,
+    handleAiFillMissing,
   };
 };

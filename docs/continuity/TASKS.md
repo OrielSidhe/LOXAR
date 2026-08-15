@@ -118,6 +118,38 @@ de conlang y error de Suspense al abrir modales lazy.
 
 ---
 
+## [2026-08-14] Checkpoint: Mover exportación de gramática a `useAppHandlers`
+**Rama:** `main`. **Motivo:** reducir handlers inline en `App.tsx` centralizando la exportación de
+gramática en el hook de handlers de app.
+**Cambios:**
+- `src/hooks/useAppHandlers.ts`: se agregó `handleExportGrammar`, que usa `activeGrammar`,
+  `activeMetadata`, `exportPath` y `showNotification` para generar el archivo
+  `.loxar-grammar.json` y llamar a `window.loxarBridge.exportFile`.
+- `src/App.tsx`: se reemplazó el callback inline `onExportGrammar={...}` por
+  `onExportGrammar={handleExportGrammar}` y se incluyeron `activeGrammar` y `activeMetadata` en
+  las opciones de `useAppHandlers`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: seguir extrayendo handlers o secciones chicas de `App.tsx`, o avanzar
+  con la auditoría de limpieza si el usuario lo autoriza.
+
+---
+
+## [2026-08-14] Checkpoint: Mover handlers de IA a `useAppHandlers` y limpiar duplicados
+**Rama:** `main`. **Motivo:** reducir handlers inline en `App.tsx` y eliminar duplicación entre
+`ModalManager` y `ToolsTab` para las acciones de IA.
+**Cambios:**
+- `src/hooks/useAppHandlers.ts`: se agregaron `handleAiCompleteFunctions` y `handleAiFillMissing`,
+  con firma `(listName: string, successMessage?: string) => Promise<void>` para mantener
+  compatibilidad con `ToolsTab` y permitir mensajes custom.
+- `src/App.tsx`: se reemplazaron los callbacks inline de `ModalManager` por referencias a los
+  handlers centralizados, y se eliminaron las definiciones locales `handleToolsCompleteFunctions`
+  y `handleToolsFillMissing`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos

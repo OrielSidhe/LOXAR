@@ -233,9 +233,15 @@ const App = () => {
     sessionCacheData,
     generationModes,
     activeLexicon,
+    activeGrammar,
+    activeMetadata,
+    activeCustomFunctions,
     incompleteEntries,
     selectedIds,
     showNotification,
+    setAiStatus,
+    setAiProgress,
+    setLastAiResult,
   });
 
   const {
@@ -273,6 +279,9 @@ const App = () => {
     handleBatchDelete,
     handleBatchChangeFunction,
     handleNavigateIncomplete,
+    handleExportGrammar,
+    handleAiCompleteFunctions,
+    handleAiFillMissing,
   } = appHandlers;
 
   const aiHandlers = useAiHandlers({
@@ -363,34 +372,6 @@ const App = () => {
     }
   }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
 
-  const handleToolsCompleteFunctions = useCallback(async () => {
-    try {
-      setAiStatus('working');
-      setAiProgress(null);
-      const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
-      setLastAiResult(res.count);
-      setAiStatus('complete');
-      showNotification('Funciones completadas', 'success');
-    } catch (e) {
-      setAiStatus('error');
-      setAiProgress(null);
-    }
-  }, [lexiconHook, activeCustomFunctions, showNotification]);
-
-  const handleToolsFillMissing = useCallback(async () => {
-    try {
-      setAiStatus('working');
-      setAiProgress(null);
-      const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
-      setLastAiResult(result);
-      setAiStatus('complete');
-      showNotification('Campos completados', 'success');
-    } catch (e) {
-      setAiStatus('error');
-      setAiProgress(null);
-    }
-  }, [lexiconHook, showNotification]);
-
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
@@ -441,30 +422,10 @@ const App = () => {
             onCloseEditModal={() => setEntryToEditInModal(null)}
             onRestoreBackup={handleRestoreBackup}
             onAiCompleteFunctions={async () => {
-              try {
-                setAiStatus('working');
-                setAiProgress(null);
-                const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
-                setLastAiResult(res.count);
-                setAiStatus('complete');
-                showNotification('Completado de funciones finalizado', 'success');
-              } catch (e) {
-                setAiStatus('error');
-                setAiProgress(null);
-              }
+              await handleAiCompleteFunctions(suggestionListName, 'Completado de funciones finalizado');
             }}
             onAiFillMissing={async () => {
-              try {
-                setAiStatus('working');
-                setAiProgress(null);
-                const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
-                setLastAiResult(result);
-                setAiStatus('complete');
-                showNotification('Generación masiva completada', 'success');
-              } catch (e) {
-                setAiStatus('error');
-                setAiProgress(null);
-              }
+              await handleAiFillMissing(suggestionListName, 'Generación masiva completada');
             }}
             onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
             onManageFunctions={handleManageFunctions}
@@ -678,19 +639,7 @@ const App = () => {
                     lexicon={activeLexicon}
                     conlangName={activeMetadata?.conlangName}
                     onAddLexicalException={handleAddLexicalException}
-                    onExportGrammar={() => {
-                      const manifest = activeGrammar;
-                      const safeName = (activeMetadata?.conlangName || 'gramatica').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                      const date = new Date().toISOString().split('T')[0];
-                      const fileName = `${safeName}_${date}.loxar-grammar.json`;
-                      const content = JSON.stringify(manifest, null, 2);
-                      window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content })
-                        .then(({ success, error }) => {
-                          if (success) showNotification(`Gramática exportada a ${fileName}`, 'success');
-                          else showNotification(`Error de exportación: ${error}`, 'error');
-                        })
-                        .catch(e => showNotification(`Error: ${e instanceof Error ? e.message : 'desconocido'}`, 'error'));
-                    }}
+                    onExportGrammar={handleExportGrammar}
                   />
                 )}
                 {activeTab === 'translator' && (
@@ -716,8 +665,8 @@ const App = () => {
                     onBackToToolDashboard={handleBackToToolDashboard}
                     onOpenInterlinearGloss={handleOpenInterlinearGloss}
                     onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
-                    onCompleteFunctions={handleToolsCompleteFunctions}
-                    onFillMissing={handleToolsFillMissing}
+                    onCompleteFunctions={handleAiCompleteFunctions}
+                    onFillMissing={handleAiFillMissing}
                     onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
                     onManageFunctions={() => setActiveModal('functions')}
                     onManageHyphens={() => setActiveModal('hyphens')}
