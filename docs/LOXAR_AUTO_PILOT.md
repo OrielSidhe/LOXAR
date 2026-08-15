@@ -112,8 +112,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 **[ ] P1 — Auditoría de arquitectura.** Refactors estructurales pendientes:
 - [x] Renombrar `window.electronAPI` → `window.loxarBridge` y matar stubs Gemini muertos.
 - [x] Extraer widget bridge de `App.tsx` a `src/hooks/useWidgetBridge.ts` (P1-2).
+- [x] Migrar tests legacy a Vitest. Suite actual: 122/122 tests unitarios/integración en Vitest; `jest` eliminado de `package.json`; solo queda `tests-gui/smoke.spec.ts` (Playwright) como suite GUI separada.
 - [ ] Descomponer `App.tsx` (God Component) y los 4 componentes gigantes.
-- [ ] Migrar tests legacy a Vitest.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.

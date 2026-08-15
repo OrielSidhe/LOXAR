@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T20:25:00.000Z",
+  "lastUpdated": "2026-08-14T20:35:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Extraer widget bridge de App.tsx a hook dedicado (P1-2) y preparar siguiente paso de descomposición.",
+    "lastPrompt": "Verificar estado de migración de tests legacy a Vitest y actualizar continuidad (P1-3).",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "P1-2 completado: widget bridge extraído a src/hooks/useWidgetBridge.ts, App.tsx reduce listeners directos y usa el hook. Validaciones estáticas en verde (typecheck 0 errores, lint OK, build OK, 122/122 tests). Próximo bloque: seguir descomponiendo App.tsx o migrar tests legacy a Vitest."
+  "sessionSummary": "P1-3 completado: no quedan tests huérfanos en Jest; package.json no contiene jest; suite Vitest corriendo con 122/122 tests unitarios/integración. Solo permanece tests-gui/smoke.spec.ts (Playwright) como suite GUI separada, pendiente de autorización para 1er run. Próximo bloque: seguir descomponiendo App.tsx."
 }

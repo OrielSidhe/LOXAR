@@ -33,8 +33,11 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - [ ] **Auditoría de arquitectura (P1, tras typecheck verde):** 
   - [x] Renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini muertos.
   - [x] Extraer widget bridge de `App.tsx` a `src/hooks/useWidgetBridge.ts` (P1-2).
+  - [x] Migrar tests legacy a Vitest. Estado actual: no quedan tests huérfanos en Jest; `package.json` no
+       contiene `jest`; suite Vitest corriendo con 122/122 tests unitarios/integración. Solo permanece
+       `tests-gui/smoke.spec.ts` (Playwright) como suite GUI separada, pendiente de autorización para
+       1er run.
   - [ ] Descomponer `App.tsx` (God Component, 1482 líneas) y los 4 componentes gigantes.
-  - [ ] Migrar los 23 tests legacy a Vitest.
 
 ---
 
