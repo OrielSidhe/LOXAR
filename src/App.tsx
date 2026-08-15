@@ -75,860 +75,779 @@ const ModalManager = lazy(() => import('./components/ModalManager'));
 const AiSettingsModal = lazy(() => import('./components/AiSettingsModal'));
 
 const App = () => {
-    const appVersion = "2.4.0-pro";
-    const [splashFinished, setSplashFinished] = useState(false);
-    const [showWelcome, setShowWelcome] = useState(true);
-    const [isLoading, setIsLoading] = useState(false);
-    const [loadingMessage, setLoadingMessage] = useState("");
-    const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
-    const [isAppLoaded, setIsAppLoaded] = useState(false);
-    const [showSettings, setShowSettings] = useState(false);
+  const appVersion = '2.4.0-pro';
 
-    // Navigation & View State
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('table');
-    const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
-    const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
+  const [splashFinished, setSplashFinished] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
+  const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
+  const [isAppLoaded, setIsAppLoaded] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-    useEffect(() => {
-      applyTheme(themes[themeId]);
-      saveTheme(themeId);
-    }, [themeId]);
-    
-    // Workbench / Editor State
-    const [editorMode, setEditorMode] = useState<'add' | 'complete'>('add');
-    const [incompleteIndex, setIncompleteIndex] = useState(0);
-    const [initialDataForAdd, setInitialDataForAdd] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('table');
+  const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
 
-    // Modos de generación (elevados para que el lote los reutilice)
-    const [generationModes, setGenerationModes] = useState<GenerationMode[]>(['generative']);
+  const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
+  useEffect(() => {
+    applyTheme(themes[themeId]);
+    saveTheme(themeId);
+  }, [themeId]);
 
-    // Cola de trabajo (Fase 2-G): selecciones que avanzan en el workbench
-    const [entryToComplete, setEntryToComplete] = useState<LexiconEntry | null>(null);
-    const [entryToEditInModal, setEntryToEditInModal] = useState<LexiconEntry | null>(null);
-    const [entryToInflect, setEntryToInflect] = useState<LexiconEntry | null>(null);
+  const [editorMode, setEditorMode] = useState<'add' | 'complete'>('add');
+  const [incompleteIndex, setIncompleteIndex] = useState(0);
+  const [initialDataForAdd, setInitialDataForAdd] = useState<any>(null);
+  const [generationModes, setGenerationModes] = useState<GenerationMode[]>(['generative']);
 
-    // Table / Search State
-    const [searchTerm, setSearchTerm] = useState("");
-    const [searchColumn, setSearchColumn] = useState("all");
-    const [functionFilter, setFunctionFilter] = useState("all");
-    const [viewFilter, setViewFilter] = useState("all");
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [visibleColumns, setVisibleColumns] = useState<string[]>(['Léxema', 'Significado', 'Función', 'Raíz']);
-    const [showAffixFormatting, setShowAffixFormatting] = useState(true);
+  const [entryToComplete, setEntryToComplete] = useState<LexiconEntry | null>(null);
+  const [entryToEditInModal, setEntryToEditInModal] = useState<LexiconEntry | null>(null);
+  const [entryToInflect, setEntryToInflect] = useState<LexiconEntry | null>(null);
 
-    // IA & Suggestions State
-    const [aiStatus, setAiStatus] = useState<'idle' | 'working' | 'complete' | 'error'>('idle');
-    const [grammarOk, setGrammarOk] = useState<boolean | null>(null);
-    const [showOfflineBanner, setShowOfflineBanner] = useState<boolean>(false);
-    const [aiProgress, setAiProgress] = useState<{ processed: number; total: number } | null>(null);
-    const [lastAiResult, setLastAiResult] = useState<any>(null);
-    const [suggestions, setSuggestions] = useState<MissingWord[]>([]);
-    const [suggestionListName, setSuggestionListName] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchColumn, setSearchColumn] = useState('all');
+  const [functionFilter, setFunctionFilter] = useState('all');
+  const [viewFilter, setViewFilter] = useState('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['Léxema', 'Significado', 'Función', 'Raíz']);
+  const [showAffixFormatting, setShowAffixFormatting] = useState(true);
 
-    // Backups & Config
-    const [backups, setBackups] = useState<string[]>([]);
-    const [exportPath, setExportPath] = useState<string | null>(null);
-    const [projectPath, setProjectPath] = useState<string | null>(null);
-    const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
-    const [isProjectDirty, setIsProjectDirty] = useState(false);
-    const [showProjectBootstrap, setShowProjectBootstrap] = useState(false);
-    const [availableProjects, setAvailableProjects] = useState<string[]>([]);
-    const [hasLocalData, setHasLocalData] = useState(false);
-    const [bootstrapDismissed, setBootstrapDismissed] = useState(false);
-    const [canvasState, setCanvasState] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
-    const [isTourActive, setIsTourActive] = useState(false);
-    const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
-    const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
+  const [aiStatus, setAiStatus] = useState<'idle' | 'working' | 'complete' | 'error'>('idle');
+  const [grammarOk, setGrammarOk] = useState<boolean | null>(null);
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+  const [aiProgress, setAiProgress] = useState<{ processed: number; total: number } | null>(null);
+  const [lastAiResult, setLastAiResult] = useState<any>(null);
+  const [suggestions, setSuggestions] = useState<MissingWord[]>([]);
+  const [suggestionListName, setSuggestionListName] = useState('');
 
-    const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
+  const [backups, setBackups] = useState<string[]>([]);
+  const [exportPath, setExportPath] = useState<string | null>(null);
+  const [projectPath, setProjectPath] = useState<string | null>(null);
+  const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
+  const [isProjectDirty, setIsProjectDirty] = useState(false);
+  const [canvasState, setCanvasState] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
+  const [isTourActive, setIsTourActive] = useState(false);
+  const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
 
-    const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-        const id = Date.now();
-        setNotifications(prev => [...prev, { id, message, type }]);
-        setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
-    }, []);
+  const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
+  const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
 
-    const lexiconHook = useLexicon(showNotification, setIsLoading, setLoadingMessage);
-    const {
-        activeLexicon, activeLexiconName, activeProfile, activeMetadata,
-        activeCustomFunctions, lexicons, isDirty, activeGrammar
-    } = lexiconHook;
+  const [showProjectBootstrap, setShowProjectBootstrap] = useState(false);
+  const [availableProjects, setAvailableProjects] = useState<string[]>([]);
+  const [hasLocalData, setHasLocalData] = useState(false);
+  const [bootstrapDismissed, setBootstrapDismissed] = useState(false);
 
-    const projectOps = useProjectOperations({
-        activeLexicon,
-        activeLexiconName,
-        activeMetadata,
-        activeGrammar,
-        activeProfile,
-        activeCustomFunctions,
-        themeId,
-        exportPath,
-        projectPath,
-        isProjectDirty,
-        isDirty,
-        canvasState,
-        sessionCacheData,
-        activeTab,
-        showNotification,
-        setIsLoading,
-        setLoadingMessage,
-        setProjectPath,
-        setCanvasState,
-        setIsProjectDirty,
-        setProjectLastSaved,
-        setActiveTab,
-        setExportPath,
-        setBackups,
-        lexicons,
-        lexiconHook,
-    });
-    const {
-        buildProjectPayload,
-        writeProjectToPath,
-        handleNewProject,
-        handleOpenProject,
-        handleSaveProject,
-        handleSaveProjectAs,
-        restoreProjectFromPath,
-        handleFileExport,
-        handleSetExportPath,
-        handleSaveChanges,
-        markProjectDirty,
-    } = projectOps;
+  const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
+  }, []);
 
-    const incompleteEntries = useMemo(() => activeLexicon.filter(entry => {
-        const category = entry.Categoría?.trim().toLowerCase();
-        return !entry.Significado?.[0]?.trim()
-            || !category
-            || category === 'desconocida'
-            || category === 'n/a'
-            || !entry.Raíz?.trim()
-            || !entry.Léxema?.[0]?.trim();
-    }), [activeLexicon]);
+  const lexiconHook = useLexicon(showNotification, setIsLoading, setLoadingMessage);
+  const { activeLexicon, activeLexiconName, activeProfile, activeMetadata, activeCustomFunctions, lexicons, isDirty, activeGrammar } = lexiconHook;
 
-    const appHandlers = useAppHandlers({
-        lexiconHook,
-        restoreProjectFromPath,
-        writeProjectToPath,
-        handleNewProject,
-        handleOpenProject,
-        markProjectDirty,
-        setShowProjectBootstrap,
-        setBootstrapDismissed,
-        setProjectPath,
-        setIsProjectDirty,
-        setActiveTab,
-        setShowWelcome,
-        setIsTourActive,
-        setActiveModal,
-        setCanvasState,
-        setCurrentTourSteps,
-        setActiveToolView,
-        setIncompleteIndex,
-        setEditorMode,
-        setSearchTerm,
-        setSelectedIds,
-        setLoadingMessage,
-        setIsLoading,
-        setEntryToEditInModal,
-        setEntryToInflect,
-        activeTab,
-        exportPath,
-        isDirty,
-        activeLexiconName,
-        sessionCacheData,
-        generationModes,
-        activeLexicon,
-        incompleteEntries,
-        selectedIds,
-        showNotification,
-    });
+  const projectOps = useProjectOperations({
+    activeLexicon,
+    activeLexiconName,
+    activeMetadata,
+    activeGrammar,
+    activeProfile,
+    activeCustomFunctions,
+    themeId,
+    exportPath,
+    projectPath,
+    isProjectDirty,
+    isDirty,
+    canvasState,
+    sessionCacheData,
+    activeTab,
+    showNotification,
+    setIsLoading,
+    setLoadingMessage,
+    setProjectPath,
+    setCanvasState,
+    setIsProjectDirty,
+    setProjectLastSaved,
+    setActiveTab,
+    setExportPath,
+    setBackups,
+    lexicons,
+    lexiconHook,
+  });
 
-    // Dynamic title/favicon
-    useEffect(() => {
-        const title = activeMetadata?.conlangName || activeLexiconName || 'LOXAR';
-        document.title = `${title} - ${appVersion}`;
-        const link = document.querySelector("link[rel~='icon']") as HTMLLinkElement | null;
-        if (link) link.href = '/icon.png';
-    }, [activeLexiconName, activeMetadata?.conlangName, appVersion]);
+  const {
+    buildProjectPayload,
+    writeProjectToPath,
+    handleNewProject,
+    handleOpenProject,
+    handleSaveProject,
+    handleSaveProjectAs,
+    restoreProjectFromPath,
+    handleFileExport,
+    handleSetExportPath,
+    handleSaveChanges,
+    markProjectDirty,
+  } = projectOps;
 
-    // Canonical phonology source of truth: when a grammar manifest defines
-    // phonology, generation should prefer it over the stored generative profile.
-    const generativeProfile = useMemo(() => {
-        if (activeGrammar?.phonology) {
-            return { ...activeProfile, ...phonologyFromManifest(activeGrammar) };
-        }
-        return activeProfile;
-    }, [activeProfile, activeGrammar]);
+  const incompleteEntries = useMemo(() => activeLexicon.filter(entry => {
+    const category = entry.Categoría?.trim().toLowerCase();
+    return !entry.Significado?.[0]?.trim()
+      || !category
+      || category === 'desconocida'
+      || category === 'n/a'
+      || !entry.Raíz?.trim()
+      || !entry.Léxema?.[0]?.trim();
+  }), [activeLexicon]);
 
+  const appHandlers = useAppHandlers({
+    lexiconHook,
+    restoreProjectFromPath,
+    writeProjectToPath,
+    handleNewProject,
+    handleOpenProject,
+    markProjectDirty,
+    setShowProjectBootstrap,
+    setBootstrapDismissed,
+    setProjectPath,
+    setIsProjectDirty,
+    setActiveTab,
+    setShowWelcome,
+    setIsTourActive,
+    setActiveModal,
+    setCanvasState,
+    setCurrentTourSteps,
+    setActiveToolView,
+    setIncompleteIndex,
+    setEditorMode,
+    setSearchTerm,
+    setSelectedIds,
+    setLoadingMessage,
+    setIsLoading,
+    setEntryToEditInModal,
+    setEntryToInflect,
+    activeTab,
+    exportPath,
+    isDirty,
+    activeLexiconName,
+    sessionCacheData,
+    generationModes,
+    activeLexicon,
+    incompleteEntries,
+    selectedIds,
+    showNotification,
+  });
 
-    useEffect(() => {
-        // Initialize App
-        const timer = setTimeout(() => setIsAppLoaded(true), 1500);
-        if (exportPath) {
-            window.loxarBridge.listBackups(exportPath).then(setBackups).catch(console.error);
-        }
-        return () => clearTimeout(timer);
-    }, [exportPath, activeLexiconName]);
+  const {
+    handleOpenModal,
+    handleCloseModal,
+    handleCreateNewLexicon,
+    handleConfirmCreateLexicon,
+    handleRenameLexicon,
+    handleDeleteLexicon,
+    confirmDiscardUnsaved,
+    handleQuit,
+    handleResetApp,
+    handleRestoreBackup,
+    handleStartTour,
+    onTourEnd,
+    handleOpenInterlinearGloss,
+    handleOpenSoundChangeWorkbench,
+    handleBackToToolDashboard,
+    handleCanvasChange,
+    handleBootstrapCreate,
+    handleBootstrapOpenOther,
+    handleBootstrapOpenFound,
+    handleBootstrapImportLocal,
+    handleBootstrapDismiss,
+    handleWidgetAddWord,
+    handleWidgetAddInflection,
+    handleWidgetSearch,
+    handleInflectRequest,
+    handleLookupForCompletion,
+    handleManageFunctions,
+    handleManageHyphens,
+    handleToggleSelectAll,
+    handleAddLexicalException,
+    handleToggleSelection,
+    handleBatchDelete,
+    handleBatchChangeFunction,
+    handleNavigateIncomplete,
+  } = appHandlers;
 
-    // Runtime grammar engine validation + AI availability check
-    useEffect(() => {
-        const validateEngine = async () => {
-            const ok = validateGrammarEngine();
-            setGrammarOk(ok);
-            const aiAvailable = await isAiAvailable();
-            setShowOfflineBanner(!aiAvailable && !ok);
-        };
-        validateEngine();
-    }, []);
+  const aiHandlers = useAiHandlers({
+    activeLexicon,
+    showNotification,
+    getLexiconSample: lexiconHook.getLexiconSample,
+    generativeProfile: activeProfile,
+    setAiStatus,
+    setSuggestionListName,
+    setActiveTab,
+    setSuggestions,
+    setInitialDataForAdd,
+    setEditorMode,
+  });
 
-    // Session cache: load persisted state on mount + save tab changes
-    useEffect(() => {
-        let cancelled = false;
-        (async () => {
-            try {
-                const cached = await loadSessionCache();
-                if (cancelled) return;
-                if (cached.activeTab) setActiveTab(cached.activeTab as any);
-                if (cached.exportPath) setExportPath(cached.exportPath);
+  const {
+    handleAnalyzeForSuggestions,
+    handleAiGenerate,
+    handleAiCompleteEntry,
+    handleCorrectSignificado,
+    handleGenerateAIFromSuggestion,
+    handleAddManuallyFromSuggestion,
+  } = aiHandlers;
 
-                // Reabrir el último proyecto si la ruta sigue existiendo. Si el
-                // archivo desapareció (p.ej. se limpió appdata), no confiamos en
-                // la caché y dejamos que el usuario elija de nuevo.
-                let reopened = false;
-                if (cached.projectPath) {
-                    try {
-                        const fileExists = await exists(cached.projectPath).catch(() => false);
-                        if (fileExists) {
-                            setProjectPath(cached.projectPath);
-                            await restoreProjectFromPath(cached.projectPath);
-                            setIsProjectDirty(false);
-                            reopened = true;
-                        }
-                    } catch {
-                        reopened = false;
-                    }
-                }
+  const workQueueState = useWorkQueue({
+    getLexiconSample: lexiconHook.getLexiconSample,
+    activeInflectionProfile: lexiconHook.activeInflectionProfile,
+    activeLexicon,
+    generativeProfile: activeProfile,
+    showNotification,
+    setActiveTab,
+    setAiStatus,
+  });
 
-                // Sin proyecto configurado: buscar .loxar existentes y pedir
-                // explícitamente dónde guardar en lugar de usar appdata en silencio.
-                if (!reopened) {
-                    const [found, localNames] = await Promise.all([
-                        scanForLoxarProjects().catch(() => [] as string[]),
-                        listLexiconNames().catch(() => [] as string[]),
-                    ]);
-                    if (cancelled) return;
-                    setAvailableProjects(found);
-                    setHasLocalData(localNames.length > 0);
-                    setShowProjectBootstrap(true);
-                }
-                setSessionCacheData({ tourCompleted: cached.tourCompleted });
-            } catch (e) {
-                console.error('Failed to load session cache', e);
-            }
-        })();
-        return () => { cancelled = true; };
-    }, []);
+  const {
+    workQueue,
+    queueCursor,
+    queueActive,
+    currentQueueItem,
+    enqueueItems,
+    queueAdvance,
+    queuePrev,
+    queueTogglePending,
+    queueRemoveCurrent,
+    queueClear,
+    handleEnqueue,
+    handleGenerateBatch,
+    queueInitialData,
+  } = workQueueState;
 
-    useEffect(() => {
-        saveSessionCache({ activeTab, exportPath, projectPath }).catch(console.error);
-    }, [activeTab, exportPath, projectPath]);
+  const effectiveInitialDataForAdd = queueActive ? queueInitialData : initialDataForAdd;
 
-    useEffect(() => {
-        if (activeLexiconName) {
-            setShowWelcome(false);
-        }
-    }, [activeLexiconName]);
+  useEffect(() => {
+    if (editorMode === 'complete') {
+      setEntryToComplete(incompleteEntries[incompleteIndex] ?? null);
+    } else {
+      setEntryToComplete(null);
+    }
+  }, [editorMode, incompleteIndex, incompleteEntries]);
 
-    useEffect(() => {
-        const baseTitle = 'LOXAR';
-        if (activeLexiconName) {
-            const conlang = activeMetadata?.conlangName?.trim();
-            document.title = conlang ? `${conlang} - ${baseTitle}` : `${activeLexiconName} - ${baseTitle}`;
-        } else {
-            document.title = baseTitle;
-        }
-    }, [activeLexiconName, activeMetadata?.conlangName]);
+  useEffect(() => {
+    setIncompleteIndex(prev => Math.max(0, Math.min(prev, incompleteEntries.length - 1)));
+  }, [incompleteEntries.length]);
 
-    const aiHandlers = useAiHandlers({
-        activeLexicon,
-        showNotification,
-        getLexiconSample: lexiconHook.getLexiconSample,
-        generativeProfile,
-        setAiStatus,
-        setSuggestionListName,
-        setActiveTab,
-        setSuggestions,
-        setInitialDataForAdd,
-        setEditorMode,
-    });
+  const completionStats = useMemo(() => ({
+    total: activeLexicon.length,
+    needsFunction: incompleteEntries.filter(e => !e.Categoría || e.Categoría === 'desconocida').length,
+    totalIncomplete: incompleteEntries.length,
+  }), [activeLexicon.length, incompleteEntries]);
 
-    const handleAnalyzeForSuggestions = aiHandlers.handleAnalyzeForSuggestions;
-    const handleAiGenerate = aiHandlers.handleAiGenerate;
-    const handleAiCompleteEntry = aiHandlers.handleAiCompleteEntry;
-    const handleCorrectSignificado = aiHandlers.handleCorrectSignificado;
-    const handleGenerateAIFromSuggestion = aiHandlers.handleGenerateAIFromSuggestion;
-    const handleAddManuallyFromSuggestion = aiHandlers.handleAddManuallyFromSuggestion;
+  const entryBeingEdited = useMemo(() => (editorMode === 'complete' ? entryToComplete : null), [editorMode, entryToComplete]);
 
-    const {
-        handleOpenModal,
-        handleCloseModal,
-        handleCreateNewLexicon,
-        handleConfirmCreateLexicon,
-        handleRenameLexicon,
-        handleDeleteLexicon,
-        confirmDiscardUnsaved,
-        handleQuit,
-        handleResetApp,
-        handleRestoreBackup,
-        handleStartTour,
-        onTourEnd,
-        handleOpenInterlinearGloss,
-        handleOpenSoundChangeWorkbench,
-        handleBackToToolDashboard,
-        handleCanvasChange,
-        handleBootstrapOpenFound,
-        handleBootstrapCreate,
-        handleBootstrapOpenOther,
-        handleBootstrapDismiss,
-        handleBootstrapImportLocal,
-        handleWidgetAddWord,
-        handleWidgetAddInflection,
-        handleWidgetSearch,
-        handleInflectRequest,
-        handleLookupForCompletion,
-        handleManageFunctions,
-        handleManageHyphens,
-        handleToggleSelectAll,
-        handleAddLexicalException,
-        handleToggleSelection,
-        handleBatchDelete,
-        handleBatchChangeFunction,
-        handleNavigateIncomplete,
-    } = appHandlers;
+  const widgetBridge = useWidgetBridge({
+    onAddWord: handleWidgetAddWord,
+    onAddInflection: handleWidgetAddInflection,
+    onSearch: handleWidgetSearch,
+    onInflectRequest: handleInflectRequest,
+    openWidget: () => window.loxarBridge.openWidget(),
+  });
 
-    // --- Cola de trabajo (Fase 2-G) ---
-    const workQueueState = useWorkQueue({
-        getLexiconSample: lexiconHook.getLexiconSample,
-        activeInflectionProfile: lexiconHook.activeInflectionProfile,
-        activeLexicon,
-        generativeProfile,
-        showNotification,
-        setActiveTab,
-        setAiStatus,
-    });
-    const {
-        workQueue,
-        queueCursor,
-        queueActive,
-        currentQueueItem,
-        enqueueItems,
-        queueAdvance,
-        queuePrev,
-        queueTogglePending,
-        queueRemoveCurrent,
-        queueClear,
-        handleEnqueue,
-        handleGenerateBatch,
-        queueInitialData,
-    } = workQueueState;
+  useEffect(() => {
+    if (activeLexicon && lexiconHook.activeInflectionProfile && activeMetadata) {
+      widgetBridge.sendLexiconData({
+        entries: activeLexicon,
+        inflectionProfile: lexiconHook.activeInflectionProfile,
+        metadata: activeMetadata,
+      });
+    }
+  }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
 
-    const effectiveInitialDataForAdd = queueActive ? queueInitialData : initialDataForAdd;
+  return (
+    <ErrorBoundary>
+      <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
+        {!splashFinished && <SplashScreen onFinish={() => setSplashFinished(true)} />}
 
-    // Keep the entry being completed in sync with the navigation index.
-    useEffect(() => {
-        if (editorMode === 'complete') {
-            setEntryToComplete(incompleteEntries[incompleteIndex] ?? null);
-        } else {
-            setEntryToComplete(null);
-        }
-    }, [editorMode, incompleteIndex, incompleteEntries]);
+        <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished ? 'opacity-100' : 'opacity-0'}`}>
+          <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] animate-move-lights opacity-60"></div>
+          <div className="absolute top-[40%] right-[0%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[100px] animate-move-lights animation-delay-2000 opacity-50"></div>
+          <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[60%] bg-emerald-500/5 rounded-full blur-[130px] animate-move-lights animation-delay-4000 opacity-40"></div>
 
-    // Clamp the index when the list of incomplete entries shrinks/changes.
-    useEffect(() => {
-        setIncompleteIndex(prev => Math.max(0, Math.min(prev, incompleteEntries.length - 1)));
-    }, [incompleteEntries.length]);
-
-    const completionStats = useMemo(() => ({
-        total: activeLexicon.length,
-        needsFunction: incompleteEntries.filter(e => !e.Categoría || e.Categoría === 'desconocida').length,
-        totalIncomplete: incompleteEntries.length
-    }), [activeLexicon.length, incompleteEntries]);
-
-    const entryBeingEdited = useMemo(() => editorMode === 'complete' ? entryToComplete : null, [editorMode, entryToComplete]);
-
-    const widgetBridge = useWidgetBridge({
-        onAddWord: handleWidgetAddWord,
-        onAddInflection: handleWidgetAddInflection,
-        onSearch: handleWidgetSearch,
-        onInflectRequest: handleInflectRequest,
-        openWidget: () => window.loxarBridge.openWidget(),
-    });
-
-    // Widget Data emitter
-    useEffect(() => {
-        if (activeLexicon && lexiconHook.activeInflectionProfile && activeMetadata) {
-            widgetBridge.sendLexiconData({
-                entries: activeLexicon,
-                inflectionProfile: lexiconHook.activeInflectionProfile,
-                metadata: activeMetadata
-            });
-        }
-    }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
-
-    return (
-        <ErrorBoundary>
-        <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
-            {!splashFinished && <SplashScreen onFinish={() => setSplashFinished(true)} />}
-
-            <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished ? 'opacity-100' : 'opacity-0'}`}>
-                {/* Ambient Lights */}
-                <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px] animate-move-lights opacity-60"></div>
-                <div className="absolute top-[40%] right-[0%] w-[40%] h-[40%] bg-purple-500/5 rounded-full blur-[100px] animate-move-lights animation-delay-2000 opacity-50"></div>
-                <div className="absolute -bottom-[20%] left-[20%] w-[60%] h-[60%] bg-emerald-500/5 rounded-full blur-[130px] animate-move-lights animation-delay-4000 opacity-40"></div>
-
-                {isLoading && <LoadingOverlay message={loadingMessage} />}
-                {showOfflineBanner && (
-                    <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-4 mx-4 mt-4 rounded-md shadow-sm">
-                        <div className="flex items-center">
-                            <AlertTriangleIcon className="h-5 w-5 mr-2 flex-shrink-0" />
-                            <div>
-                                <p className="font-semibold">Grammar engine running offline</p>
-                                <p className="text-sm">AI assistance is disabled. The local grammar engine is available for basic operations.</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-                {showWelcome && <WelcomeScreen
-                    onCreateLexicon={handleCreateNewLexicon}
-                    onContinue={() => {
-                        audioService.playStartup();
-                        setShowWelcome(false);
-                    }}
-                    onImport={(content) => {
-                        audioService.playStartup();
-                        setShowWelcome(false);
-                        lexiconHook.startImportProcess(content);
-                    }}
-                    onStartTour={() => {
-                        audioService.playStartup();
-                        setShowWelcome(false);
-                        handleStartTour();
-                    }}
-                />}
-                {isTourActive && <GuidedTour steps={currentTourSteps} onClose={onTourEnd} />}
-
-                <ModalManager
-                    activeModal={activeModal}
-                    entryToEditInModal={entryToEditInModal}
-                    entryToInflect={entryToInflect}
-                    importState={lexiconHook.importState}
-                    activeLexicon={activeLexicon}
-                    activeLexiconName={activeLexiconName}
-                    activeProfile={activeProfile}
-                    activeMetadata={activeMetadata}
-                    activeCustomFunctions={activeCustomFunctions}
-                    activeInflectionProfile={lexiconHook.activeInflectionProfile}
-                    backups={backups}
-                    appVersion={appVersion}
-                    completionStats={completionStats}
-                    onClose={handleCloseModal}
-                    onCloseEditModal={() => setEntryToEditInModal(null)}
-                    onRestoreBackup={handleRestoreBackup}
-                    onAiCompleteFunctions={async () => {
-                        try {
-                            setAiStatus('working');
-                            setAiProgress(null);
-                            const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
-                            setLastAiResult(res.count);
-                            setAiStatus('complete');
-                            showNotification('Completado de funciones finalizado', 'success');
-                        } catch (e) { setAiStatus('error'); setAiProgress(null); }
-                    }}
-                    onAiFillMissing={async () => {
-                        try {
-                            setAiStatus('working');
-                            setAiProgress(null);
-                            const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
-                            setLastAiResult(result);
-                            setAiStatus('complete');
-                            showNotification('Generación masiva completada', 'success');
-                        } catch (e) { setAiStatus('error'); setAiProgress(null); }
-                    }}
-                    onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
-                    onManageFunctions={handleManageFunctions}
-                    onManageHyphens={handleManageHyphens}
-                    onUpdateGenerativeProfile={lexiconHook.updateGenerativeProfile}
-                    onGenerateLanguageSample={async (profile, _sampleList) => { 
-                        return await generateLanguageSample(profile, lexiconHook.activeLexicon);
-                    }}
-                    onAddWord={lexiconHook.addWord}
-                    onEditWord={lexiconHook.editWord}
-                    onConfirmCreateLexicon={handleConfirmCreateLexicon}
-                    onAddCustomFunction={lexiconHook.addCustomFunction}
-                    onOpenFunctions={() => setActiveModal('functions')}
-                    onOpenHyphens={() => setActiveModal('hyphens')}
-                    onOpenProfile={() => setActiveModal('profile')}
-                    onOpenNeography={() => setActiveTab('writing')}
-                    onOpenInflection={() => setActiveTab('grammar')}
-                    importHandlers={{
-                        cancelImport: lexiconHook.cancelImport,
-                        setImportMapping: lexiconHook.setImportMapping,
-                        resolveConflict: lexiconHook.resolveConflict,
-                        proceedWithValidEntries: lexiconHook.proceedWithValidEntries,
-                        resanitizeAndContinue: lexiconHook.resanitizeAndContinue,
-                        applyCharacterRepair: lexiconHook.applyCharacterRepair
-                    }}
-                    showNotification={showNotification}
-                />
-                
-                {activeModal === 'ai_settings' && (
-                    <AiSettingsModal onClose={handleCloseModal} />
-                )}
-
-                {showSettings && (
-                    <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />
-                )}
-
-                <Header wordsAddedCount={lexiconHook.wordsAddedSinceSave} onOpenWidget={() => window.loxarBridge.openWidget()} onShowTour={handleStartTour} onOpenSettings={() => setShowSettings(true)} themeId={themeId} onThemeChange={(id) => setThemeId(id as any)} />
-
-                <div className="flex items-center justify-between px-6 py-4 bg-surface-dark/90 backdrop-blur-md border-b border-border-dark flex-wrap gap-4 z-30 relative">
-                    <LexiconSelector 
-                        lexiconNames={lexiconHook.lexiconNames} 
-                        activeLexiconName={activeLexiconName} 
-                        onSelect={lexiconHook.setActiveLexicon} 
-                        onCreate={handleCreateNewLexicon} 
-                        onDelete={handleDeleteLexicon} 
-                        onRename={handleRenameLexicon} 
-                    />
-                    <div className="flex items-center gap-4">
-                        <FileControls 
-                            onImport={lexiconHook.startImportProcess} 
-                            onExport={handleFileExport} 
-                            onSave={handleSaveChanges} 
-                            onSetExportPath={handleSetExportPath} 
-                            onRestore={() => handleOpenModal('restore')} 
-                            onOpenAbout={() => handleOpenModal('about')} 
-                            onStartTour={handleStartTour} 
-                            onOpenAiSettings={() => handleOpenModal('ai_settings')}
-                            onQuit={handleQuit}
-                            onResetApp={handleResetApp}
-                            onError={(msg) => showNotification(msg, 'error')} 
-                            disabled={!activeLexiconName} 
-                            isDirty={isDirty} 
-                            onNewProject={handleNewProject}
-                            onOpenProject={handleOpenProject}
-                            onSaveProject={handleSaveProject}
-                            onSaveProjectAs={handleSaveProjectAs}
-                            projectPath={projectPath}
-                        />
-                        <button onClick={handleStartTour} className="p-2 text-text-secondary hover:text-primary transition-colors hover:bg-white/5 rounded-full">
-                            <InfoIcon className="w-6 h-6" />
-                        </button>
-                    </div>
+          {isLoading && <LoadingOverlay message={loadingMessage} />}
+          {showOfflineBanner && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mb-4 mx-4 mt-4 rounded-md shadow-sm">
+              <div className="flex items-center">
+                <AlertTriangleIcon className="h-5 w-5 mr-2 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">Grammar engine running offline</p>
+                  <p className="text-sm">AI assistance is disabled. The local grammar engine is available for basic operations.</p>
                 </div>
-
-                <div className="flex flex-1 min-h-0 relative">
-                    <LanguageTreeCanvas
-                      activeModule={activeTab}
-                      grammar={activeGrammar}
-                      lexicon={activeLexicon}
-                      profile={activeProfile}
-                      canvasNodes={canvasState.nodes}
-                      canvasEdges={canvasState.edges}
-                      onCanvasChange={handleCanvasChange}
-                      onNodeClick={(nodeId) => setActiveTab(nodeId as any)}
-                    />
-
-                    <VerticalSidebar
-                      active={activeTab}
-                      onChange={(id) => setActiveTab(id as any)}
-                      onOpenWidget={() => window.loxarBridge.openWidget()}
-                      onOpenSettings={() => setShowSettings(true)}
-                      onShowTour={handleStartTour}
-                    />
-
-                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
-                        <div className="flex-grow h-full flex flex-col">
-                            {activeTab === 'dashboard' && (
-                                <ModulePanel title="Panel" active={activeTab === 'dashboard'} onClose={() => setActiveTab('table')}>
-                                    <CompletionDashboard
-                                        stats={{ ...completionStats, wordsAddedCount: lexiconHook.wordsAddedSinceSave }}
-                                        onOpenReport={() => handleOpenModal('report')}
-                                        onOpenAiAssistant={() => handleOpenModal('ai_assistant')}
-                                        onNavigateComplete={() => { setViewFilter('incomplete'); setActiveTab('table'); }}
-                                        onNavigateFunctions={() => { setViewFilter('incomplete'); setActiveTab('table'); }}
-                                        onGenerateWords={() => handleOpenModal('ai_assistant')}
-                                        onBackup={handleSaveChanges}
-                                        onClose={() => setActiveTab('table')}
-                                    />
-                                </ModulePanel>
-                            )}
-                            {activeTab === 'table' && (
-                                <LexiconTable
-                                    data={activeLexicon} lexiconName={activeLexiconName}
-                                    conlangName={activeMetadata?.conlangName} mainLanguage={activeMetadata?.mainLanguage}
-                                    onEditWord={lexiconHook.editWord}
-                                    onDeleteWord={lexiconHook.deleteWord}
-                                    showNotification={showNotification}
-                                    searchTerm={searchTerm} onSearchTermChange={setSearchTerm}
-                                    categoryFilter={functionFilter} onCategoryFilterChange={setFunctionFilter}
-                                    viewFilter={viewFilter as any} onViewFilterChange={setViewFilter as any}
-                                    showAffixFormatting={showAffixFormatting}
-                                    onShowAffixFormattingChange={setShowAffixFormatting}
-                                    selectedIds={selectedIds}
-                                    onToggleSelection={handleToggleSelection}
-                                    onToggleSelectAll={handleToggleSelectAll}
-                                    onGenerateInflections={(entry) => {
-                                        setEntryToInflect(entry);
-                                        handleOpenModal('inflection_generator');
-                                    }}
-                                    onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
-                                />
-                            )}
-                            {activeTab === 'workbench' && (
-                                <div className="flex gap-4 h-full min-h-[600px]">
-                                    {/* LEFT: Entry Editor + cola de trabajo */}
-                                    <div className="flex-1 min-w-0 flex flex-col gap-3">
-                                        {queueActive && (
-                                            <WorkQueueBar
-                                                items={workQueue}
-                                                cursor={queueCursor}
-                                                onPrev={queuePrev}
-                                                onNext={queueAdvance}
-                                                onTogglePending={queueTogglePending}
-                                                onRemove={queueRemoveCurrent}
-                                                onClear={queueClear}
-                                            />
-                                        )}
-                                        <div className="flex-1 min-h-0">
-                                            <EntryEditor
-                                                mode={editorMode} onModeChange={setEditorMode}
-                                                entryToEdit={entryBeingEdited || undefined}
-                                                incompleteCount={incompleteEntries.length} incompleteIndex={incompleteIndex}
-                                                onNavigateIncomplete={handleNavigateIncomplete} onLookup={handleLookupForCompletion}
-                                                onAddWord={lexiconHook.addWord} onUpdateWord={lexiconHook.editWord}
-                                                findDuplicateSignificados={(sig, excludeId) => lexiconHook.activeLexicon.filter(e => e.Significado.includes(sig) && e.ID !== excludeId)}
-                                                onDuplicateFound={() => {}}
-                                                onAiCompleteEntry={handleAiCompleteEntry}
-                                                onAiGenerateRootAndLexeme={handleAiGenerate}
-                                                onCorrectSignificado={handleCorrectSignificado}
-                                                showNotification={showNotification} disabled={!activeLexiconName}
-                                                initialDataForAdd={effectiveInitialDataForAdd}
-                                                setIsLoading={setIsLoading} setLoadingMessage={setLoadingMessage}
-                                                customCategories={activeCustomFunctions} onAddCustomCategory={lexiconHook.addCustomFunction}
-                                                activeMetadata={activeMetadata}
-                                                activeLexicon={activeLexicon}
-                                                generationModes={generationModes}
-                                                onGenerationModesChange={setGenerationModes}
-                                                onQueueAdvance={queueActive ? queueAdvance : undefined}
-                                            />
-                                        </div>
-                                    </div>
-                                    {/* RIGHT: Suggestions & Word Lists */}
-                                    <div className="w-72 shrink-0">
-                                        <WorkbenchRightPanel
-                                            suggestions={suggestions}
-                                            listName={suggestionListName}
-                                            onClose={() => setSuggestions([])}
-                                            onAddManually={handleAddManuallyFromSuggestion}
-                                            onGenerateAI={handleGenerateAIFromSuggestion}
-                                            isLoading={aiStatus === 'working'}
-                                            activeMetadata={activeMetadata}
-                                            onSelectList={setSuggestionListName}
-                                            onAnalyzeList={handleAnalyzeForSuggestions}
-                                            generativeProfile={activeProfile}
-                                            generativeLexicon={activeLexicon}
-                                            onSaveGenerativeProfile={lexiconHook.updateGenerativeProfile}
-                                            showNotification={showNotification}
-                                            onEnqueue={handleEnqueue}
-                                            onGenerateBatch={handleGenerateBatch}
-                                            generationModes={generationModes}
-                                            manifest={activeGrammar}
-                                            onSyncPhonology={(p) => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                            {activeTab === 'collections' && (
-                                <CollectionsManager 
-                                    lexicon={activeLexicon} inflection={lexiconHook.activeInflectionProfile}
-                                    onUpdateEntry={lexiconHook.editWord} onAddEntry={lexiconHook.addWord}
-                                    onAddBatchEntries={lexiconHook.addBatchWords}
-                                    onDeleteEntry={lexiconHook.deleteWord} customCategories={activeCustomFunctions}
-                                    onStartTour={handleStartTour}
-                                />
-                            )}
-                            {activeTab === 'writing' && (
-                                <WritingAndNeographyTab 
-                                    corpus={lexiconHook.activeCorpus} 
-                                    onUpdateCorpus={lexiconHook.updateCorpus}
-                                    neographyProfile={lexiconHook.activeNeographyProfile}
-                                    generativeProfile={activeProfile}
-                                    onUpdateNeographyProfile={lexiconHook.updateNeographyProfile}
-                                    onStartTour={handleStartTour}
-                                />
-                            )}
-                            {activeTab === 'grammar' && (
-                                <GrammarTab
-                                    manifest={activeGrammar}
-                                    onSave={(manifest) => lexiconHook.updateGrammarManifest(manifest)}
-                                    lexicon={activeLexicon}
-                                    conlangName={activeMetadata?.conlangName}
-                                    onAddLexicalException={handleAddLexicalException}
-                                    onExportGrammar={() => {
-                                        const manifest = activeGrammar;
-                                        const safeName = (activeMetadata?.conlangName || 'gramatica').replace(/[^a-z0-9]/gi, '_').toLowerCase();
-                                        const date = new Date().toISOString().split('T')[0];
-                                        const fileName = `${safeName}_${date}.loxar-grammar.json`;
-                                        const content = JSON.stringify(manifest, null, 2);
-                                        window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content })
-                                            .then(({ success, error }) => {
-                                                if (success) showNotification(`Gramática exportada a ${fileName}`, 'success');
-                                                else showNotification(`Error de exportación: ${error}`, 'error');
-                                            })
-                                            .catch(e => showNotification(`Error: ${e instanceof Error ? e.message : 'desconocido'}`, 'error'));
-                                    }}
-                                />
-                            )}
-                            {activeTab === 'translator' && (
-                                <TranslationPlayground 
-                                    lexicon={activeLexicon} 
-                                    grammar={activeGrammar} 
-                                    corpus={lexiconHook.activeCorpus}
-                                    onUpdateCorpus={lexiconHook.updateCorpus}
-                                    onClose={() => {}}
-                                />
-                            )}
-                            {activeTab === 'tools' && (
-                                <ModulePanel title="Herramientas" active={activeTab === 'tools'} onClose={() => setActiveTab('tools')}>
-                                    {suggestions.length > 0 ? (
-                                        <SuggestionsWorkbench
-                                            suggestions={suggestions}
-                                            listName={suggestionListName}
-                                            onClose={() => setSuggestions([])}
-                                            onAddManually={handleAddManuallyFromSuggestion}
-                                            onGenerateAI={handleGenerateAIFromSuggestion}
-                                            isLoading={aiStatus === 'working'}
-                                            activeMetadata={activeMetadata}
-                                        />
-                                    ) : (
-                                        <>
-                                            {activeToolView === 'dashboard' && (
-                                                <ToolsDashboard
-                                                    onStartTour={handleStartTour}
-                                                    onOpenProfile={() => setActiveModal('profile')}
-                                                    onOpenNeography={() => setActiveTab('writing')}
-                                                    onOpenInflectionWorkshop={() => setActiveTab('grammar')}
-                                                    onOpenGrammar={() => setActiveTab('grammar')}
-                                                    onOpenTranslator={() => setActiveTab('translator')}
-                                                    onOpenInterlinearGloss={handleOpenInterlinearGloss}
-                                                    onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
-                                                    onManageFunctions={() => setActiveModal('functions')}
-                                                    onManageHyphens={() => setActiveModal('hyphens')}
-                                                    onCompleteFunctions={async () => {
-                                                        setAiStatus('working');
-                                                        setAiProgress(null);
-                                                        try {
-                                                            const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
-                                                            setLastAiResult(res.count);
-                                                            setAiStatus('complete'); showNotification('Funciones completadas', 'success');
-                                                        } catch (e) { setAiStatus('error'); setAiProgress(null); }
-                                                    }}
-                                                    onFillMissing={async () => {
-                                                        setAiStatus('working');
-                                                        setAiProgress(null);
-                                                        try {
-                                                            const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
-                                                            setLastAiResult(result);
-                                                            setAiStatus('complete'); showNotification('Campos completados', 'success');
-                                                        } catch (e) { setAiStatus('error'); setAiProgress(null); }
-                                                    }}
-                                                    onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
-                                                    stats={completionStats}
-                                                    disabled={!activeLexiconName}
-                                                />
-                                            )}
-                                            {activeToolView === 'interlinear-gloss' && (
-                                                <div className="space-y-3">
-                                                    <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
-                                                    <InterlinearGlossViewer lexicon={lexicons[activeLexiconName ?? '']} />
-                                                </div>
-                                            )}
-                                            {activeToolView === 'sound-change' && (
-                                                <div className="space-y-3">
-                                                    <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
-                                                    <SoundChangeWorkbench lexicon={lexicons[activeLexiconName ?? '']} />
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </ModulePanel>
-                            )}
-                        </div>
-                    </main>
-                </div>
-
-                {activeTab === 'table' && selectedIds.size > 0 &&
-                    <BatchActionToolbar
-                        selectedCount={selectedIds.size} customFunctions={activeCustomFunctions}
-                        onClearSelection={() => setSelectedIds(new Set())}
-                        onBatchDelete={handleBatchDelete} onBatchChangeFunction={handleBatchChangeFunction}
-                    />}
-
-                <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
-                    {notifications.map(notification => (
-                        <div key={notification.id} className={`glass-toast pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-r-lg shadow-glow animate-fade-in ${notification.type === 'error' ? '!border-danger !bg-danger/10' : ''}`}>
-                            {notification.type === 'success' ? <CheckCircleIcon className="h-5 w-5 text-accent" /> : <AlertTriangleIcon className="h-5 w-5 text-danger" />}
-                            <span className="font-medium text-sm text-white">{notification.message}</span>
-                            <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))} className="ml-2 hover:bg-white/10 rounded-full p-1 transition-colors text-text-secondary hover:text-white">
-                                <XCircleIcon className="h-4 w-4" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
+              </div>
             </div>
+          )}
+          {showWelcome && (
+            <WelcomeScreen
+              onCreateLexicon={handleCreateNewLexicon}
+              onContinue={() => {
+                audioService.playStartup();
+                setShowWelcome(false);
+              }}
+              onImport={content => {
+                audioService.playStartup();
+                setShowWelcome(false);
+                lexiconHook.startImportProcess(content);
+              }}
+              onStartTour={() => {
+                audioService.playStartup();
+                setShowWelcome(false);
+                handleStartTour();
+              }}
+            />
+          )}
+          {isTourActive && <GuidedTour steps={currentTourSteps} onClose={onTourEnd} />}
 
-                {isAppLoaded && showProjectBootstrap && (
-                    <ProjectBootstrapModal
-                        availableProjects={availableProjects}
-                        hasLocalData={hasLocalData}
-                        onCreate={handleBootstrapCreate}
-                        onOpenOther={handleBootstrapOpenOther}
-                        onOpenFound={handleBootstrapOpenFound}
-                        onImportLocal={handleBootstrapImportLocal}
-                        onDismiss={handleBootstrapDismiss}
+          <ModalManager
+            activeModal={activeModal}
+            entryToEditInModal={entryToEditInModal}
+            entryToInflect={entryToInflect}
+            importState={lexiconHook.importState}
+            activeLexicon={activeLexicon}
+            activeLexiconName={activeLexiconName}
+            activeProfile={activeProfile}
+            activeMetadata={activeMetadata}
+            activeCustomFunctions={activeCustomFunctions}
+            activeInflectionProfile={lexiconHook.activeInflectionProfile}
+            backups={backups}
+            appVersion={appVersion}
+            completionStats={completionStats}
+            onClose={handleCloseModal}
+            onCloseEditModal={() => setEntryToEditInModal(null)}
+            onRestoreBackup={handleRestoreBackup}
+            onAiCompleteFunctions={async () => {
+              try {
+                setAiStatus('working');
+                setAiProgress(null);
+                const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
+                setLastAiResult(res.count);
+                setAiStatus('complete');
+                showNotification('Completado de funciones finalizado', 'success');
+              } catch (e) {
+                setAiStatus('error');
+                setAiProgress(null);
+              }
+            }}
+            onAiFillMissing={async () => {
+              try {
+                setAiStatus('working');
+                setAiProgress(null);
+                const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
+                setLastAiResult(result);
+                setAiStatus('complete');
+                showNotification('Generación masiva completada', 'success');
+              } catch (e) {
+                setAiStatus('error');
+                setAiProgress(null);
+              }
+            }}
+            onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
+            onManageFunctions={handleManageFunctions}
+            onManageHyphens={handleManageHyphens}
+            onUpdateGenerativeProfile={lexiconHook.updateGenerativeProfile}
+            onGenerateLanguageSample={async (profile, _sampleList) => generateLanguageSample(profile, lexiconHook.activeLexicon)}
+            onAddWord={lexiconHook.addWord}
+            onEditWord={lexiconHook.editWord}
+            onConfirmCreateLexicon={handleConfirmCreateLexicon}
+            onAddCustomFunction={lexiconHook.addCustomFunction}
+            onOpenFunctions={() => setActiveModal('functions')}
+            onOpenHyphens={() => setActiveModal('hyphens')}
+            onOpenProfile={() => setActiveModal('profile')}
+            onOpenNeography={() => setActiveTab('writing')}
+            onOpenInflection={() => setActiveTab('grammar')}
+            importHandlers={{
+              cancelImport: lexiconHook.cancelImport,
+              setImportMapping: lexiconHook.setImportMapping,
+              resolveConflict: lexiconHook.resolveConflict,
+              proceedWithValidEntries: lexiconHook.proceedWithValidEntries,
+              resanitizeAndContinue: lexiconHook.resanitizeAndContinue,
+              applyCharacterRepair: lexiconHook.applyCharacterRepair,
+            }}
+            showNotification={showNotification}
+          />
+
+          {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
+          {showSettings && <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />}
+
+          <Header
+            wordsAddedCount={lexiconHook.wordsAddedSinceSave}
+            onOpenWidget={() => window.loxarBridge.openWidget()}
+            onShowTour={handleStartTour}
+            onOpenSettings={() => setShowSettings(true)}
+            themeId={themeId}
+            onThemeChange={id => setThemeId(id as any)}
+          />
+
+          <div className="flex items-center justify-between px-6 py-4 bg-surface-dark/90 backdrop-blur-md border-b border-border-dark flex-wrap gap-4 z-30 relative">
+            <LexiconSelector
+              lexiconNames={lexiconHook.lexiconNames}
+              activeLexiconName={activeLexiconName}
+              onSelect={lexiconHook.setActiveLexicon}
+              onCreate={handleCreateNewLexicon}
+              onDelete={handleDeleteLexicon}
+              onRename={handleRenameLexicon}
+            />
+            <div className="flex items-center gap-4">
+              <FileControls
+                onImport={lexiconHook.startImportProcess}
+                onExport={handleFileExport}
+                onSave={handleSaveChanges}
+                onSetExportPath={handleSetExportPath}
+                onRestore={() => handleOpenModal('restore')}
+                onOpenAbout={() => handleOpenModal('about')}
+                onStartTour={handleStartTour}
+                onOpenAiSettings={() => handleOpenModal('ai_settings')}
+                onQuit={handleQuit}
+                onResetApp={handleResetApp}
+                onError={(msg) => showNotification(msg, 'error')}
+                disabled={!activeLexiconName}
+                isDirty={isDirty}
+                onNewProject={handleNewProject}
+                onOpenProject={handleOpenProject}
+                onSaveProject={handleSaveProject}
+                onSaveProjectAs={handleSaveProjectAs}
+                projectPath={projectPath}
+              />
+              <button onClick={handleStartTour} className="p-2 text-text-secondary hover:text-primary transition-colors hover:bg-white/5 rounded-full">
+                <InfoIcon className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-1 min-h-0 relative">
+            <LanguageTreeCanvas
+              activeModule={activeTab}
+              grammar={activeGrammar}
+              lexicon={activeLexicon}
+              profile={activeProfile}
+              canvasNodes={canvasState.nodes}
+              canvasEdges={canvasState.edges}
+              onCanvasChange={handleCanvasChange}
+              onNodeClick={nodeId => setActiveTab(nodeId as any)}
+            />
+
+            <VerticalSidebar
+              active={activeTab}
+              onChange={id => setActiveTab(id as any)}
+              onOpenWidget={() => window.loxarBridge.openWidget()}
+              onOpenSettings={() => setShowSettings(true)}
+              onShowTour={handleStartTour}
+            />
+
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
+              <div className="flex-grow h-full flex flex-col">
+                {activeTab === 'dashboard' && (
+                  <ModulePanel title="Panel" active={activeTab === 'dashboard'} onClose={() => setActiveTab('table')}>
+                    <CompletionDashboard
+                      stats={{ ...completionStats, wordsAddedCount: lexiconHook.wordsAddedSinceSave }}
+                      onOpenReport={() => handleOpenModal('report')}
+                      onOpenAiAssistant={() => handleOpenModal('ai_assistant')}
+                      onNavigateComplete={() => { setViewFilter('incomplete'); setActiveTab('table'); }}
+                      onNavigateFunctions={() => { setViewFilter('incomplete'); setActiveTab('table'); }}
+                      onGenerateWords={() => handleOpenModal('ai_assistant')}
+                      onBackup={handleSaveChanges}
+                      onClose={() => setActiveTab('table')}
                     />
+                  </ModulePanel>
                 )}
-                {!projectPath && !showProjectBootstrap && bootstrapDismissed && (
-                    <div className="fixed top-0 left-0 right-0 z-[90] flex items-center gap-3 px-4 py-2 bg-danger/15 border-b border-danger/40 text-sm text-white">
-                        <AlertTriangleIcon className="h-4 w-4 text-danger flex-shrink-0" />
-                        <span className="flex-1">No hay un archivo de proyecto configurado. Si se limpia la carpeta de la app, tus datos se perderán.</span>
-                        <button
-                            onClick={() => setShowProjectBootstrap(true)}
-                            className="px-3 py-1 rounded-md bg-accent text-white font-semibold hover:bg-accent-hover transition-colors"
-                        >
-                            Elegir ubicación
-                        </button>
+                {activeTab === 'table' && (
+                  <LexiconTable
+                    data={activeLexicon}
+                    lexiconName={activeLexiconName}
+                    conlangName={activeMetadata?.conlangName}
+                    mainLanguage={activeMetadata?.mainLanguage}
+                    onEditWord={lexiconHook.editWord}
+                    onDeleteWord={lexiconHook.deleteWord}
+                    showNotification={showNotification}
+                    searchTerm={searchTerm}
+                    onSearchTermChange={setSearchTerm}
+                    categoryFilter={functionFilter}
+                    onCategoryFilterChange={setFunctionFilter}
+                    viewFilter={viewFilter as any}
+                    onViewFilterChange={setViewFilter as any}
+                    showAffixFormatting={showAffixFormatting}
+                    onShowAffixFormattingChange={setShowAffixFormatting}
+                    selectedIds={selectedIds}
+                    onToggleSelection={handleToggleSelection}
+                    onToggleSelectAll={handleToggleSelectAll}
+                    onGenerateInflections={entry => {
+                      setEntryToInflect(entry);
+                      handleOpenModal('inflection_generator');
+                    }}
+                    onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
+                  />
+                )}
+                {activeTab === 'workbench' && (
+                  <div className="flex gap-4 h-full min-h-[600px]">
+                    <div className="flex-1 min-w-0 flex flex-col gap-3">
+                      {queueActive && (
+                        <WorkQueueBar
+                          items={workQueue}
+                          cursor={queueCursor}
+                          onPrev={queuePrev}
+                          onNext={queueAdvance}
+                          onTogglePending={queueTogglePending}
+                          onRemove={queueRemoveCurrent}
+                          onClear={queueClear}
+                        />
+                      )}
+                      <div className="flex-1 min-h-0">
+                        <EntryEditor
+                          mode={editorMode}
+                          onModeChange={setEditorMode}
+                          entryToEdit={entryBeingEdited || undefined}
+                          incompleteCount={incompleteEntries.length}
+                          incompleteIndex={incompleteIndex}
+                          onNavigateIncomplete={handleNavigateIncomplete}
+                          onLookup={handleLookupForCompletion}
+                          onAddWord={lexiconHook.addWord}
+                          onUpdateWord={lexiconHook.editWord}
+                          findDuplicateSignificados={(sig, excludeId) => lexiconHook.activeLexicon.filter(e => e.Significado.includes(sig) && e.ID !== excludeId)}
+                          onDuplicateFound={() => {}}
+                          onAiCompleteEntry={handleAiCompleteEntry}
+                          onAiGenerateRootAndLexeme={handleAiGenerate}
+                          onCorrectSignificado={handleCorrectSignificado}
+                          showNotification={showNotification}
+                          disabled={!activeLexiconName}
+                          initialDataForAdd={effectiveInitialDataForAdd}
+                          setIsLoading={setIsLoading}
+                          setLoadingMessage={setLoadingMessage}
+                          customCategories={activeCustomFunctions}
+                          onAddCustomCategory={lexiconHook.addCustomFunction}
+                          activeMetadata={activeMetadata}
+                          activeLexicon={activeLexicon}
+                          generationModes={generationModes}
+                          onGenerationModesChange={setGenerationModes}
+                          onQueueAdvance={queueActive ? queueAdvance : undefined}
+                        />
+                      </div>
                     </div>
+                    <div className="w-72 shrink-0">
+                      <WorkbenchRightPanel
+                        suggestions={suggestions}
+                        listName={suggestionListName}
+                        onClose={() => setSuggestions([])}
+                        onAddManually={handleAddManuallyFromSuggestion}
+                        onGenerateAI={handleGenerateAIFromSuggestion}
+                        isLoading={aiStatus === 'working'}
+                        activeMetadata={activeMetadata}
+                        onSelectList={setSuggestionListName}
+                        onAnalyzeList={handleAnalyzeForSuggestions}
+                        generativeProfile={activeProfile}
+                        generativeLexicon={activeLexicon}
+                        onSaveGenerativeProfile={lexiconHook.updateGenerativeProfile}
+                        showNotification={showNotification}
+                        onEnqueue={handleEnqueue}
+                        onGenerateBatch={handleGenerateBatch}
+                        generationModes={generationModes}
+                        manifest={activeGrammar}
+                        onSyncPhonology={p => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
+                      />
+                    </div>
+                  </div>
                 )}
+                {activeTab === 'collections' && (
+                  <CollectionsManager
+                    lexicon={activeLexicon}
+                    inflection={lexiconHook.activeInflectionProfile}
+                    onUpdateEntry={lexiconHook.editWord}
+                    onAddEntry={lexiconHook.addWord}
+                    onAddBatchEntries={lexiconHook.addBatchWords}
+                    onDeleteEntry={lexiconHook.deleteWord}
+                    customCategories={activeCustomFunctions}
+                    onStartTour={handleStartTour}
+                  />
+                )}
+                {activeTab === 'writing' && (
+                  <WritingAndNeographyTab
+                    corpus={lexiconHook.activeCorpus}
+                    onUpdateCorpus={lexiconHook.updateCorpus}
+                    neographyProfile={lexiconHook.activeNeographyProfile}
+                    generativeProfile={activeProfile}
+                    onUpdateNeographyProfile={lexiconHook.updateNeographyProfile}
+                    onStartTour={handleStartTour}
+                  />
+                )}
+                {activeTab === 'grammar' && (
+                  <GrammarTab
+                    manifest={activeGrammar}
+                    onSave={manifest => lexiconHook.updateGrammarManifest(manifest)}
+                    lexicon={activeLexicon}
+                    conlangName={activeMetadata?.conlangName}
+                    onAddLexicalException={handleAddLexicalException}
+                    onExportGrammar={() => {
+                      const manifest = activeGrammar;
+                      const safeName = (activeMetadata?.conlangName || 'gramatica').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                      const date = new Date().toISOString().split('T')[0];
+                      const fileName = `${safeName}_${date}.loxar-grammar.json`;
+                      const content = JSON.stringify(manifest, null, 2);
+                      window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content })
+                        .then(({ success, error }) => {
+                          if (success) showNotification(`Gramática exportada a ${fileName}`, 'success');
+                          else showNotification(`Error de exportación: ${error}`, 'error');
+                        })
+                        .catch(e => showNotification(`Error: ${e instanceof Error ? e.message : 'desconocido'}`, 'error'));
+                    }}
+                  />
+                )}
+                {activeTab === 'translator' && (
+                  <TranslationPlayground
+                    lexicon={activeLexicon}
+                    grammar={activeGrammar}
+                    corpus={lexiconHook.activeCorpus}
+                    onUpdateCorpus={lexiconHook.updateCorpus}
+                    onClose={() => {}}
+                  />
+                )}
+                {activeTab === 'tools' && (
+                  <ModulePanel title="Herramientas" active={activeTab === 'tools'} onClose={() => setActiveTab('tools')}>
+                    {suggestions.length > 0 ? (
+                      <SuggestionsWorkbench
+                        suggestions={suggestions}
+                        listName={suggestionListName}
+                        onClose={() => setSuggestions([])}
+                        onAddManually={handleAddManuallyFromSuggestion}
+                        onGenerateAI={handleGenerateAIFromSuggestion}
+                        isLoading={aiStatus === 'working'}
+                        activeMetadata={activeMetadata}
+                      />
+                    ) : (
+                      <>
+                        {activeToolView === 'dashboard' && (
+                          <ToolsDashboard
+                            onStartTour={handleStartTour}
+                            onOpenProfile={() => setActiveModal('profile')}
+                            onOpenNeography={() => setActiveTab('writing')}
+                            onOpenInflectionWorkshop={() => setActiveTab('grammar')}
+                            onOpenGrammar={() => setActiveTab('grammar')}
+                            onOpenTranslator={() => setActiveTab('translator')}
+                            onOpenInterlinearGloss={handleOpenInterlinearGloss}
+                            onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
+                            onManageFunctions={() => setActiveModal('functions')}
+                            onManageHyphens={() => setActiveModal('hyphens')}
+                            onCompleteFunctions={async () => {
+                              setAiStatus('working');
+                              setAiProgress(null);
+                              try {
+                                const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
+                                setLastAiResult(res.count);
+                                setAiStatus('complete');
+                                showNotification('Funciones completadas', 'success');
+                              } catch (e) {
+                                setAiStatus('error');
+                                setAiProgress(null);
+                              }
+                            }}
+                            onFillMissing={async () => {
+                              setAiStatus('working');
+                              setAiProgress(null);
+                              try {
+                                const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
+                                setLastAiResult(result);
+                                setAiStatus('complete');
+                                showNotification('Campos completados', 'success');
+                              } catch (e) {
+                                setAiStatus('error');
+                                setAiProgress(null);
+                              }
+                            }}
+                            onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
+                            stats={completionStats}
+                            disabled={!activeLexiconName}
+                          />
+                        )}
+                        {activeToolView === 'interlinear-gloss' && (
+                          <div className="space-y-3">
+                            <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
+                            <InterlinearGlossViewer lexicon={lexicons[activeLexiconName ?? '']} />
+                          </div>
+                        )}
+                        {activeToolView === 'sound-change' && (
+                          <div className="space-y-3">
+                            <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
+                            <SoundChangeWorkbench lexicon={lexicons[activeLexiconName ?? '']} />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </ModulePanel>
+                )}
+              </div>
+            </main>
+          </div>
+
+          {activeTab === 'table' && selectedIds.size > 0 && (
+            <BatchActionToolbar
+              selectedCount={selectedIds.size}
+              customFunctions={activeCustomFunctions}
+              onClearSelection={() => setSelectedIds(new Set())}
+              onBatchDelete={handleBatchDelete}
+              onBatchChangeFunction={handleBatchChangeFunction}
+            />
+          )}
+
+          <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3 pointer-events-none">
+            {notifications.map(notification => (
+              <div key={notification.id} className={`glass-toast pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-r-lg shadow-glow animate-fade-in ${notification.type === 'error' ? '!border-danger !bg-danger/10' : ''}`}>
+                {notification.type === 'success' ? <CheckCircleIcon className="h-5 w-5 text-accent" /> : <AlertTriangleIcon className="h-5 w-5 text-danger" />}
+                <span className="font-medium text-sm text-white">{notification.message}</span>
+                <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== notification.id))} className="ml-2 hover:bg-white/10 rounded-full p-1 transition-colors text-text-secondary hover:text-white">
+                  <XCircleIcon className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
-        </ErrorBoundary>
-    );
+
+        {isAppLoaded && showProjectBootstrap && (
+          <ProjectBootstrapModal
+            availableProjects={availableProjects}
+            hasLocalData={hasLocalData}
+            onCreate={handleBootstrapCreate}
+            onOpenOther={handleBootstrapOpenOther}
+            onOpenFound={handleBootstrapOpenFound}
+            onImportLocal={handleBootstrapImportLocal}
+            onDismiss={handleBootstrapDismiss}
+          />
+        )}
+        {!projectPath && !showProjectBootstrap && bootstrapDismissed && (
+          <div className="fixed top-0 left-0 right-0 z-[90] flex items-center gap-3 px-4 py-2 bg-danger/15 border-b border-danger/40 text-sm text-white">
+            <AlertTriangleIcon className="h-4 w-4 text-danger flex-shrink-0" />
+            <span className="flex-1">No hay un archivo de proyecto configurado. Si se limpia la carpeta de la app, tus datos se perderán.</span>
+            <button
+              onClick={() => setShowProjectBootstrap(true)}
+              className="px-3 py-1 rounded-md bg-accent text-white font-semibold hover:bg-accent-hover transition-colors"
+            >
+              Elegir ubicación
+            </button>
+          </div>
+        )}
+      </div>
+    </ErrorBoundary>
+  );
 };
 
-const TabButton = React.memo(({ icon, label, isActive, onClick }: { icon: ReactNode, label: string, isActive: boolean, onClick: () => void }) => (
-    <button
-        onClick={() => { audioService.playClick(); onClick(); }}
-        onMouseEnter={() => audioService.playHover()}
-        className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative overflow-hidden group rounded-t-md ${isActive ? 'text-primary border-b-2 border-primary bg-primary/5 shadow-[0_-2px_10px_rgba(13,185,242,0.1)]' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}`}
-        role="tab"
-        aria-selected={isActive}
-    >
-        <span className={`transition-transform duration-300 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>{icon}</span>
-        <span className={isActive ? 'animate-pulse-slow font-bold tracking-wide' : ''}>{label}</span>
-        {isActive && <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent animate-pulse-slow pointer-events-none" />}
-    </button>
+const TabButton = React.memo(({ icon, label, isActive, onClick }: { icon: ReactNode; label: string; isActive: boolean; onClick: () => void }) => (
+  <button
+    onClick={() => {
+      audioService.playClick();
+      onClick();
+    }}
+    onMouseEnter={() => audioService.playHover()}
+    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all relative overflow-hidden group rounded-t-md ${isActive ? 'text-primary border-b-2 border-primary bg-primary/5 shadow-[0_-2px_10px_rgba(13,185,242,0.1)]' : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}`}
+    role="tab"
+    aria-selected={isActive}
+  >
+    <span className={`transition-transform duration-300 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>{icon}</span>
+    <span className={isActive ? 'animate-pulse-slow font-bold tracking-wide' : ''}>{label}</span>
+    {isActive && <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent animate-pulse-slow pointer-events-none" />}
+  </button>
 ));
 TabButton.displayName = 'TabButton';
 

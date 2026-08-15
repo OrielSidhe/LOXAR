@@ -138,6 +138,25 @@ bootstrap, modales, tour, canvas, widget y selección a `src/hooks/useAppHandler
 
 ---
 
+## [2026-08-14] Checkpoint: Revertir P1-2f y estabilizar `App.tsx`
+**Rama:** `main`. **Motivo:** el intento de extraer `useProjectShell` generó dependencias cruzadas
+y deja `App.tsx` con variables/handlers usados antes de declararse, además de bugs internos en el
+hook (`saveSessionCache.read` inexistente, imports rotos, variables no definidas). Para no dejar
+código roto, se revirtió la integración y se preservó la descomposición ya funcionando.
+**Cambios:**
+- Se eliminó la integración de `useProjectShell` en `App.tsx`.
+- Se eliminó `src/hooks/useProjectShell.ts` porque quedó sin usage y era inválido.
+- Se mantienen los hooks extraídos ya estables: `useWidgetBridge`, `useWorkQueue`, `useAiHandlers`,
+  `useProjectOperations` y `useAppHandlers`.
+- `App.tsx` vuelve a compilar y pasar validaciones estáticas; no se reintentará P1-2f en este ciclo
+  sin antes rediseñar el hook para eliminar la circularidad con App.tsx.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: seguir descomponiendo `App.tsx` por secciones más pequeñas o pasar a
+  los 4 componentes gigantes, sin reabrir `useProjectShell` por ahora.
+
+---
+
 ## [2026-08-14] Checkpoint: Auditoría de calidad completa (READ-ONLY) + directivas de coding/awareness
 **Rama:** `main`. **Motivo:** el usuario pidió (a) añadir buenas prácticas de coding (limpio, breve,
 comentarios solo donde sea necesario) y una regla de **awareness holístico** (no arreglar cosas pequeñas

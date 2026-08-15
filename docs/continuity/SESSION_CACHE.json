@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-15T00:15:00.000Z",
+  "lastUpdated": "2026-08-14T03:15:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "P1-2b/c/d/e completados: work queue, handlers de IA/sugerencias, project operations y bootstrap/modal/app handlers extraídos a hooks dedicados. App.tsx reducido a ~930 líneas. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx o los 4 componentes gigantes."
+  "sessionSummary": "P1-2e completado: bootstrap/modal/app handlers extraídos a useAppHandlers. P1-2f revertido: useProjectShell generaba dependencias circulares y fue eliminado; App.tsx estabilizado. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx o los 4 componentes gigantes."
 }

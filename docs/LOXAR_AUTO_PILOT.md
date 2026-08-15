@@ -13,7 +13,10 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `d7d5950`
+- Git inicializado y con commits; último commit `b0baca7`
+- P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
+  `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
+  `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica
@@ -115,8 +118,13 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] Extraer work queue de `App.tsx` a `src/hooks/useWorkQueue.ts` (P1-2b).
 - [x] Extraer handlers de IA/sugerencias de `App.tsx` a `src/hooks/useAiHandlers.ts` (P1-2c).
 - [x] Extraer project operations de `App.tsx` a `src/hooks/useProjectOperations.ts` (P1-2d).
+- [x] Extraer bootstrap/modal/app handlers de `App.tsx` a `src/hooks/useAppHandlers.ts` (P1-2e).
 - [x] Migrar tests legacy a Vitest. Suite actual: 122/122 tests unitarios/integración en Vitest; `jest` eliminado de `package.json`; solo queda `tests-gui/smoke.spec.ts` (Playwright) como suite GUI separada.
-- [ ] Descomponer `App.tsx` (God Component, ~1136 líneas) y los 4 componentes gigantes.
+- [ ] **Descomponer `App.tsx` (God Component, ~1136 líneas) y los 4 componentes gigantes.**
+  - Estado: P1-2f fue revertido porque `useProjectShell` generaba dependencias circulares.
+  - Próximo paso real: seguir descomponiendo `App.tsx` por secciones más pequeñas o pasar a
+    `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor` sin reabrir `useProjectShell`
+    por ahora.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.
