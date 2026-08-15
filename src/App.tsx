@@ -40,6 +40,8 @@ import TranslationPlayground from './components/TranslationPlayground';
 import SuggestionsWorkbench from './components/SuggestionsWorkbench';
 import WorkbenchRightPanel from './components/WorkbenchRightPanel';
 import WorkQueueBar from './components/WorkQueueBar';
+import WorkbenchTab from './components/WorkbenchTab';
+import ToolsTab from './components/ToolsTab';
 import AppBatchToolbar from './components/AppBatchToolbar';
 import TabButton from './components/TabButton';
 import SplashScreen from './components/SplashScreen';
@@ -51,8 +53,8 @@ import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-const ToolsDashboard = lazy(() => import('./components/ToolsDashboard'));
 import SettingsModal from './components/SettingsModal';
+import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
 import LanguageTreeCanvas from './components/LanguageTreeCanvas';
@@ -361,6 +363,34 @@ const App = () => {
     }
   }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
 
+  const handleToolsCompleteFunctions = useCallback(async () => {
+    try {
+      setAiStatus('working');
+      setAiProgress(null);
+      const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
+      setLastAiResult(res.count);
+      setAiStatus('complete');
+      showNotification('Funciones completadas', 'success');
+    } catch (e) {
+      setAiStatus('error');
+      setAiProgress(null);
+    }
+  }, [lexiconHook, activeCustomFunctions, showNotification]);
+
+  const handleToolsFillMissing = useCallback(async () => {
+    try {
+      setAiStatus('working');
+      setAiProgress(null);
+      const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
+      setLastAiResult(result);
+      setAiStatus('complete');
+      showNotification('Campos completados', 'success');
+    } catch (e) {
+      setAiStatus('error');
+      setAiProgress(null);
+    }
+  }, [lexiconHook, showNotification]);
+
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
@@ -563,73 +593,57 @@ const App = () => {
                   />
                 )}
                 {activeTab === 'workbench' && (
-                  <div className="flex gap-4 h-full min-h-[600px]">
-                    <div className="flex-1 min-w-0 flex flex-col gap-3">
-                      {queueActive && (
-                        <WorkQueueBar
-                          items={workQueue}
-                          cursor={queueCursor}
-                          onPrev={queuePrev}
-                          onNext={queueAdvance}
-                          onTogglePending={queueTogglePending}
-                          onRemove={queueRemoveCurrent}
-                          onClear={queueClear}
-                        />
-                      )}
-                      <div className="flex-1 min-h-0">
-                        <EntryEditor
-                          mode={editorMode}
-                          onModeChange={setEditorMode}
-                          entryToEdit={entryBeingEdited || undefined}
-                          incompleteCount={incompleteEntries.length}
-                          incompleteIndex={incompleteIndex}
-                          onNavigateIncomplete={handleNavigateIncomplete}
-                          onLookup={handleLookupForCompletion}
-                          onAddWord={lexiconHook.addWord}
-                          onUpdateWord={lexiconHook.editWord}
-                          findDuplicateSignificados={(sig, excludeId) => lexiconHook.activeLexicon.filter(e => e.Significado.includes(sig) && e.ID !== excludeId)}
-                          onDuplicateFound={() => {}}
-                          onAiCompleteEntry={handleAiCompleteEntry}
-                          onAiGenerateRootAndLexeme={handleAiGenerate}
-                          onCorrectSignificado={handleCorrectSignificado}
-                          showNotification={showNotification}
-                          disabled={!activeLexiconName}
-                          initialDataForAdd={effectiveInitialDataForAdd}
-                          setIsLoading={setIsLoading}
-                          setLoadingMessage={setLoadingMessage}
-                          customCategories={activeCustomFunctions}
-                          onAddCustomCategory={lexiconHook.addCustomFunction}
-                          activeMetadata={activeMetadata}
-                          activeLexicon={activeLexicon}
-                          generationModes={generationModes}
-                          onGenerationModesChange={setGenerationModes}
-                          onQueueAdvance={queueActive ? queueAdvance : undefined}
-                        />
-                      </div>
-                    </div>
-                    <div className="w-72 shrink-0">
-                      <WorkbenchRightPanel
-                        suggestions={suggestions}
-                        listName={suggestionListName}
-                        onClose={() => setSuggestions([])}
-                        onAddManually={handleAddManuallyFromSuggestion}
-                        onGenerateAI={handleGenerateAIFromSuggestion}
-                        isLoading={aiStatus === 'working'}
-                        activeMetadata={activeMetadata}
-                        onSelectList={setSuggestionListName}
-                        onAnalyzeList={handleAnalyzeForSuggestions}
-                        generativeProfile={activeProfile}
-                        generativeLexicon={activeLexicon}
-                        onSaveGenerativeProfile={lexiconHook.updateGenerativeProfile}
-                        showNotification={showNotification}
-                        onEnqueue={handleEnqueue}
-                        onGenerateBatch={handleGenerateBatch}
-                        generationModes={generationModes}
-                        manifest={activeGrammar}
-                        onSyncPhonology={p => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
-                      />
-                    </div>
-                  </div>
+                  <WorkbenchTab
+                    queueActive={queueActive}
+                    workQueue={workQueue}
+                    queueCursor={queueCursor}
+                    queuePrev={queuePrev}
+                    queueNext={queueAdvance}
+                    queueTogglePending={queueTogglePending}
+                    queueRemoveCurrent={queueRemoveCurrent}
+                    queueClear={queueClear}
+                    editorMode={editorMode}
+                    onEditorModeChange={setEditorMode}
+                    entryToEdit={entryBeingEdited}
+                    incompleteCount={incompleteEntries.length}
+                    incompleteIndex={incompleteIndex}
+                    onNavigateIncomplete={handleNavigateIncomplete}
+                    onLookup={handleLookupForCompletion}
+                    onAddWord={lexiconHook.addWord}
+                    onUpdateWord={lexiconHook.editWord}
+                    findDuplicateSignificados={(sig, excludeId) => lexiconHook.activeLexicon.filter(e => e.Significado.includes(sig) && e.ID !== excludeId)}
+                    onDuplicateFound={() => {}}
+                    onAiCompleteEntry={handleAiCompleteEntry}
+                    onAiGenerateRootAndLexeme={handleAiGenerate}
+                    onCorrectSignificado={handleCorrectSignificado}
+                    showNotification={showNotification}
+                    disabled={!activeLexiconName}
+                    initialDataForAdd={effectiveInitialDataForAdd}
+                    setIsLoading={setIsLoading}
+                    setLoadingMessage={setLoadingMessage}
+                    customCategories={activeCustomFunctions}
+                    onAddCustomCategory={lexiconHook.addCustomFunction}
+                    activeMetadata={activeMetadata}
+                    activeLexicon={activeLexicon}
+                    generationModes={generationModes}
+                    onGenerationModesChange={setGenerationModes}
+                    onQueueAdvance={queueActive ? queueAdvance : undefined}
+                    suggestions={suggestions}
+                    suggestionListName={suggestionListName}
+                    onCloseSuggestions={() => setSuggestions([])}
+                    onAddManually={handleAddManuallyFromSuggestion}
+                    onGenerateAI={handleGenerateAIFromSuggestion}
+                    isLoadingAI={aiStatus === 'working'}
+                    onSelectList={(name) => setSuggestionListName(name)}
+                    onAnalyzeList={handleAnalyzeForSuggestions}
+                    generativeProfile={activeProfile}
+                    generativeLexicon={activeLexicon}
+                    onSaveGenerativeProfile={lexiconHook.updateGenerativeProfile}
+                    onEnqueue={handleEnqueue}
+                    onGenerateBatch={handleGenerateBatch}
+                    manifest={activeGrammar}
+                    onSyncPhonology={p => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
+                  />
                 )}
                 {activeTab === 'collections' && (
                   <CollectionsManager
@@ -685,77 +699,34 @@ const App = () => {
                   />
                 )}
                 {activeTab === 'tools' && (
-                  <ModulePanel title="Herramientas" active={activeTab === 'tools'} onClose={() => setActiveTab('tools')}>
-                    {suggestions.length > 0 ? (
-                      <SuggestionsWorkbench
-                        suggestions={suggestions}
-                        listName={suggestionListName}
-                        onClose={() => setSuggestions([])}
-                        onAddManually={handleAddManuallyFromSuggestion}
-                        onGenerateAI={handleGenerateAIFromSuggestion}
-                        isLoading={aiStatus === 'working'}
-                        activeMetadata={activeMetadata}
-                      />
-                    ) : (
-                      <>
-                        {activeToolView === 'dashboard' && (
-                          <ToolsDashboard
-                            onStartTour={handleStartTour}
-                            onOpenProfile={() => setActiveModal('profile')}
-                            onOpenNeography={() => setActiveTab('writing')}
-                            onOpenInflectionWorkshop={() => setActiveTab('grammar')}
-                            onOpenGrammar={() => setActiveTab('grammar')}
-                            onOpenTranslator={() => setActiveTab('translator')}
-                            onOpenInterlinearGloss={handleOpenInterlinearGloss}
-                            onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
-                            onManageFunctions={() => setActiveModal('functions')}
-                            onManageHyphens={() => setActiveModal('hyphens')}
-                            onCompleteFunctions={async () => {
-                              setAiStatus('working');
-                              setAiProgress(null);
-                              try {
-                                const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
-                                setLastAiResult(res.count);
-                                setAiStatus('complete');
-                                showNotification('Funciones completadas', 'success');
-                              } catch (e) {
-                                setAiStatus('error');
-                                setAiProgress(null);
-                              }
-                            }}
-                            onFillMissing={async () => {
-                              setAiStatus('working');
-                              setAiProgress(null);
-                              try {
-                                const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
-                                setLastAiResult(result);
-                                setAiStatus('complete');
-                                showNotification('Campos completados', 'success');
-                              } catch (e) {
-                                setAiStatus('error');
-                                setAiProgress(null);
-                              }
-                            }}
-                            onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
-                            stats={completionStats}
-                            disabled={!activeLexiconName}
-                          />
-                        )}
-                        {activeToolView === 'interlinear-gloss' && (
-                          <div className="space-y-3">
-                            <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
-                            <InterlinearGlossViewer lexicon={lexicons[activeLexiconName ?? '']} />
-                          </div>
-                        )}
-                        {activeToolView === 'sound-change' && (
-                          <div className="space-y-3">
-                            <button type="button" onClick={handleBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
-                            <SoundChangeWorkbench lexicon={lexicons[activeLexiconName ?? '']} />
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </ModulePanel>
+                  <ToolsTab
+                    activeTab={activeTab}
+                    suggestions={suggestions}
+                    suggestionListName={suggestionListName}
+                    onCloseSuggestions={() => setSuggestions([])}
+                    onAddManually={handleAddManuallyFromSuggestion}
+                    onGenerateAI={handleGenerateAIFromSuggestion}
+                    isLoadingAI={aiStatus === 'working'}
+                    activeMetadata={activeMetadata}
+                    activeToolView={activeToolView}
+                    onBackToToolDashboard={handleBackToToolDashboard}
+                    onOpenInterlinearGloss={handleOpenInterlinearGloss}
+                    onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
+                    onCompleteFunctions={handleToolsCompleteFunctions}
+                    onFillMissing={handleToolsFillMissing}
+                    onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
+                    onManageFunctions={() => setActiveModal('functions')}
+                    onManageHyphens={() => setActiveModal('hyphens')}
+                    onOpenProfile={() => setActiveModal('profile')}
+                    onOpenNeography={() => setActiveTab('writing')}
+                    onOpenInflectionWorkshop={() => setActiveTab('grammar')}
+                    onOpenGrammar={() => setActiveTab('grammar')}
+                    onOpenTranslator={() => setActiveTab('translator')}
+                    onStartTour={handleStartTour}
+                    lexicon={lexicons[activeLexiconName ?? '']}
+                    stats={completionStats}
+                    disabled={!activeLexiconName}
+                  />
                 )}
               </div>
             </main>

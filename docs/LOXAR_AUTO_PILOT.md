@@ -22,9 +22,10 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   además de `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`,
   `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner`, `EntryEditorIpaToggle`
   y `EntryEditorForm` de `EntryEditor`, `ParadigmCell` de `CollectionsManager`, helpers de preview a
-  `src/utils/grammarPreview.ts`, y `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`,
+  `src/utils/grammarPreview.ts`, `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`,
   `GrammarNotesPanel`, `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`,
-  `GrammarSyntaxPanel`, `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals` de `GrammarTab`.
+  `GrammarSyntaxPanel`, `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals` de `GrammarTab`,
+  y `WorkbenchTab` y `ToolsTab` de `App.tsx` con tipos de handlers alineados.
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica

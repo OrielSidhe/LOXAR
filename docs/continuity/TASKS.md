@@ -66,6 +66,28 @@ gigantes.
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `WorkbenchTab` y `ToolsTab` de `App.tsx` y alinear tipos de herramientas
+**Rama:** `main`. **Motivo:** reducir `App.tsx` extrayendo dos pestañas completas a componentes
+dedicados y corregir firmas de handlers de herramientas que no coincidían con sus consumidores.
+**Cambios:**
+- `src/components/WorkbenchTab.tsx` (NUEVO): encapsula el layout de dos columnas de la pestaña
+  Workbench (`WorkQueueBar` + `EntryEditor` + `WorkbenchRightPanel`).
+- `src/components/ToolsTab.tsx` (NUEVO): encapsula la pestaña Herramientas con sus vistas
+  condicionales (`SuggestionsWorkbench`, `ToolsDashboard`, `InterlinearGlossViewer`,
+  `SoundChangeWorkbench`).
+- `src/App.tsx`: se reemplazaron los bloques inline de workbench y tools por llamadas a
+  `<WorkbenchTab />` y `<ToolsTab />`. Se agregaron callbacks `handleToolsCompleteFunctions`
+  y `handleToolsFillMissing` con `useCallback` para preservar identidad de handlers.
+- `src/components/ToolsDashboard.tsx`: se alinearon tipos de `onCompleteFunctions`,
+  `onFillMissing` y `onAnalyzeForSuggestions` con `(listName: string) => Promise<void>` /
+  `(listName: string) => void`, y se propagó `listName` desde `ToolsTab`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: extraer `ToolViewWrapper` de `App.tsx` o avanzar sobre
+  `CollectionsManager` / `SyntaxCanvas` / secciones restantes de `EntryEditor`.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos

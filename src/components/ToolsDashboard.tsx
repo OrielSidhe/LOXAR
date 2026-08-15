@@ -14,13 +14,14 @@ import Tooltip from './Tooltip';
 import { WORD_LISTS } from '../data/wordLists';
 
 interface ToolsDashboardProps {
+    listName: string;
     onOpenProfile: () => void;
     onOpenNeography: () => void;
     onOpenInflectionWorkshop: () => void;
     onManageFunctions: () => void;
     onManageHyphens: () => void;
-    onCompleteFunctions: () => void;
-    onFillMissing: () => void;
+    onCompleteFunctions: (listName: string) => Promise<void>;
+    onFillMissing: (listName: string) => Promise<void>;
     onAnalyzeForSuggestions: (listName: string) => void;
     onOpenGrammar: () => void;
     onOpenTranslator: () => void;
@@ -51,6 +52,7 @@ const ToolCard = ({ icon, title, description, onClick, disabled, accentColor = '
 );
 
 const ToolsDashboard = ({
+    listName,
     onOpenProfile, onOpenNeography, onOpenInflectionWorkshop, onManageFunctions, onManageHyphens,
     onCompleteFunctions, onFillMissing, onAnalyzeForSuggestions, onOpenGrammar, onOpenTranslator,
     onOpenInterlinearGloss, onOpenSoundChangeWorkbench, stats, disabled, onStartTour
@@ -78,7 +80,7 @@ const ToolsDashboard = ({
                         icon={<SparkleIcon className="w-6 h-6" />}
                         title={`Completar Funciones (${stats.needsFunction})`}
                         description="Detecta y rellena automáticamente las funciones gramaticales faltantes."
-                        onClick={onCompleteFunctions}
+                        onClick={() => onCompleteFunctions(listName)}
                         disabled={disabled || stats.needsFunction === 0}
                         accentColor="text-purple-400"
                         tooltip="Completa automáticamente las funciones gramaticales faltantes del léxico activo."
@@ -87,7 +89,7 @@ const ToolsDashboard = ({
                         icon={<AutoFixIcon className="w-6 h-6" />}
                         title="Autocompletado Total"
                         description="Genera raíces, lexemas y definiciones para todas las entradas incompletas."
-                        onClick={onFillMissing}
+                        onClick={() => onFillMissing(listName)}
                         disabled={disabled}
                         accentColor="text-pink-400"
                         tooltip="Genera raíces, lexemas y definiciones para todas las entradas incompletas del léxico activo."
