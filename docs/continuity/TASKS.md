@@ -200,6 +200,22 @@ componente dedicado para seguir reduciendo la superficie del God Component.
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `ProjectBootstrapBanner` y seguir descomponiendo `App.tsx`
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de `App.tsx`. En este paso se extrajo el banner rojo inferior de “proyecto no
+configurado” a un componente dedicado para seguir reduciendo la superficie del God Component.
+**Cambios:**
+- `src/components/ProjectBootstrapBanner.tsx` (NUEVO): componente dedicado para el banner de
+  proyecto no configurado.
+- `src/App.tsx`: se reemplazó el bloque inline del banner rojo inferior por
+  `<ProjectBootstrapBanner onChooseLocation={() => setShowProjectBootstrap(true)} />`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar descomponiendo `App.tsx` por otras secciones pequeñas o
+  avanzar sobre los 4 componentes gigantes.
+
+---
+
 ## [2026-08-14] Checkpoint: Auditoría de calidad completa (READ-ONLY) + directivas de coding/awareness
 **Rama:** `main`. **Motivo:** el usuario pidió (a) añadir buenas prácticas de coding (limpio, breve,
 comentarios solo donde sea necesario) y una regla de **awareness holístico** (no arreglar cosas pequeñas

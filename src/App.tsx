@@ -28,7 +28,6 @@ import TableIcon from './components/icons/TableIcon';
 import PenToolIcon from './components/icons/PenToolIcon';
 import SettingsIcon from './components/icons/SettingsIcon';
 import SparkleIcon from './components/icons/SparkleIcon';
-import AlertTriangleIcon from './components/icons/AlertTriangleIcon';
 import InfoIcon from './components/icons/InfoIcon';
 
 // Components
@@ -48,6 +47,7 @@ import SplashScreen from './components/SplashScreen';
 import ToastContainer from './components/ToastContainer';
 import OfflineBanner from './components/OfflineBanner';
 import AmbientLights from './components/AmbientLights';
+import ProjectBootstrapBanner from './components/ProjectBootstrapBanner';
 import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -799,16 +799,7 @@ const App = () => {
           />
         )}
         {!projectPath && !showProjectBootstrap && bootstrapDismissed && (
-          <div className="fixed top-0 left-0 right-0 z-[90] flex items-center gap-3 px-4 py-2 bg-danger/15 border-b border-danger/40 text-sm text-white">
-            <AlertTriangleIcon className="h-4 w-4 text-danger flex-shrink-0" />
-            <span className="flex-1">No hay un archivo de proyecto configurado. Si se limpia la carpeta de la app, tus datos se perderán.</span>
-            <button
-              onClick={() => setShowProjectBootstrap(true)}
-              className="px-3 py-1 rounded-md bg-accent text-white font-semibold hover:bg-accent-hover transition-colors"
-            >
-              Elegir ubicación
-            </button>
-          </div>
+          <ProjectBootstrapBanner onChooseLocation={() => setShowProjectBootstrap(true)} />
         )}
       </div>
     </ErrorBoundary>
