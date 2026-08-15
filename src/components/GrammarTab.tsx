@@ -21,6 +21,7 @@ import GrammarSyntaxPanel from './GrammarSyntaxPanel';
 import { normalizeCategory, getEntryForm, getDefaultPreviewEntries, isMeaningfulTypology } from '../utils/grammarPreview';
 import GrammarModuleSidebar from './GrammarModuleSidebar';
 import GrammarTabHeader from './GrammarTabHeader';
+import GrammarTabModals from './GrammarTabModals';
 
 interface GrammarTabProps {
     manifest: GrammarManifest;
@@ -428,21 +429,15 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
 
     return (
         <div className="flex h-full gap-4">
-            {isImporterOpen && (
-                <Suspense fallback={<div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50"><div className="text-white text-sm">Cargando importador...</div></div>}>
-                    <GrammarImporterModal
-                        onSaveFlexibleGrammar={handleSaveFlexibleGrammar}
-                        onClose={() => setIsImporterOpen(false)}
-                        showNotification={() => {}}
-                        existingNotes={editedManifest.notes?.join('\n') || ''}
-                    />
-                </Suspense>
-            )}
-            <GrammarWizard
-                open={isWizardOpen}
-                initialName={conlangName}
-                onApply={handleWizardApply}
-                onClose={() => setIsWizardOpen(false)}
+            <GrammarTabModals
+                isImporterOpen={isImporterOpen}
+                isWizardOpen={isWizardOpen}
+                conlangName={conlangName}
+                existingNotes={editedManifest.notes?.join('\n') || ''}
+                onSaveFlexibleGrammar={handleSaveFlexibleGrammar}
+                onCloseImporter={() => setIsImporterOpen(false)}
+                onApplyWizard={handleWizardApply}
+                onCloseWizard={() => setIsWizardOpen(false)}
             />
             <GrammarModuleSidebar
                 activeModule={activeModule}

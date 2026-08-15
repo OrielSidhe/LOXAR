@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T04:27:00.000Z",
+  "lastUpdated": "2026-08-14T04:31:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "P1-2e completado: bootstrap/modal/app handlers extraídos a useAppHandlers. P1-2f revertido: useProjectShell eliminado por circularidad. Avance P1 actual: se extrajeron ToastContainer, OfflineBanner, AmbientLights, ProjectBootstrapBanner, AppToolbar, AppBatchToolbar y TabButton de App.tsx; también se extrajeron SignificadoTagsInput, EntryDuplicateWarning de EntryEditor, ParadigmCell de CollectionsManager, helpers de preview de GrammarTab a utils/grammarPreview.ts, y GrammarOverview, GrammarPhonologyPanel, GrammarTypologyPanel, GrammarNotesPanel, GrammarStrategiesPanel, GrammarMorphologyPanel, GrammarRolesPanel, GrammarSyntaxPanel, GrammarModuleSidebar y GrammarTabHeader de GrammarTab. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones pequeñas o avanzar sobre los 4 componentes gigantes."
+  "sessionSummary": "P1-2e completado: bootstrap/modal/app handlers extraídos a useAppHandlers. P1-2f revertido: useProjectShell eliminado por circularidad. Avance P1 actual: se extrajeron ToastContainer, OfflineBanner, AmbientLights, ProjectBootstrapBanner, AppToolbar, AppBatchToolbar y TabButton de App.tsx; también se extrajeron SignificadoTagsInput, EntryDuplicateWarning de EntryEditor, ParadigmCell de CollectionsManager, helpers de preview de GrammarTab a utils/grammarPreview.ts, y GrammarOverview, GrammarPhonologyPanel, GrammarTypologyPanel, GrammarNotesPanel, GrammarStrategiesPanel, GrammarMorphologyPanel, GrammarRolesPanel, GrammarSyntaxPanel, GrammarModuleSidebar, GrammarTabHeader y GrammarTabModals de GrammarTab. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones pequeñas o avanzar sobre los 4 componentes gigantes."
 }
