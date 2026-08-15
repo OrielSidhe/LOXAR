@@ -2020,3 +2020,21 @@ Texto libre → textParser (local, determinista) → DeclarativeManifest
 **Próximo paso:** inicializar git (`git init`) si no existe y hacer el commit inicial, o abrir el repo en GitHub y pushear.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `EntryEditorAiActions` de `EntryEditor` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo el bloque de acciones de IA
+(modo de generación + botones Generar/Completar) de `EntryEditor` a un componente dedicado para reducir
+la superficie de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/EntryEditorAiActions.tsx` (NUEVO): componente dedicado para las acciones de IA
+  con selector de modos de generación y botones Generar/Completar.
+- `src/components/EntryEditor.tsx`: se reemplazó el bloque inline de acciones de IA por el
+  componente `<EntryEditorAiActions ... />`, manteniendo la lógica de estado y handlers en el
+  componente padre. Se eliminaron imports de `SparkleIcon`, `WandIcon` y `PlusIcon` que ya no se
+  usan directamente en `EntryEditor`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
