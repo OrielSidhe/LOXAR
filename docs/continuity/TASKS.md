@@ -278,6 +278,24 @@ componentes gigantes.
   `GrammarTab`, `SyntaxCanvas` o `EntryEditor`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer helpers de preview de `GrammarTab` a `utils/grammarPreview.ts`
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de `GrammarTab`. En este paso se extrajeron las funciones de preview y
+normalización a un módulo utilitario para reducir la superficie del componente gigante.
+**Cambios:**
+- `src/utils/grammarPreview.ts` (NUEVO): módulo utilitario con helpers de preview:
+  `normalizeCategory`, `getEntryLabel`, `getEntryForm`, `getDefaultPreviewEntries`,
+  `buildPreviewSentence`, `DEFAULT_TYPOLOGY`, `isMeaningfulTypology`.
+- `src/components/GrammarTab.tsx`: se eliminaron las definiciones inline de esas funciones
+  y ahora se importan desde `../utils/grammarPreview`. Se mantuvo el bloque inline
+  `DEFAULT_SYNTAX_CANVAS` y el guard `wizardAutoOpenedThisSession` porque se usan en JSX/scope
+  local.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `GrammarTab`,
+  `SyntaxCanvas` o `EntryEditor`.
+
+---
 ## [2026-08-14] Checkpoint: Extraer `TabButton` de `App.tsx` y seguir descomponiendo el God Component
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de `App.tsx`. En este paso se extrajo el componente inline `TabButton` a un
