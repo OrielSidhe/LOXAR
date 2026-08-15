@@ -24,6 +24,7 @@ import ImportReport from './ImportReport';
 import GrammarOverview from './GrammarOverview';
 import GrammarPhonologyPanel from './GrammarPhonologyPanel';
 import GrammarTypologyPanel from './GrammarTypologyPanel';
+import GrammarNotesPanel from './GrammarNotesPanel';
 import { normalizeCategory, getEntryLabel, getEntryForm, getDefaultPreviewEntries, buildPreviewSentence, DEFAULT_TYPOLOGY, isMeaningfulTypology } from '../utils/grammarPreview';
 
 interface GrammarTabProps {
@@ -735,32 +736,24 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
 
 
     const renderSemantics = () => (
-        <div className="space-y-4">
-            <div className="bg-background rounded-lg p-6 border border-border-dark space-y-4">
-                <h3 className="text-lg font-bold text-white">Semántica y Uso</h3>
-                <p className="text-sm text-text-secondary">Registra restricciones de significado, registro, pragmática o notas culturales. Estas notas se guardan en el manifiesto y alimentan al traductor/agente como contexto.</p>
-                <textarea
-                    value={editedManifest.notes?.join('\n') || ''}
-                    onChange={(e) => updateManifest({ notes: e.target.value.split('\n').filter(Boolean) })}
-                    className="w-full bg-surface border border-border-dark rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none resize-none h-72"
-                    placeholder="Ej: El orden cambia a OVS para énfasis poético. Los sufijos de caso son opcionales en habla informal..."
-                />
-            </div>
-        </div>
+        <GrammarNotesPanel
+            manifest={editedManifest}
+            onChange={(updates) => updateManifest(updates)}
+            title="Semántica y Uso"
+            description="Registra restricciones de significado, registro, pragmática o notas culturales. Estas notas se guardan en el manifiesto y alimentan al traductor/agente como contexto."
+            placeholder="Ej: El orden cambia a OVS para énfasis poético. Los sufijos de caso son opcionales en habla informal..."
+            textAreaClassName="w-full bg-surface border border-border-dark rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none resize-none h-72"
+        />
     );
 
     const renderNotes = () => (
-        <div className="space-y-4">
-            <div className="bg-background rounded-lg p-6 border border-border-dark">
-                <h3 className="text-lg font-bold text-white mb-4">Notas de Gramática</h3>
-                <textarea
-                    value={editedManifest.notes?.join('\n') || ''}
-                    onChange={(e) => updateManifest({ notes: e.target.value.split('\n').filter(Boolean) })}
-                    className="w-full bg-surface border border-border-dark rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none resize-none h-64"
-                    placeholder="Escribe notas sobre tu gramática aquí..."
-                />
-            </div>
-        </div>
+        <GrammarNotesPanel
+            manifest={editedManifest}
+            onChange={(updates) => updateManifest(updates)}
+            title="Notas de Gramática"
+            placeholder="Escribe notas sobre tu gramática aquí..."
+            textAreaClassName="w-full bg-surface border border-border-dark rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none resize-none h-64"
+        />
     );
 
     const renderContent = () => {
