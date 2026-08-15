@@ -40,7 +40,7 @@ import TranslationPlayground from './components/TranslationPlayground';
 import SuggestionsWorkbench from './components/SuggestionsWorkbench';
 import WorkbenchRightPanel from './components/WorkbenchRightPanel';
 import WorkQueueBar from './components/WorkQueueBar';
-import BatchActionToolbar from './components/BatchActionToolbar';
+import AppBatchToolbar from './components/AppBatchToolbar';
 import SplashScreen from './components/SplashScreen';
 import ToastContainer from './components/ToastContainer';
 import OfflineBanner from './components/OfflineBanner';
@@ -761,7 +761,7 @@ const App = () => {
           </div>
 
           {activeTab === 'table' && selectedIds.size > 0 && (
-            <BatchActionToolbar
+            <AppBatchToolbar
               selectedCount={selectedIds.size}
               customFunctions={activeCustomFunctions}
               onClearSelection={() => setSelectedIds(new Set())}

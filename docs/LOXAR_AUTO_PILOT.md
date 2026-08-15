@@ -18,8 +18,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
 - Avance P1 actual: se extrajeron `ToastContainer`, `OfflineBanner`, `AmbientLights`,
-  `ProjectBootstrapBanner` y `AppToolbar` de `App.tsx` como pasos de descomposición posteriores a
-  P1-2e
+  `ProjectBootstrapBanner`, `AppToolbar` y `AppBatchToolbar` de `App.tsx` como pasos de
+  descomposición posteriores a P1-2e
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica
