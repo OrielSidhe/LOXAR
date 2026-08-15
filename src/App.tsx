@@ -45,7 +45,7 @@ import ToolsTab from './components/ToolsTab';
 import AppBatchToolbar from './components/AppBatchToolbar';
 import TabButton from './components/TabButton';
 import SplashScreen from './components/SplashScreen';
-import OfflineBanner from './components/OfflineBanner';
+import AppOfflineBannerLayer from './components/AppOfflineBannerLayer';
 import AmbientLights from './components/AmbientLights';
 import ProjectBootstrapBanner from './components/ProjectBootstrapBanner';
 import AiStatusIndicator from './components/AiStatusIndicator';
@@ -405,7 +405,7 @@ const App = () => {
           <AmbientLights />
 
           {isLoading && <LoadingOverlay message={loadingMessage} />}
-          {showOfflineBanner && <OfflineBanner />}
+          <AppOfflineBannerLayer showOfflineBanner={showOfflineBanner} />
 
           <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
             <ModalManager

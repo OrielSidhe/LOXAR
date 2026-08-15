@@ -197,6 +197,20 @@ en un componente propio, manteniendo la limpieza del archivo central.
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `AppOfflineBannerLayer` de `App.tsx`
+**Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` aislando el banner offline en un componente
+propio, manteniendo la limpieza del archivo central.
+**Cambios:**
+- `src/components/AppOfflineBannerLayer.tsx` (NUEVO): componente envoltorio de `OfflineBanner`
+  con prop tipada `showOfflineBanner`.
+- `src/App.tsx`: se reemplazó el uso inline de `{showOfflineBanner && <OfflineBanner />}` por
+  `<AppOfflineBannerLayer showOfflineBanner={showOfflineBanner} />` y se eliminó el import directo
+  de `OfflineBanner`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos

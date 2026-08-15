@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T14:29:00.000Z",
+  "lastUpdated": "2026-08-14T14:45:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Se extrajo AppWelcomeSection de App.tsx (SplashScreen + WelcomeScreen + GuidedTour) y se envolvió el layer de toasts en AppToastLayer. Validaciones estáticas en verde; suite Vitest 122/122. Próximo bloque: seguir descomponiendo App.tsx por secciones chicas o avanzar en el rediseño del canvas de inicio."
+  "sessionSummary": "Se extrajo AppOfflineBannerLayer de App.tsx, encapsulando el bloque condicional de OfflineBanner. Validaciones estáticas en verde: typecheck 0 errores, lint OK, build OK, vitest 122 passed. Próximo bloque: seguir descomponiendo App.tsx por secciones chicas o avanzar en componentes gigantes."
 }
