@@ -88,6 +88,20 @@ dedicados y corregir firmas de handlers de herramientas que no coincidían con s
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `AiMapperModal` de `SyntaxCanvas.tsx`
+**Rama:** `main`. **Motivo:** seguir descomponiendo `SyntaxCanvas.tsx` extrayendo un modal
+autocontenido sin estado compartido, para reducir la superficie del componente.
+**Cambios:**
+- `src/components/AiMapperModal.tsx` (NUEVO): modal de mapeo IA a árbol sintáctico con
+  estado local (`mode`, `text`, `loading`, `error`, `pendingGraph`) y handlers propios.
+- `src/components/SyntaxCanvas.tsx`: se eliminó la definición inline de `AiMapperModal` y
+  se agregó el import correspondiente. Se eliminaron imports ya no usados de
+  `callAi`, `extractJson` y `cleanseJson` en `SyntaxCanvas.tsx`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos
