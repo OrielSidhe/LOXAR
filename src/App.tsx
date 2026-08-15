@@ -1,8 +1,7 @@
 import React, { useCallback, useState, useEffect, useMemo, ReactNode, Suspense, lazy } from 'react';
 import Header from './components/Header';
 import LexiconTable from './components/LexiconTable';
-import FileControls from './components/FileControls';
-import LexiconSelector from './components/LexiconSelector';
+import AppToolbar from './components/AppToolbar';
 import { useLexicon } from './hooks/useLexicon';
 import { useWidgetBridge } from './hooks/useWidgetBridge';
 import { useWorkQueue } from './hooks/useWorkQueue';
@@ -28,7 +27,6 @@ import TableIcon from './components/icons/TableIcon';
 import PenToolIcon from './components/icons/PenToolIcon';
 import SettingsIcon from './components/icons/SettingsIcon';
 import SparkleIcon from './components/icons/SparkleIcon';
-import InfoIcon from './components/icons/InfoIcon';
 
 // Components
 import LoadingOverlay from './components/LoadingOverlay';
@@ -473,41 +471,32 @@ const App = () => {
             onThemeChange={id => setThemeId(id as any)}
           />
 
-          <div className="flex items-center justify-between px-6 py-4 bg-surface-dark/90 backdrop-blur-md border-b border-border-dark flex-wrap gap-4 z-30 relative">
-            <LexiconSelector
-              lexiconNames={lexiconHook.lexiconNames}
-              activeLexiconName={activeLexiconName}
-              onSelect={lexiconHook.setActiveLexicon}
-              onCreate={handleCreateNewLexicon}
-              onDelete={handleDeleteLexicon}
-              onRename={handleRenameLexicon}
-            />
-            <div className="flex items-center gap-4">
-              <FileControls
-                onImport={lexiconHook.startImportProcess}
-                onExport={handleFileExport}
-                onSave={handleSaveChanges}
-                onSetExportPath={handleSetExportPath}
-                onRestore={() => handleOpenModal('restore')}
-                onOpenAbout={() => handleOpenModal('about')}
-                onStartTour={handleStartTour}
-                onOpenAiSettings={() => handleOpenModal('ai_settings')}
-                onQuit={handleQuit}
-                onResetApp={handleResetApp}
-                onError={(msg) => showNotification(msg, 'error')}
-                disabled={!activeLexiconName}
-                isDirty={isDirty}
-                onNewProject={handleNewProject}
-                onOpenProject={handleOpenProject}
-                onSaveProject={handleSaveProject}
-                onSaveProjectAs={handleSaveProjectAs}
-                projectPath={projectPath}
-              />
-              <button onClick={handleStartTour} className="p-2 text-text-secondary hover:text-primary transition-colors hover:bg-white/5 rounded-full">
-                <InfoIcon className="w-6 h-6" />
-              </button>
-            </div>
-          </div>
+          <AppToolbar
+            lexiconNames={lexiconHook.lexiconNames}
+            activeLexiconName={activeLexiconName}
+            onSelectLexicon={lexiconHook.setActiveLexicon}
+            onCreateLexicon={handleCreateNewLexicon}
+            onDeleteLexicon={handleDeleteLexicon}
+            onRenameLexicon={handleRenameLexicon}
+            onImport={lexiconHook.startImportProcess}
+            onExport={handleFileExport}
+            onSave={handleSaveChanges}
+            onSetExportPath={handleSetExportPath}
+            onRestore={() => handleOpenModal('restore')}
+            onOpenAbout={() => handleOpenModal('about')}
+            onStartTour={handleStartTour}
+            onOpenAiSettings={() => handleOpenModal('ai_settings')}
+            onQuit={handleQuit}
+            onResetApp={handleResetApp}
+            onError={(msg) => showNotification(msg, 'error')}
+            disabled={!activeLexiconName}
+            isDirty={isDirty}
+            onNewProject={handleNewProject}
+            onOpenProject={handleOpenProject}
+            onSaveProject={handleSaveProject}
+            onSaveProjectAs={handleSaveProjectAs}
+            projectPath={projectPath}
+          />
 
           <div className="flex flex-1 min-h-0 relative">
             <LanguageTreeCanvas
