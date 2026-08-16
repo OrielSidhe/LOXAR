@@ -83,11 +83,25 @@ const LOCAL_STRATEGY_TYPE_MAP: Record<string, DeclarativeStrategy['type']> = {
   reduplicación: 'affix', reduplication: 'affix',
 };
 
+const LOCAL_STRATEGY_CATEGORY_INFERENCE_MAP: Record<string, string[]> = {
+  sustantivo: ['noun'], nombre: ['noun'], noun: ['noun'],
+  adjetivo: ['adjective'], adjective: ['adjective'], adj: ['adjective'],
+  verbo: ['verb'], verb: ['verb'], verbal: ['verb'],
+  caso: ['noun'],
+  género: ['noun', 'adjective'], genero: ['noun', 'adjective'],
+  número: ['noun', 'adjective'], numero: ['noun', 'adjective'],
+  tiempo: ['verb'], tense: ['verb'],
+  preverbal: ['verb'], postverbal: ['verb'],
+  verbal: ['verb'],
+  cláusula: ['verb', 'particle'], clausula: ['verb', 'particle'],
+};
+
 // Features comunes en español → inglés canónico
 const LOCAL_FEATURE_MAP: Record<string, string> = {
   pasado: 'past', presente: 'present', futuro: 'future',
   singular: 'singular', plural: 'plural',
   masculino: 'masculine', femenino: 'feminine', neutro: 'neuter',
+  número: 'number',
   primera: 'first', segundo: 'second', tercera: 'third',
   primera_persona: 'first', segunda_persona: 'second', tercera_persona: 'third',
   sg: 'singular', pl: 'plural',
@@ -133,6 +147,17 @@ function resolveAffixPositionLocal(raw: string): 'prefix' | 'suffix' | 'infix' |
 function resolveStrategyTypeLocal(raw: string): DeclarativeStrategy['type'] {
   const lower = raw.toLowerCase().trim();
   return LOCAL_STRATEGY_TYPE_MAP[lower] || 'affix';
+}
+
+function inferStrategyCategories(name: string): string[] {
+  const lower = name.toLowerCase();
+  const categories = new Set<string>();
+  for (const [key, cats] of Object.entries(LOCAL_STRATEGY_CATEGORY_INFERENCE_MAP)) {
+    if (lower.includes(key)) {
+      cats.forEach(c => categories.add(c));
+    }
+  }
+  return Array.from(categories);
 }
 
 function resolveRoleLocal(raw: string): string {
@@ -190,7 +215,7 @@ function detectSections(text: string): RawSection[] {
         initialContent = '';
       }
     } else {
-      const freeMatch = trimmed.match(/^([A-Za-z\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF][A-Za-z0-9\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\s\/\-]*?):\s*(.*)?$/);
+      const freeMatch = trimmed.match(/^([\p{L}\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF][\p{L}\p{N}\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\s\/\-]*?):\s*(.*)?$/u);
       if (freeMatch && freeMatch[1].length < 60 && freeMatch[1].length > 1) {
         const potentialHeader = freeMatch[1].toLowerCase();
         if (classifySection(potentialHeader)) {
@@ -301,7 +326,7 @@ function parsePhonology(content: string): {
     for (const match of ipaMatch) {
       const inside = match.slice(1, -1).trim();
       const phonemes = inside.split(/[\s,]+/).filter(p => p.length > 0);
-      const vowelPattern = /^[aeiouyàáâãäåæəɛɪɨœøɵʊʌɔɒɤʉʏʝɲŋθðʃʒʧʤɨʂʐʀ]+$/i;
+      const vowelPattern = /^[aeiouyàáâãäåæéíóúəɛɪɨœøɵʊʌɔɒɤʉʏʝɲŋθðʃʒʧʤɨʂʐʀ]+$/i;
       for (const p of phonemes) {
         if (vowelPattern.test(p)) {
           if (!phonology.vowels.includes(p)) phonology.vowels.push(p);
@@ -317,7 +342,7 @@ function parsePhonology(content: string): {
   if (consonantListMatch) {
     const raw = consonantListMatch[1];
     // Extraer tokens individuales (letras o digraphs conocidos)
-    const tokens = raw.match(/\b(ch|th|ae|oe|[b-df-hj-np-tv-z])\b/gi) || [];
+    const tokens = raw.match(/\b(ch|th|ae|oe|[b-df-hj-np-tv-zñ])\b/gi) || [];
     tokens.forEach(t => {
       const lower = t.toLowerCase();
       if (!phonology.consonants.includes(lower)) phonology.consonants.push(lower);
@@ -327,7 +352,7 @@ function parsePhonology(content: string): {
   const vowelListMatch = content.match(/vocales?:\s*([^\n]+)/i);
   if (vowelListMatch) {
     const raw = vowelListMatch[1];
-    const tokens = raw.match(/\b([aeiou])\b/gi) || [];
+    const tokens = raw.match(/[aeiouáéíóú]/gi) || [];
     tokens.forEach(t => {
       const lower = t.toLowerCase();
       if (!phonology.vowels.includes(lower)) phonology.vowels.push(lower);
@@ -372,7 +397,7 @@ function parseCategorySection(
   const category = resolveCategory(categoryHint);
 
   // Patrón 1: "X por -Y sufijo/prefijo/infijo" (admite rasgos multi-palabra)
-  const affixPattern = /(.+?)\s+por\s+(-[\w']+)\s+(sufijo|prefijo|infijo|circunfijo)/i;
+  const affixPattern = /(.+?)\s+por\s+(-[^\s,;]+)\s+(sufijo|prefijo|infijo|circunfijo)/i;
   const matches = content.matchAll(new RegExp(affixPattern.source, 'gi'));
 
   for (const match of matches) {
@@ -396,7 +421,7 @@ function parseCategorySection(
   }
 
   // Patrón 2: "tiempo1 -form1, tiempo2 -form2" (verbos)
-  const tensePattern = /(\w+)\s+(-[\w']+)/g;
+  const tensePattern = /(\S+)\s+(-[^\s,;]+)/g;
   const tenseMatches = content.matchAll(tensePattern);
 
   // Si ya tenemos paradigmas del patrón 1, no duplicar
@@ -424,7 +449,7 @@ function parseCategorySection(
 
   // Patrón 3: "-form" standalone o "feature: -form" / "suffix -form"
   if (paradigms.length === 0) {
-    const standaloneForms = content.matchAll(/(-[\w']+)/g);
+    const standaloneForms = content.matchAll(/(-([^\s]+))/g);
     let order = 0;
     for (const match of standaloneForms) {
       const form = match[1];
@@ -504,6 +529,7 @@ function parseStrategies(content: string): { strategies: DeclarativeStrategy[]; 
       name,
       type: type as DeclarativeStrategy['type'],
       affixRule: { position, form },
+      appliesToCategories: inferStrategyCategories(name),
     });
     addedMarkers.add(form);
   }
@@ -529,7 +555,7 @@ function parseStrategies(content: string): { strategies: DeclarativeStrategy[]; 
   }
 
   // Patrón C: "partícula 'X' para Y" (formato legacy)
-  const legacyParticlePattern = /part[íi]cula\s+['"]([^'"]+)['"]\s+(?:para|for|para_el)\s+(\w+)/i;
+  const legacyParticlePattern = /part[íi]culas?\s+['"]([^'"]+)['"]\s+(?:para|for|para_el)\s+(\S+)/i;
   const legacyMatches = content.matchAll(new RegExp(legacyParticlePattern.source, 'gi'));
 
   for (const match of legacyMatches) {

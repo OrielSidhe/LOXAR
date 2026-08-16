@@ -188,6 +188,33 @@ describe('textParser (Fase 1)', () => {
   });
 
   // -------------------------------------------------------------------------
+  // 1.11 — Maneja encabezados y fonemas con ñ y vocales acentuadas
+  // -------------------------------------------------------------------------
+  it('1.11: parseLocal maneja secciones y fonemas con ñ y vocales acentuadas', () => {
+    const text = `§ Ñandú: inventario extendido
+§ Fonología: consonantes /p t k ñ/, vocales /a e i o u á é í ó ú/`;
+    const result = parseLocal(text);
+    expect(result.report.sectionsFound.includes('phonology')).toBeTruthy();
+    expect(result.manifest.phonology.consonants).toContain('ñ');
+    expect(result.manifest.phonology.vowels).toEqual(
+      expect.arrayContaining(['a', 'e', 'i', 'o', 'u', 'á', 'é', 'í', 'ó', 'ú'])
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // 1.12 — Maneja formas de afijos con caracteres Unicode
+  // -------------------------------------------------------------------------
+  it('1.12: parseLocal maneja formas de afijos con caracteres Unicode', () => {
+    const text = `§ Sustantivos: número por -ña sufijo`;
+    const result = parseLocal(text);
+    const paradigm = result.manifest.paradigms.find(p => p.category === 'noun');
+    expect(paradigm).toBeTruthy();
+    const slot = paradigm!.slots.find(s => s.feature === 'number');
+    expect(slot).toBeTruthy();
+    expect(slot!.realization.form).toBe('-ña');
+  });
+
+  // -------------------------------------------------------------------------
   // 1.10 — Maneja texto parcialmente parseable
   // -------------------------------------------------------------------------
   it('1.10: parseLocal maneja texto parcialmente parseable', () => {

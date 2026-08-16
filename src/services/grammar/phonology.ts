@@ -32,7 +32,7 @@ export const validate = (word: string, p?: PhonologyConfig): string[] => {
   if (!p) return [];
   const inv = segSet(p);
   const violations: string[] = [];
-  const cleaned = word.toLowerCase().replace(/[^a-záéíóúüñ]/gi, '');
+  const cleaned = word.toLowerCase().replace(/[^\p{L}]/gu, '');
   for (const ch of cleaned) {
     if (!inv.has(ch)) violations.push(`Segmento fuera de inventario: "${ch}"`);
   }
