@@ -197,6 +197,20 @@ en un componente propio, manteniendo la limpieza del archivo central.
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `AppSettingsModalLayer` de `App.tsx`
+**Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` aislando el modal de configuración
+en un componente propio, manteniendo la limpieza del archivo central.
+**Cambios:**
+- `src/components/AppSettingsModalLayer.tsx` (NUEVO): componente envoltorio de `SettingsModal`
+  con props tipadas `showSettings` y `onCloseSettings`.
+- `src/App.tsx`: se reemplazó el uso inline de `{showSettings && <SettingsModal ... />}` por
+  `<AppSettingsModalLayer showSettings={showSettings} onCloseSettings={() => setShowSettings(false)} />`
+  y se eliminó el import directo de `SettingsModal`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Extraer `AppOfflineBannerLayer` de `App.tsx`
 **Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` aislando el banner offline en un componente
 propio, manteniendo la limpieza del archivo central.

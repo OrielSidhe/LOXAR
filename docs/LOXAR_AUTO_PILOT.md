@@ -30,7 +30,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   error de Suspense en modales lazy resuelto, exportación de gramática movida a `useAppHandlers`,
   y pantalla inicial rediseñada como `LanguageHomeCanvas` tipo canvas Stitch con nodo central
   de lenguaje y módulos satélite navegables.
-  También se extrajeron `AppWelcomeSection`, `AppToastLayer` y `AppOfflineBannerLayer` de `App.tsx` reduciendo el tamaño del archivo central.
+  También se extrajeron `AppWelcomeSection`, `AppToastLayer`, `AppOfflineBannerLayer` y `AppSettingsModalLayer` de `App.tsx` reduciendo el tamaño del archivo central.
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker
 - Traducción real: `InterlinearGlossViewer` integrado en UI
 - Traducción offline: motor local en `TranslationPlayground` con matching + realización morfológica

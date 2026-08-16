@@ -52,7 +52,7 @@ import AiStatusIndicator from './components/AiStatusIndicator';
 import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-import SettingsModal from './components/SettingsModal';
+import AppSettingsModalLayer from './components/AppSettingsModalLayer';
 import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
@@ -460,7 +460,7 @@ const App = () => {
           <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
             {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
           </Suspense>
-          {showSettings && <SettingsModal open={showSettings} onClose={() => setShowSettings(false)} />}
+          <AppSettingsModalLayer showSettings={showSettings} onCloseSettings={() => setShowSettings(false)} />
 
           <Header
             wordsAddedCount={lexiconHook.wordsAddedSinceSave}
