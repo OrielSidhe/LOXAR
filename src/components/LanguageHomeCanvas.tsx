@@ -34,12 +34,32 @@ const MODULE_NODES: ModuleNode[] = [
   { id: 'grammar', label: 'Gramática', icon: '📐', status: 'empty', description: 'Categorías, reglas y excepciones', x: 50, y: 18 },
   { id: 'phonology', label: 'Fonología', icon: '🔊', status: 'empty', description: 'Inventario fonético y reglas', x: 18, y: 36 },
   { id: 'syntax', label: 'Sintaxis', icon: '🧩', status: 'empty', description: 'Estructura de oraciones', x: 82, y: 36 },
-  { id: 'lexicon', label: 'Léxico', icon: '📚', status: 'empty', description: 'Entradas y significados', x: 18, y: 64 },
+  { id: 'lexicon', label: 'Léxico / Workbench', icon: '📚', status: 'empty', description: 'Entradas, significados y cola de trabajo', x: 18, y: 64 },
   { id: 'neography', label: 'Neografía', icon: '✍️', status: 'empty', description: 'Glifos y sistema de escritura', x: 50, y: 82 },
   { id: 'semantics', label: 'Semántica', icon: '💡', status: 'empty', description: 'Campos semánticos y relaciones', x: 82, y: 64 },
   { id: 'translator', label: 'Traductor', icon: '🔁', status: 'empty', description: 'Traducción y glosado interlineal', x: 6, y: 50 },
-  { id: 'workbench', label: 'Workbench', icon: '🛠️', status: 'empty', description: 'Cola de trabajo y completado', x: 94, y: 50 },
+  { id: 'collections', label: 'Colecciones', icon: '🗂️', status: 'empty', description: 'Colecciones y grupos', x: 94, y: 50 },
 ];
+
+type ModuleAction = {
+  label: string;
+  target: ModuleId;
+};
+
+const MODULE_ACTIONS: Record<ModuleId, ModuleAction[]> = {
+  lexicon: [
+    { label: 'Léxico', target: 'lexicon' },
+    { label: 'Workbench', target: 'workbench' },
+  ],
+  grammar: [],
+  phonology: [],
+  syntax: [],
+  neography: [],
+  semantics: [],
+  translator: [],
+  workbench: [],
+  collections: [],
+};
 
 const EDGES = [
   { from: 'center', to: 'grammar', label: 'normas' },
@@ -49,7 +69,7 @@ const EDGES = [
   { from: 'center', to: 'neography', label: 'grafía' },
   { from: 'center', to: 'semantics', label: 'sentido' },
   { from: 'center', to: 'translator', label: 'puente' },
-  { from: 'center', to: 'workbench', label: 'flujo' },
+  { from: 'center', to: 'collections', label: 'colecciones' },
 ];
 
 const STATUS_COLORS: Record<string, { border: string; bg: string; text: string; glow: string }> = {
@@ -226,7 +246,6 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
               top: `${node.y}%`,
               zIndex: isActive ? 20 : isHovered ? 10 : 5,
             }}
-            onClick={() => handleNodeClick(node.id)}
             onPointerEnter={() => setHoveredNode(node.id)}
             onPointerLeave={() => setHoveredNode(null)}
             title={node.description}
@@ -238,6 +257,28 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
                 <div className="text-[10px] text-white/50 mt-0.5">{node.description}</div>
               </div>
             </div>
+            {node.id === 'lexicon' && (
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNodeClick('lexicon');
+                  }}
+                  className="text-[10px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  Léxico
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNodeClick('workbench');
+                  }}
+                  className="text-[10px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  Workbench
+                </button>
+              </div>
+            )}
             <div className="flex items-center gap-1.5 mt-2">
               <span className={`relative flex h-2 w-2`}>
                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${STATUS_DOT[node.status]}`} />

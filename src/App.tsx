@@ -570,7 +570,10 @@ const App = () => {
                         workbench: { pending: incompleteEntries.length, completed: 0 },
                         collections: { collections: 0 },
                       }}
-                      onModuleClick={(moduleId) => setActiveTab(moduleId as any)}
+                      onModuleClick={(moduleId) => {
+                        const tab = moduleId === 'lexicon' ? 'table' : moduleId;
+                        setActiveTab(tab as any);
+                      }}
                     />
                   </div>
                 )}
