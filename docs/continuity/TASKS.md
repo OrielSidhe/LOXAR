@@ -2347,3 +2347,20 @@ la superficie de uno de los 4 componentes gigantes.
   `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
 
 ---
+## [2026-08-14] Checkpoint: Extraer `CollectionsSidebar` de `CollectionsManager` y seguir descomponiendo componentes gigantes
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajo la barra lateral completa de
+colecciones (creación, plantillas, import/export, listado con acciones) de `CollectionsManager` a un
+componente dedicado para reducir la superficie de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/CollectionsSidebar.tsx` (NUEVO): componente dedicado para la sidebar de colecciones
+  con props tipadas para estado, handlers y datos de colecciones.
+- `src/components/CollectionsManager.tsx`: se reemplazó el bloque inline de sidebar por
+  `<CollectionsSidebar ... />`, manteniendo la lógica de estado y handlers en el componente padre.
+  Se añadió el import correspondiente.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---

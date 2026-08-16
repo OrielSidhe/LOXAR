@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-14T20:19:00.000Z",
+  "lastUpdated": "2026-08-14T21:07:00.000Z",
   "uiState": {
     "activeTab": "table",
     "syntaxSubTab": "ast",
@@ -16,5 +16,5 @@
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Se extrajo AppProjectBootstrapLayer de App.tsx, se corrigió tipado y se mantuvieron las validaciones en verde (typecheck 0 errores, lint OK, build OK, vitest 122/122). Próximo bloque: seguir descomponiendo App.tsx o componentes gigantes."
+  "sessionSummary": "Se extrajo CollectionsSidebar de CollectionsManager, se corrigió tipado y se mantuvieron las validaciones en verde (typecheck 0 errores, lint OK, build OK, vitest 122/122). Próximo bloque: seguir descomponiendo App.tsx o componentes gigantes."
 }
