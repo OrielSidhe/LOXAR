@@ -272,6 +272,21 @@ propio, manteniendo la limpieza del archivo central.
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `AppProjectBootstrapLayer` de `App.tsx`
+**Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` aislando el flujo de bootstrap
+(modal + banner) en un componente propio, manteniendo la limpieza del archivo central.
+**Cambios:**
+- `src/components/AppProjectBootstrapLayer.tsx` (NUEVO): componente envoltorio de
+  `ProjectBootstrapModal` y `ProjectBootstrapBanner` con props tipadas para el estado
+  de bootstrap y los callbacks correspondientes.
+- `src/App.tsx`: se reemplazó el bloque inline de bootstrap por
+  `<AppProjectBootstrapLayer ... />` y se eliminaron los imports directos de
+  `ProjectBootstrapModal` y `ProjectBootstrapBanner`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Renombrar `window.electronAPI` → `window.loxarBridge` y eliminar stubs Gemini
 **Rama:** `main`. **Motivo:** P1-1 de auditoría de arquitectura. El polyfill `window.electronAPI` era un
 shim vivo a Tauri, pero su nombre era engañoso y la interfaz `ElectronAPI` incluía 12 stubs Gemini muertos

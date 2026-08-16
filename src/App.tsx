@@ -43,7 +43,7 @@ import ToolsTab from './components/ToolsTab';
 import AppBatchToolbar from './components/AppBatchToolbar';
 import AppOfflineBannerLayer from './components/AppOfflineBannerLayer';
 import AppAmbientLightsLayer from './components/AppAmbientLightsLayer';
-import ProjectBootstrapBanner from './components/ProjectBootstrapBanner';
+import AppProjectBootstrapLayer from './components/AppProjectBootstrapLayer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import AppSettingsModalLayer from './components/AppSettingsModalLayer';
@@ -52,7 +52,6 @@ import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
 import LanguageTreeCanvas from './components/LanguageTreeCanvas';
 import LanguageHomeCanvas from './components/LanguageHomeCanvas';
-import ProjectBootstrapModal from './components/ProjectBootstrapModal';
 import AppWelcomeSection from './components/AppWelcomeSection';
 import AppToastLayer from './components/AppToastLayer';
 
@@ -703,10 +702,12 @@ const App = () => {
             notifications={notifications}
             onDismissNotification={id => setNotifications(prev => prev.filter(n => n.id !== id))}
           />
-        </div>
 
-        {isAppLoaded && showProjectBootstrap && (
-          <ProjectBootstrapModal
+          <AppProjectBootstrapLayer
+            isAppLoaded={isAppLoaded}
+            showProjectBootstrap={showProjectBootstrap}
+            bootstrapDismissed={bootstrapDismissed}
+            projectPath={projectPath}
             availableProjects={availableProjects}
             hasLocalData={hasLocalData}
             onCreate={handleBootstrapCreate}
@@ -714,11 +715,9 @@ const App = () => {
             onOpenFound={handleBootstrapOpenFound}
             onImportLocal={handleBootstrapImportLocal}
             onDismiss={handleBootstrapDismiss}
+            onChooseLocation={() => setShowProjectBootstrap(true)}
           />
-        )}
-        {!projectPath && !showProjectBootstrap && bootstrapDismissed && (
-          <ProjectBootstrapBanner onChooseLocation={() => setShowProjectBootstrap(true)} />
-        )}
+        </div>
       </div>
     </ErrorBoundary>
   );
