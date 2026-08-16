@@ -30,8 +30,6 @@ import SparkleIcon from './components/icons/SparkleIcon';
 
 // Components
 import AppLoadingLayer from './components/AppLoadingLayer';
-import WelcomeScreen from './components/WelcomeScreen';
-import CompletionDashboard from './components/CompletionDashboard';
 import EntryEditor from './components/EntryEditor';
 import CollectionsManager from './components/CollectionsManager';
 import WritingAndNeographyTab from './components/WritingAndNeographyTab';
@@ -43,13 +41,9 @@ import WorkQueueBar from './components/WorkQueueBar';
 import WorkbenchTab from './components/WorkbenchTab';
 import ToolsTab from './components/ToolsTab';
 import AppBatchToolbar from './components/AppBatchToolbar';
-import TabButton from './components/TabButton';
-import SplashScreen from './components/SplashScreen';
 import AppOfflineBannerLayer from './components/AppOfflineBannerLayer';
-import AmbientLights from './components/AmbientLights';
+import AppAmbientLightsLayer from './components/AppAmbientLightsLayer';
 import ProjectBootstrapBanner from './components/ProjectBootstrapBanner';
-import AiStatusIndicator from './components/AiStatusIndicator';
-import GuidedTour from './components/GuidedTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import AppSettingsModalLayer from './components/AppSettingsModalLayer';
@@ -402,7 +396,7 @@ const App = () => {
         />
 
         <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished ? 'opacity-100' : 'opacity-0'}`}>
-          <AmbientLights />
+          <AppAmbientLightsLayer />
 
           <AppLoadingLayer isLoading={isLoading} loadingMessage={loadingMessage} />
           <AppOfflineBannerLayer showOfflineBanner={showOfflineBanner} />
