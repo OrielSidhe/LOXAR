@@ -471,10 +471,7 @@ const App = () => {
             }}
             showNotification={showNotification}
           />
-          </Suspense>
-
-          <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
-            {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
+          {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
           </Suspense>
           <AppSettingsModalLayer showSettings={showSettings} onCloseSettings={() => setShowSettings(false)} />
 

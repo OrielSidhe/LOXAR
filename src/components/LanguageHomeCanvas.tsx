@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import XCircleIcon from './icons/XCircleIcon';
 
 type ModuleId = 'grammar' | 'phonology' | 'syntax' | 'lexicon' | 'neography' | 'semantics' | 'translator' | 'workbench' | 'collections';
 
@@ -71,6 +72,7 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
 }) => {
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showPanel, setShowPanel] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoaded(true), 50);
@@ -146,8 +148,9 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
 
       {/* Central Language Node */}
       <div
-        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-3xl border-2 border-accent/60 bg-accent/10 backdrop-blur-md px-8 py-6 shadow-[0_0_40px_rgba(99,102,241,0.15)] transition-all duration-700 pointer-events-auto"
+        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-3xl border-2 border-accent/60 bg-accent/10 backdrop-blur-md px-8 py-6 shadow-[0_0_40px_rgba(99,102,241,0.15)] transition-all duration-700 pointer-events-auto cursor-pointer"
         style={{ left: `${centerX}%`, top: `${centerY}%`, zIndex: 10 }}
+        onClick={() => setShowPanel(prev => !prev)}
       >
         <div className="flex flex-col items-center gap-2">
           <div className="text-3xl">🌐</div>
@@ -157,6 +160,47 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
           <div className="text-[10px] text-white/50">Lengua central</div>
         </div>
       </div>
+
+      {/* Home Summary Panel Overlay */}
+      {showPanel && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-2xl max-h-[80vh] overflow-hidden bg-surface-dark/95 backdrop-blur-xl rounded-2xl border border-border-dark shadow-2xl flex flex-col animate-scale-in">
+            <div className="flex items-center justify-between p-4 border-b border-border-dark bg-surface-dark/80">
+              <h2 className="text-lg font-bold text-white">Resumen del proyecto</h2>
+              <button onClick={() => setShowPanel(false)} className="p-1 rounded-full text-text-secondary hover:text-white hover:bg-white/5 transition-colors">
+                <XCircleIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="rounded-xl border border-border-dark bg-white/5 p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-text-secondary mb-1">Léxico</div>
+                  <div className="text-2xl font-bold text-white">{stats?.lexicon?.entries ?? 0}</div>
+                  <div className="text-[10px] text-text-secondary">entradas</div>
+                </div>
+                <div className="rounded-xl border border-border-dark bg-white/5 p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-text-secondary mb-1">Gramática</div>
+                  <div className="text-2xl font-bold text-white">{stats?.grammar?.rules ?? 0}</div>
+                  <div className="text-[10px] text-text-secondary">reglas</div>
+                </div>
+                <div className="rounded-xl border border-border-dark bg-white/5 p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-text-secondary mb-1">Fonología</div>
+                  <div className="text-2xl font-bold text-white">{stats?.phonology?.sounds ?? 0}</div>
+                  <div className="text-[10px] text-text-secondary">sonidos</div>
+                </div>
+                <div className="rounded-xl border border-border-dark bg-white/5 p-3">
+                  <div className="text-[10px] uppercase tracking-wider text-text-secondary mb-1">Workbench</div>
+                  <div className="text-2xl font-bold text-white">{stats?.workbench?.pending ?? 0}</div>
+                  <div className="text-[10px] text-text-secondary">pendientes</div>
+                </div>
+              </div>
+              <div className="text-xs text-text-secondary">
+                Usá el canvas o la barra lateral para navegar por los módulos.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Module Nodes */}
       {enrichedNodes.map((node) => {

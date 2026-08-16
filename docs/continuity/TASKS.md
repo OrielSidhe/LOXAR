@@ -1134,6 +1134,37 @@ una sola fuente de verdad.
 - [x] **P1 — Zod + normalización unificada:** centralizar normalización en `src/services/normalize.ts` (defaults + esquemas zod passthrough/defaults) y aplicarla en `sqlStorage.loadLexicon` (ambas ramas) y en `getInitialState` de `useLexicon.ts`, eliminando la divergencia localStorage vs SQLite (incidente 2969057).
 - [x] **UX limpieza (continuación):** reducir botón "Registrar Palabra", mover explicaciones inline a Tooltips hover, modos de generación tipo gema iluminada, quitar tab "Sugerencias" (reubicar Lote IA/"A cola" en Listas), eliminar sección "Notas de Gramática" (campo muerto) y añadir tipo de afijo "desinencia".
 - [x] **Motor de gramática local (engine puro + UI + pipeline):** `src/services/grammar/` (morphology/syntax/phonology + barrel), `GrammarManifest` fuente de verdad, `RuleEditor` + `ExceptionEditor` (supletiva ser/estar), Preview con motor + advertencias fonotácticas, AI offline-aware (importer + SyntaxCanvas Mapper), pipeline Neography (glifos) + Translator (grounding). Ver checkpoint 2026-07-14 abajo.
+
+---
+## [2026-08-14] Checkpoint: Corregir tests fallosos de parser Unicode e indexación de estrategias
+**Rama:** `main`. **Motivo:** cerrar tests pendientes del import textual de gramática que quedaron fallando en la sesión anterior.
+**Cambios:**
+- `src/services/grammar/textParser.ts`: corregido duplicado de clave `verbal` en `LOCAL_STRATEGY_CATEGORY_INFERENCE_MAP` que rompía el objeto literal.
+- `src/services/grammar/textParser.ts`: agregado `LOCAL_STRATEGY_CATEGORY_INFERENCE_MAP` e `inferStrategyCategories()` para asignar categorías objetivo a estrategias parseadas desde texto, habilitando `bridgeManifest` cuando `appliesToCategories` venía vacío.
+- `src/services/grammar/__tests__/quavanolPipeline.test.ts`: test 6.6 pasa porque el fixture Quavanol ahora tiene estrategias indexadas por categoría.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, `npx vitest run` 124 passed.
+- Próximo bloque: implementar mejoras UI pendientes del canvas home.
+
+---
+## [2026-08-14] Checkpoint: Implementar navegación por historial y botones volver/inicio
+**Rama:** `main`. **Motivo:** resolver el feedback de navegación del usuario: desde el canvas home se podía entrar a módulos, pero no había forma fácil de volver al panel ni de retroceder.
+**Cambios:**
+- `src/App.tsx`: reemplazado `activeTab` plano por `tabHistory` con historial real de navegación. `setActiveTab` ahora apila tabs sin duplicar el último activo.
+- `src/App.tsx`: agregados botones “Volver” y “Panel” sobre el área principal cuando el usuario no está en `dashboard`.
+- `src/components/VerticalSidebar.tsx`: agregado botón home con `HomeIcon` que vuelve directamente al panel (`dashboard`).
+- `src/components/icons/HomeIcon.tsx` (NUEVO): icono home para la sidebar.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, `npx vitest run` 124 passed.
+- Próximo bloque: convertir el nodo central del canvas home en overlay de resumen y ajustar comportamiento del panel.
+
+---
+## [2026-08-14] Checkpoint: Implementar panel resumen en LanguageHomeCanvas y consolidar Suspense
+**Rama:** `main`. **Motivo:** cumplir el requerimiento de que el botón central abra un panel desplegable con estadísticas del proyecto, y eliminar el boundary duplicado de `AiSettingsModal`.
+**Cambios:**
+- `src/components/LanguageHomeCanvas.tsx`: el nodo central ahora es clickeable y alterna un overlay de resumen con métricas vivas del proyecto (léxico, gramática, fonología, workbench).
+- `src/components/LanguageHomeCanvas.tsx`: import de `XCircleIcon` para cerrar el overlay.
+- `src/App.tsx`: eliminado el segundo `<Suspense>` boundary exclusivo de `AiSettingsModal`; ahora ambos modales comparten el mismo boundary de `ModalManager`, evitando montajes duplicados y conflictos de suspenso.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK, `npx vitest run` 124 passed.
+- Próximo bloque: seguir con sincronización grammar canvas ↔ logical view o ajustes menores de UI según feedback.
 - [ ] Verificar en runtime (lo hará el usuario con `npm run tauri dev`): auto-detección de categoría local-first, banner IA, navegación "Completar"
 - [ ] **M1 — Parser local de gramática textual:** `src/services/grammar/textParser.ts` (NUEVO) — parser determinista que convierte texto libre → `DeclarativeManifest` SIN LLM. 10 tests TDD.
 - [ ] **M2 — Inductor LLM mejorado:** Modificar `parseGrammarAdvanced` en `geminiService.ts` para pedir `DeclarativeManifest` (no `FlexibleGrammar`), validar post-LLM con Zod estricto, eliminar `cleanseJson` como fallback. 7 tests TDD.

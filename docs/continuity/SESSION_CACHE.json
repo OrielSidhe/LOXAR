@@ -1,8 +1,8 @@
 {
-  "lastUpdated": "2026-08-14T23:12:00.000Z",
+  "lastUpdated": "2026-08-14T02:16:00.000Z",
   "uiState": {
-    "activeTab": "table",
-    "syntaxSubTab": "ast",
+    "activeTab": "dashboard",
+    "syntaxSubTab": "canvas",
     "activeProfile": "default",
     "editorMode": "add",
     "incompleteIndex": 0,
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Continuar descomposición de App.tsx y componentes gigantes siguiendo LOXAR_OPERATING_PROTOCOL.md.",
+    "lastPrompt": "Implementar navegación por historial, botones volver/inicio, panel resumen en canvas home y consolidar boundaries de Suspense.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Se extrajeron SyntaxNodeRenderer y SyntaxBreakdownPanel de SyntaxCanvas.tsx, se mantuvieron las validaciones en verde (typecheck 0 errores, lint OK, build OK, vitest 122/122). Próximo bloque: seguir descomponiendo App.tsx o componentes gigantes."
+  "sessionSummary": "Se corrigieron tests fallosos de textParser y quavanolPipeline, se implementó historial de navegación con botones volver/inicio, se agregó botón home en sidebar, se convirtió el nodo central del canvas en overlay de resumen del proyecto y se eliminó el Suspense boundary duplicado de AiSettingsModal. Validaciones verdes."
 }
