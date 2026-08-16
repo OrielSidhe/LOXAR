@@ -92,7 +92,6 @@ const LOCAL_STRATEGY_CATEGORY_INFERENCE_MAP: Record<string, string[]> = {
   número: ['noun', 'adjective'], numero: ['noun', 'adjective'],
   tiempo: ['verb'], tense: ['verb'],
   preverbal: ['verb'], postverbal: ['verb'],
-  verbal: ['verb'],
   cláusula: ['verb', 'particle'], clausula: ['verb', 'particle'],
 };
 
@@ -163,15 +162,6 @@ function inferStrategyCategories(name: string): string[] {
 function resolveRoleLocal(raw: string): string {
   const lower = raw.toLowerCase().trim();
   return LOCAL_ROLE_MAP[lower] || lower;
-}
-
-// ---------------------------------------------------------------------------
-// Tipos internos del parser (no exportados)
-// ---------------------------------------------------------------------------
-
-interface RawSection {
-  header: string;
-  content: string;
 }
 
 // ---------------------------------------------------------------------------

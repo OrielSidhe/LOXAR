@@ -27,6 +27,8 @@ import TableIcon from './components/icons/TableIcon';
 import PenToolIcon from './components/icons/PenToolIcon';
 import SettingsIcon from './components/icons/SettingsIcon';
 import SparkleIcon from './components/icons/SparkleIcon';
+import ArrowLeftIcon from './components/icons/ArrowLeftIcon';
+import HomeIcon from './components/icons/HomeIcon';
 
 // Components
 import AppLoadingLayer from './components/AppLoadingLayer';
@@ -82,7 +84,27 @@ const App = () => {
   const [isAppLoaded, setIsAppLoaded] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>('dashboard');
+  const [tabHistory, setTabHistory] = useState<Array<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>>(['dashboard']);
+  const activeTab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' = tabHistory[tabHistory.length - 1] ?? 'dashboard';
+
+  const setActiveTab = useCallback((tab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' | ((prev: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools') => 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools')) => {
+    setTabHistory(prev => {
+      const next = typeof tab === 'function' ? tab(prev[prev.length - 1] ?? 'dashboard') : tab;
+      if (prev[prev.length - 1] === next) return prev;
+      return [...prev, next];
+    });
+  }, []);
+
+  const goBack = useCallback(() => {
+    setTabHistory(prev => {
+      if (prev.length <= 1) return prev;
+      return prev.slice(0, -1);
+    });
+  }, []);
+
+  const goHome = useCallback(() => {
+    setTabHistory(['dashboard']);
+  }, []);
   const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
 
   const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
@@ -132,6 +154,7 @@ const App = () => {
   const [availableProjects, setAvailableProjects] = useState<string[]>([]);
   const [hasLocalData, setHasLocalData] = useState(false);
   const [bootstrapDismissed, setBootstrapDismissed] = useState(false);
+  const [showHomePanel, setShowHomePanel] = useState(false);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
@@ -498,9 +521,30 @@ const App = () => {
               onOpenWidget={() => window.loxarBridge.openWidget()}
               onOpenSettings={() => setShowSettings(true)}
               onShowTour={handleStartTour}
+              onGoHome={goHome}
             />
 
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
+              {activeTab !== 'dashboard' && (
+                <div className="flex items-center gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    className="flex items-center gap-1 text-xs text-text-secondary hover:text-white bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
+                  >
+                    <ArrowLeftIcon className="w-3.5 h-3.5" />
+                    Volver
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goHome}
+                    className="flex items-center gap-1 text-xs text-text-secondary hover:text-accent bg-white/5 hover:bg-accent/10 rounded-lg px-2 py-1 transition-colors"
+                  >
+                    <HomeIcon className="w-3.5 h-3.5" />
+                    Panel
+                  </button>
+                </div>
+              )}
               <div className="flex-grow h-full flex flex-col">
                 {activeTab === 'dashboard' && (
                   <div className="h-full w-full">

@@ -8,6 +8,7 @@ import SettingsIcon from './icons/SettingsIcon';
 import SparkleIcon from './icons/SparkleIcon';
 import InfoIcon from './icons/InfoIcon';
 import WidgetIcon from './icons/WidgetIcon';
+import HomeIcon from './icons/HomeIcon';
 
 type SidebarItem = {
   id: string;
@@ -32,9 +33,10 @@ interface VerticalSidebarProps {
   onOpenWidget: () => void;
   onOpenSettings: () => void;
   onShowTour?: () => void;
+  onGoHome?: () => void;
 }
 
-const VerticalSidebar: React.FC<VerticalSidebarProps> = ({ active, onChange, onOpenWidget, onOpenSettings, onShowTour }) => {
+const VerticalSidebar: React.FC<VerticalSidebarProps> = ({ active, onChange, onOpenWidget, onOpenSettings, onShowTour, onGoHome }) => {
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
@@ -42,6 +44,16 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({ active, onChange, onO
       <div className="mb-3">
         <span className="text-[10px] font-black tracking-widest text-accent">LOX</span>
       </div>
+
+      {onGoHome && (
+        <button
+          onClick={onGoHome}
+          className="w-12 h-12 rounded-xl flex items-center justify-center text-text-secondary hover:text-accent hover:bg-accent/10 transition-colors mb-1"
+          title="Volver al panel"
+        >
+          <HomeIcon className="w-5 h-5" />
+        </button>
+      )}
 
       {items.map((item) => {
         const Icon = item.icon;
