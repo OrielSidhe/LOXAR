@@ -7,7 +7,7 @@
 [![Ollama](https://img.shields.io/badge/Ollama-local_inference-000000?logo=ollama)](https://ollama.ai)
 [![Gemini](https://img.shields.io/badge/Gemini-2.5-4285F4?logo=google)](https://ai.google.dev)
 
-LOXAR es una aplicación de escritorio para crear, modelar y expandir **lenguas construidas (conlangs)**. Combina gestión de léxico, gramática visual, neografía y generación de vocabulario asistida por IA en un solo entorno.
+LOXAR es una aplicación de escritorio para crear, modelar y expandir **lenguas construidas (conlangs)**. Combina gestión de léxico, gramática visual, neografía y generación de vocabulario asistida por IA en un solo entorno con una interfaz tipo canvas navegable.
 
 ## Por qué existe
 
@@ -53,6 +53,11 @@ Lexicón ←→ Gramática ←→ Motor de realización ←→ Superficie (forma
 - **Ollama** para inferencia local sin depender de APIs externas.
 - Degradación offline: el motor de gramática funciona sin conexión; la IA solo se usa para bootstrap e inducción de reglas desde corpus.
 
+### UI lista para revisión
+- Pantalla inicial tipo **canvas Stitch** (`LanguageHomeCanvas`) con nodo central de lengua y módulos satélite navegables.
+- Métricas vivas por módulo: reglas, categorías, entradas, pendientes, etc.
+- Logo LOXAR con marca **X** sobre la O, usable en README y assets del repo.
+
 ## Continuity protocol
 
 LOXAR incluye un framework de continuidad para desarrollo asistido por IA:
@@ -65,10 +70,10 @@ Esto permite que un agente de coding IA retome el proyecto desde cualquier punto
 
 ## Estado actual
 
-- **~184 archivos TS/TSX** en `src/` + `src-tauri/`.
-- **45+ commits** en `feature/sql-migration-clean`.
-- **8 tests unitarios del motor de gramática** (morphology, syntax, phonology, exceptions, AST, typology profiles, linter) — todos verdes.
-- **Fixture Quavanol** testeado: 30+ casos, 9 géneros, verb chains, numerales base-10.
+- **Frontend modularizado:** `App.tsx` reducido mediante extracciones controladas (`AppWelcomeSection`, `AppToastLayer`, `AppOfflineBannerLayer`, `AppSettingsModalLayer`, etc.).
+- **Suite de tests:** 122/122 tests unitarios/integración en Vitest.
+- **Build estable:** `npm run typecheck`, `npm run lint` y `npm run build` en verde.
+- **Repositorio listo:** continuidad actualizada, commits granulares y UI de presentación finalizada.
 
 ## Puesta en marcha
 
