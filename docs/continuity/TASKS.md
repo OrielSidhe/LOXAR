@@ -45,6 +45,22 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `SyntaxBreakdownPanel` de `SyntaxCanvas.tsx`
+**Rama:** `main`. **Motivo:** seguir descomponiendo `SyntaxCanvas.tsx` extrayendo el panel de
+desglose morfológico a un componente dedicado para reducir la superficie del componente.
+**Cambios:**
+- `src/components/SyntaxBreakdownPanel.tsx` (NUEVO): componente propio para el panel de
+  desglose morfológico por palabra, con colores de segmentos, forma de superficie y ranuras de
+  paradigma editables.
+- `src/components/SyntaxCanvas.tsx`: se eliminó la definición inline de `BreakdownPanel` y
+  se reemplazó su uso por `<SyntaxBreakdownPanel />` con el import correspondiente.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
+
 ## [2026-08-14] Checkpoint: Extraer `SyntaxNodeRenderer` de `SyntaxCanvas.tsx`
 **Rama:** `main`. **Motivo:** seguir descomponiendo `SyntaxCanvas.tsx` extrayendo el componente
 de nodos del canvas a un archivo dedicado para reducir la superficie de uno de los 4 componentes
