@@ -45,6 +45,23 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-08-14] Checkpoint: Extraer `SyntaxNodeRenderer` de `SyntaxCanvas.tsx`
+**Rama:** `main`. **Motivo:** seguir descomponiendo `SyntaxCanvas.tsx` extrayendo el componente
+de nodos del canvas a un archivo dedicado para reducir la superficie de uno de los 4 componentes
+gigantes.
+**Cambios:**
+- `src/components/SyntaxNodeRenderer.tsx` (NUEVO): componente propio para el renderizado de
+  nodos del canvas sintáctico, con cabecera, propiedades y área de hijos/hijos recursivos.
+- `src/components/SyntaxCanvas.tsx`: se eliminó la definición inline de `SyntaxNodeRenderer` y
+  se agregó el import correspondiente. Los usos dentro del canvas ahora apuntan al componente
+  extraído.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+
+---
+
 ## [2026-08-14] Checkpoint: Extraer `EntryEditorForm` de `EntryEditor` y seguir descomponiendo componentes gigantes
 **Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
 pequeñas y seguras de los componentes grandes. En este paso se extrajo el formulario inline de
