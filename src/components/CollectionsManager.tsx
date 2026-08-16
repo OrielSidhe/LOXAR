@@ -17,6 +17,7 @@ import CancelIcon from './icons/CancelIcon';
 import * as XLSX from 'xlsx';
 import ParadigmCell from './ParadigmCell';
 import CollectionsSidebar from './CollectionsSidebar';
+import CollectionsPanel from './CollectionsPanel';
 
 interface CollectionsManagerProps {
     lexicon: LexiconEntry[];
@@ -51,7 +52,7 @@ interface Collection {
 
 const normalize = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries, customCategories, onStartTour }: CollectionsManagerProps) => {
+const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries, customCategories, onStartTour, onDeleteEntry, onUpdateEntry }: CollectionsManagerProps) => {
     const [collections, setCollections] = useState<Collection[]>([]);
     const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
     const [isCreating, setIsCreating] = useState(false);
@@ -585,285 +586,36 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
                 onSetNewCollectionName={(value: string) => setNewCollectionName(value)}
             />
 
-            <div className="flex-1 flex flex-col bg-surface-dark rounded-r-xl overflow-hidden relative border border-border-dark">
-                {!activeCollection ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-text-secondary opacity-50">
-                        <FilterIcon className="w-16 h-16 mb-4" />
-                        <p className="text-lg">Selecciona una colección</p>
-                    </div>
-                ) : (
-                    <>
-                        <div className="bg-surface border-b border-border-dark p-4 flex justify-between items-center shadow-md z-1">
-                            <div>
-                                <h3 className="text-xl font-bold text-white font-display mb-1">{activeCollection.name}</h3>
-                                <div className="flex items-center gap-2 text-xs text-text-secondary">
-                                    <span>{activeCollection.entryIds.length} confirmadas</span>
-                                    {activeCollection.drafts && activeCollection.drafts.length > 0 && (
-                                        <button
-                                            onClick={() => setShowDraftsReview(true)}
-                                            className="ml-1 px-2 py-0.5 rounded-full bg-accent/20 text-accent hover:bg-accent/30 flex items-center gap-1 transition-colors animate-pulse"
-                                        >
-                                            <span className="font-bold">{activeCollection.drafts.length} pendientes por agregar</span>
-                                            <CheckCircleIcon className="w-3 h-3" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={onStartTour}
-                                    className="p-2 rounded-lg text-text-secondary hover:text-primary hover:bg-white/5"
-                                    title="Ayuda / Tour"
-                                >
-                                    <span className="font-bold font-mono text-lg">?</span>
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (window.confirm("¿Limpiar toda la tabla? (No borra palabras del léxico, solo de esta vista)")) {
-                                            saveCollections(collections.map(c => c.id === activeCollection.id ? { ...c, entryIds: [] } : c));
-                                        }
-                                    }}
-                                    className="p-2 rounded-lg text-text-secondary hover:text-red-400 hover:bg-white/5"
-                                    title="Limpiar tabla"
-                                >
-                                    <TrashIcon className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 relative overflow-hidden flex flex-col h-full">
-                            <div id="collections-toolbar" className="bg-surface border-b border-border-dark p-2 flex gap-2 overflow-x-auto z-10 relative items-center">
-                                <button
-                                    onClick={() => isSelectingMode ? handleFinishSelectionAttempt() : setIsSelectingMode(true)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all ${isSelectingMode ? 'bg-accent text-white' : 'bg-surface-light text-text-primary hover:bg-surface-light/80'}`}
-                                >
-                                    {isSelectingMode ? <CheckCircleIcon className="w-3.5 h-3.5" /> : <PlusIcon className="w-3.5 h-3.5" />}
-                                    {isSelectingMode ? 'Terminar Filas' : 'Agregar Filas (Base)'}
-                                </button>
-                                <div className="w-px bg-border-dark h-6 mx-2"></div>
-
-                                <div className="flex items-center gap-2">
-                                    {!isAddingColumn ? (
-                                        <div className="flex gap-2">
-                                            <select
-                                                className="bg-surface-dark text-xs text-white border border-border-dark rounded px-2 py-1 outline-none focus:border-primary max-w-[150px]"
-                                                onChange={(e) => {
-                                                    if (e.target.value === '__custom__') {
-                                                        setIsAddingColumn(true);
-                                                        e.target.value = "";
-                                                    } else if (e.target.value) {
-                                                        const func = e.target.value;
-                                                        const newCol: CollectionColumn = { id: Date.now().toString(), name: func, categoryLink: func };
-                                                        const updatedCols = [...(activeCollection.columns || []), newCol];
-                                                        const updatedColl = { ...activeCollection, columns: updatedCols };
-                                                        saveCollections(collections.map(c => c.id === activeCollection.id ? updatedColl : c));
-                                                        e.target.value = "";
-                                                    }
-                                                }}
-                                            >
-                                                <option value="" className="bg-surface-dark text-gray-400">+ Columna Rápida...</option>
-                                                {customCategories.map(f => (
-                                                    <option key={f} value={f} className="bg-surface-dark text-white">{f}</option>
-                                                ))}
-                                                <option value="__custom__" className="bg-surface-dark text-primary font-bold">+ Crear Personalizada...</option>
-                                            </select>
-                                            <button
-                                                onClick={() => setIsAddingColumn(true)}
-                                                className="px-2 py-1 bg-surface-light/20 hover:bg-surface-light/40 border border-border-dark rounded text-xs text-text-secondary"
-                                            >
-                                                + Nueva
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2 animate-fade-in bg-surface-light/30 p-1 rounded border border-primary/30">
-                                            <input
-                                                autoFocus
-                                                type="text"
-                                                className="bg-transparent border-none outline-none text-xs text-white placeholder-white/50 w-32"
-                                                placeholder="Nombre columna..."
-                                                value={newColumnName}
-                                                onChange={(e) => setNewColumnName(e.target.value)}
-                                                onKeyDown={(e) => e.key === 'Enter' && handleAddColumn()}
-                                            />
-                                            <button onClick={handleAddColumn} className="text-primary hover:text-white p-1"><CheckCircleIcon className="w-3 h-3" /></button>
-                                            <button onClick={() => { setIsAddingColumn(false); setNewColumnName(''); }} className="text-text-secondary hover:text-white p-1"><XCircleIcon className="w-3 h-3" /></button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {activeCollectionEntries.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center p-12 text-text-secondary opacity-60">
-                                    <p>Tabla vacía. Agrega filas (palabras base) para comenzar.</p>
-                                </div>
-                            ) : (
-                                <div id="paradigm-table" className="overflow-auto custom-scrollbar flex-1 pb-4">
-                                    <table className="w-full text-left text-sm border-collapse min-w-max">
-                                        <thead className="sticky top-0 bg-surface/95 backdrop-blur z-10 text-xs uppercase font-bold text-text-secondary border-b border-border-dark shadow-sm">
-                                            <tr>
-                                                <th className="p-3 bg-surface-dark border-r border-border-dark sticky left-0 z-20 w-48 shadow-lg">Entrada Base</th>
-                                                {activeCollection.columns?.map(col => (
-                                                    <th key={col.id} className="p-3 w-48 group relative hover:bg-white/5 transition-colors">
-                                                        <input
-                                                            type="text"
-                                                            className="bg-transparent border-none outline-none w-full cursor-pointer hover:text-primary focus:text-primary focus:cursor-text text-center font-bold"
-                                                            value={col.name}
-                                                            onChange={(e) => handleRenameColumn(col.id, e.target.value)}
-                                                            title="Click para renombrar"
-                                                        />
-                                                        <button
-                                                            onClick={() => {
-                                                                if (window.confirm('¿Borrar columna?')) {
-                                                                    const updatedCols = activeCollection.columns?.filter(c => c.id !== col.id);
-                                                                    const updatedColl = { ...activeCollection, columns: updatedCols };
-                                                                    saveCollections(collections.map(c => c.id === activeCollection.id ? updatedColl : c));
-                                                                }
-                                                            }}
-                                                            className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 hover:text-red-400"
-                                                        >
-                                                            <XCircleIcon className="w-3 h-3" />
-                                                        </button>
-                                                    </th>
-                                                ))}
-                                                <th className="p-3 w-10"></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-surface-dark divide-y divide-border-dark">
-                                            {activeCollectionEntries.map(entry => (
-                                                <tr key={entry.ID} className="hover:bg-white/5">
-                                                    <td className="p-3 bg-surface-dark/95 backdrop-blur border-r border-border-dark sticky left-0 z-10 font-bold text-white shadow-lg">
-                                                        <div className="flex flex-col">
-                                                            <span>{entry.Léxema.join(', ')}</span>
-                                                            <span className="text-[10px] text-accent font-normal">{entry.Significado[0]}</span>
-                                                        </div>
-                                                    </td>
-
-                                                    {activeCollection.columns?.map(col => (
-                                                        <td key={`${entry.ID}-${col.id}`} className="p-3 border-r border-border-dark/50">
-                                                            <ParadigmCell
-                                                                rowEntry={entry}
-                                                                colCategory={col.categoryLink}
-                                                                lexicon={lexicon}
-                                                                inflection={inflection}
-                                                                onAddEntry={onAddEntry}
-                                                                localValue={activeCollection.customCells?.[entry.ID]?.[col.categoryLink] || ''}
-                                                                onUpdateLocalValue={(val) => handleUpdateCell(entry.ID, col.categoryLink, val)}
-                                                            />
-                                                        </td>
-                                                    ))}
-
-                                                    <td className="p-3 text-right">
-                                                        <button onClick={() => handleToggleEntryInCollection(entry.ID)} className="text-text-secondary hover:text-red-400 opacity-50 hover:opacity-100"><XCircleIcon className="w-4 h-4" /></button>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            {isSelectingMode && (
-                                <div className="absolute inset-0 z-50 flex flex-col bg-surface-dark animate-fade-in overflow-hidden">
-                                    <div className="absolute top-4 right-4 z-50">
-                                        <button
-                                            onClick={() => setIsSelectingMode(false)}
-                                            className="p-2 rounded-full bg-surface hover:bg-white/10 text-text-secondary hover:text-white transition-colors"
-                                        >
-                                            <XCircleIcon className="w-8 h-8" />
-                                        </button>
-                                    </div>
-                                    <div className="p-8 border-b border-border-dark bg-surface-dark shrink-0 pt-16 shadow-lg z-10">
-                                        <div className="relative max-w-4xl mx-auto">
-                                            <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-text-secondary" />
-                                            <input
-                                                autoFocus
-                                                type="text"
-                                                className="w-full bg-[#1a1a1c] border border-border-dark rounded-full py-3 pl-12 pr-6 text-lg text-white focus:outline-none focus:border-primary transition-colors placeholder-text-secondary/50 shadow-inner"
-                                                placeholder="Buscar palabra base para la fila..."
-                                                value={searchTerm}
-                                                onChange={e => setSearchTerm(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-background">
-                                        <div className="max-w-5xl mx-auto pb-20 space-y-2">
-                                            {searchTerm.trim() && (
-                                                <button
-                                                    onClick={handleQuickAddDraft}
-                                                    className="w-full mb-6 p-4 border-2 border-dashed border-primary/40 rounded-xl flex items-center justify-center gap-3 text-primary hover:bg-primary/10 transition-colors group animate-fade-in"
-                                                >
-                                                    <PlusIcon className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                                                    <span className="font-bold">Agregar "{searchTerm}" a borradores</span>
-                                                </button>
-                                            )}
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                {activeCollection.drafts?.map((draft, idx) => (
-                                                    <div key={`draft-${idx}`} className="p-3 rounded-lg border border-accent bg-accent/10 flex justify-between items-center">
-                                                        <div>
-                                                            <div className="font-bold text-white italic">{draft}</div>
-                                                            <span className="text-[10px] uppercase font-bold text-accent tracking-wider">Borrador</span>
-                                                        </div>
-                                                        <button onClick={() => handleRemoveDraft(draft)} className="p-1 hover:bg-black/20 rounded text-accent"><TrashIcon className="w-4 h-4" /></button>
-                                                    </div>
-                                                ))}
-
-                                                {searchResults.map(entry => {
-                                                    const isSelected = activeCollection.entryIds.includes(entry.ID);
-                                                    return (
-                                                        <div
-                                                            key={entry.ID}
-                                                            onClick={() => handleToggleEntryInCollection(entry.ID)}
-                                                            className={`p-3 rounded-lg border cursor-pointer flex justify-between items-center transition-all ${isSelected ? 'bg-primary/20 border-primary' : 'bg-surface border-border-dark hover:border-primary/50'}`}
-                                                        >
-                                                            <div className="truncate pr-2">
-                                                                <div className="font-bold text-white truncate">{entry.Léxema.join(', ') || entry.Raíz}</div>
-                                                                <div className="text-xs text-text-secondary truncate">{entry.Significado.join(', ')}</div>
-                                                            </div>
-                                                            <div className={`shrink-0 w-5 h-5 rounded-full border flex items-center justify-center ${isSelected ? 'bg-primary border-primary' : 'border-text-secondary'}`}>
-                                                                {isSelected && <CheckCircleIcon className="w-3.5 h-3.5 text-white" />}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
-            </div>
-
-            {showDraftsReview && (
-                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-                    <div className="bg-surface border border-border-dark rounded-xl shadow-2xl max-w-md w-full p-6">
-                        <h3 className="text-xl font-bold text-white mb-2">Nuevas Palabras Detectadas</h3>
-                        <p className="text-text-secondary text-sm mb-4">
-                            Has creado {activeCollection?.drafts?.length} borradores rápidos. ¿Quieres agregarlos al Léxico Principal ahora?
-                        </p>
-
-                        <div className="bg-background-dark rounded border border-border-dark p-3 max-h-40 overflow-y-auto mb-6">
-                            {activeCollection?.drafts?.map((d, i) => (
-                                <div key={i} className="text-white font-mono text-sm border-b border-border-dark/50 last:border-0 py-1">{d}</div>
-                            ))}
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <button onClick={handleConfirmDrafts} className="w-full py-3 bg-primary hover:bg-primary-dark text-background-dark font-bold rounded-lg transition-colors">
-                                Sí, agregar y finalizar
-                            </button>
-                            <button onClick={() => { setShowDraftsReview(false); setIsSelectingMode(false); }} className="w-full py-2 bg-surface-light hover:bg-surface-light/80 text-text-secondary rounded-lg transition-colors">
-                                No, guardar solo selección (descartar borradores)
-                            </button>
-                            <button onClick={() => setShowDraftsReview(false)} className="w-full py-2 text-text-secondary hover:text-white transition-colors text-xs">
-                                Cancelar (Volver a editar)
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <CollectionsPanel
+                activeCollection={activeCollection}
+                collections={collections}
+                lexicon={lexicon}
+                inflection={inflection}
+                onAddEntry={onAddEntry}
+                onAddBatchEntries={onAddBatchEntries}
+                onDeleteEntry={onDeleteEntry}
+                customCategories={customCategories}
+                isSelectingMode={isSelectingMode}
+                searchTerm={searchTerm}
+                searchResults={searchResults}
+                isAddingColumn={isAddingColumn}
+                newColumnName={newColumnName}
+                showDraftsReview={showDraftsReview}
+                onStartTour={onStartTour}
+                onToggleEntryInCollection={handleToggleEntryInCollection}
+                onUpdateCell={handleUpdateCell}
+                onQuickAddDraft={handleQuickAddDraft}
+                onRemoveDraft={handleRemoveDraft}
+                onFinishSelectionAttempt={handleFinishSelectionAttempt}
+                onConfirmDrafts={handleConfirmDrafts}
+                onAddColumn={handleAddColumn}
+                onRenameColumn={handleRenameColumn}
+                onSetIsSelectingMode={(value) => setIsSelectingMode(value)}
+                onSetSearchTerm={(value) => setSearchTerm(value)}
+                onSetIsAddingColumn={(value) => setIsAddingColumn(value)}
+                onSetNewColumnName={(value) => setNewColumnName(value)}
+                onSetShowDraftsReview={(value) => setShowDraftsReview(value)}
+            />
         </div>
     );
 };

@@ -31,7 +31,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   y pantalla inicial rediseñada como `LanguageHomeCanvas` tipo canvas Stitch con nodo central
   de lenguaje y módulos satélite navegables.
   También se extrajeron `AppWelcomeSection`, `AppToastLayer`, `AppOfflineBannerLayer`,
-  `AppSettingsModalLayer`, `AppProjectBootstrapLayer` y `CollectionsSidebar` de `CollectionsManager`
+  `AppSettingsModalLayer`, `AppProjectBootstrapLayer`, `CollectionsSidebar`, `CollectionsPanel` y `CollectionsDraftsReview` de `CollectionsManager`
   reduciendo el tamaño de los componentes gigantes.
 - `LanguageHomeCanvas` ahora muestra métricas reales por módulo y el logo LOXAR quedó con la X completa sobre la O para presentación en CV/GitHub.
 - Persistencia: SQLite con transacciones, backup `.bak`, `schemaVersion`, FTS5 real desde UI y Web Worker

@@ -2364,3 +2364,24 @@ componente dedicado para reducir la superficie de uno de los 4 componentes gigan
   `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
 
 ---
+
+---
+## [2026-08-14] Checkpoint: Extraer `CollectionsPanel` y `CollectionsDraftsReview` de `CollectionsManager`
+**Rama:** `main`. **Motivo:** continuar P1 sin reabrir `useProjectShell`, avanzando por secciones
+pequeñas y seguras de los componentes grandes. En este paso se extrajeron el panel derecho completo
+y el modal de borradores de `CollectionsManager` a componentes dedicados para reducir la superficie
+de uno de los 4 componentes gigantes.
+**Cambios:**
+- `src/components/CollectionsPanel.tsx` (NUEVO): componente dedicado para el panel derecho de
+  colecciones con tabla, toolbar de columnas, modo selección y props tipadas.
+- `src/components/CollectionsDraftsReview.tsx` (NUEVO): componente dedicado para el modal de
+  revisión de borradores.
+- `src/components/CollectionsManager.tsx`: se reemplazó el bloque inline del panel derecho y el
+  modal de borradores por `<CollectionsPanel ... />` y `<CollectionsDraftsReview ... />`,
+  manteniendo la lógica de estado y handlers en el componente padre. Se añadieron los imports
+  correspondientes y se corrigió el destructuring de `onDeleteEntry` y `onUpdateEntry` para alinear
+  con `CollectionsManagerProps`.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+- Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
+  `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
