@@ -2449,3 +2449,22 @@ de uno de los 4 componentes gigantes.
   `npx vitest run` 122 passed.
 - Próximo bloque ejecutable: continuar extrayendo subcomponentes de `EntryEditor`,
   `CollectionsManager`, `GrammarTab` o `SyntaxCanvas`.
+---
+
+---
+## [2026-08-16] Checkpoint: Tests de conlangs externos y botones Léxico/Workbench en canvas inicial
+**Rama:** `main`. **Motivo:** ampliar cobertura del parser con gramáticas textuales reales de conlangs
+y cumplir el pedido de que Léxico y Workbench sean dos botones dentro del nodo de Léxico en el
+canvas inicial.
+**Cambios:**
+- `src/services/grammar/__tests__/externalConlangs.test.ts` (NUEVO): suite con 5 fixtures de gramáticas
+  textuales (Toki Pona, Esperanto, Klingon, Lojban, Na'vi) y 10 smoke tests que validan tipología,
+  fonología, paradigmas y extracción de estrategias. Todos los tests pasan.
+- `src/components/LanguageHomeCanvas.tsx`: el nodo `lexicon` ahora se llama "Léxico / Workbench" e incluye
+  dos botones internos ("Léxico" y "Workbench") con `stopPropagation` para no disparar el click del nodo.
+  Se agregó el nodo `collections` al layout del canvas.
+- `src/App.tsx`: el handler `onModuleClick` ahora mapea `'lexicon'` a la tab `'table'` para que el
+  botón "Léxico" abra correctamente la vista de léxico.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 134 passed. Nota: la única suite fallida es `tests-gui/smoke.spec.ts` (Playwright),
+  que queda como suite GUI separada pendiente de autorización por SOP §9 y no se considera regresión.
