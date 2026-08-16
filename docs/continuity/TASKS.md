@@ -184,6 +184,19 @@ bajo riesgo: splash, welcome y tour guiado.
 
 ---
 
+## [2026-08-14] Checkpoint: Actualizar README para presentación en GitHub
+**Rama:** `main`. **Motivo:** dejar el repo listo para revisión externa/CV: el README ahora refleja
+el estado real del proyecto, incluyendo la UI de canvas, métricas por módulo, logo LOXAR con X y
+estado de validaciones.
+**Cambios:**
+- `README.md`: se actualizó la descripción general, se agregó la sección `UI lista para revisión`
+  con `LanguageHomeCanvas`, métricas vivas y logo LOXAR, y se corrigió el estado actual
+  (122 tests, build verde, frontend modularizado).
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Extraer `AppToastLayer` de `App.tsx`
 **Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` aislando la capa de notificaciones
 en un componente propio, manteniendo la limpieza del archivo central.
@@ -225,6 +238,21 @@ métricas reales por módulo y el logo pasa de “0” a “X” sobre la O, man
   placeholders controlados para módulos sin datos numéricos todavía.
 - `src/components/icons/AppLogoIcon.tsx`: se agregó la segunda diagonal `x1="72" y1="28" x2="28" y2="72"`
   para que el logo sea una X atravesando el círculo, dejando la marca LOXAR lista para CV/repos.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
+## [2026-08-14] Checkpoint: Extraer `AppAmbientLightsLayer` y limpiar imports en `App.tsx`
+**Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` aislando la capa decorativa en un
+componente propio y eliminar imports ya no usados, manteniendo la limpieza del archivo central.
+**Cambios:**
+- `src/components/AppAmbientLightsLayer.tsx` (NUEVO): componente envoltorio de `AmbientLights`
+  sin props adicionales.
+- `src/App.tsx`: se reemplazó el uso inline de `<AmbientLights />` por
+  `<AppAmbientLightsLayer />` y se eliminaron imports directos sin uso de
+  `WelcomeScreen`, `CompletionDashboard`, `SplashScreen`, `TabButton`, `AiStatusIndicator` y
+  `GuidedTour`, que ya están cubiertos por componentes extraídos.
 - Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
   `npx vitest run` 122 passed.
 
