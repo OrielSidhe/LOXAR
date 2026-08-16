@@ -16,25 +16,28 @@ type LanguageHomeCanvasProps = {
   conlangName?: string | null;
   activeModule?: string;
   stats?: {
-    grammar?: { rules?: number; categories?: number };
+    grammar?: { rules?: number; categories?: number; strategies?: number; roles?: number };
     phonology?: { sounds?: number; rules?: number };
-    syntax?: { rules?: number };
-    lexicon?: { entries?: number };
-    neography?: { glyphs?: number };
-    semantics?: { fields?: number };
+    syntax?: { rules?: number; trees?: number };
+    lexicon?: { entries?: number; categories?: number };
+    neography?: { glyphs?: number; rules?: number };
+    semantics?: { fields?: number; relations?: number };
+    translator?: { translations?: number };
+    workbench?: { pending?: number; completed?: number };
+    collections?: { collections?: number };
   };
   onModuleClick?: (moduleId: ModuleId) => void;
 };
 
 const MODULE_NODES: ModuleNode[] = [
-  { id: 'grammar', label: 'Gramática', icon: '📐', status: 'empty', description: 'Categorías, reglas y excepciones', x: 50, y: 22 },
-  { id: 'phonology', label: 'Fonología', icon: '🔊', status: 'empty', description: 'Inventario fonético y reglas', x: 22, y: 38 },
-  { id: 'syntax', label: 'Sintaxis', icon: '🧩', status: 'empty', description: 'Estructura de oraciones', x: 78, y: 38 },
-  { id: 'lexicon', label: 'Léxico', icon: '📚', status: 'empty', description: 'Entradas y significados', x: 22, y: 62 },
-  { id: 'neography', label: 'Neografía', icon: '✍️', status: 'empty', description: 'Glifos y sistema de escritura', x: 50, y: 78 },
-  { id: 'semantics', label: 'Semántica', icon: '💡', status: 'empty', description: 'Campos semánticos y relaciones', x: 78, y: 62 },
-  { id: 'translator', label: 'Traductor', icon: '🔁', status: 'empty', description: 'Traducción y glosado interlineal', x: 8, y: 50 },
-  { id: 'workbench', label: 'Workbench', icon: '🛠️', status: 'empty', description: 'Cola de trabajo y completado', x: 92, y: 50 },
+  { id: 'grammar', label: 'Gramática', icon: '📐', status: 'empty', description: 'Categorías, reglas y excepciones', x: 50, y: 18 },
+  { id: 'phonology', label: 'Fonología', icon: '🔊', status: 'empty', description: 'Inventario fonético y reglas', x: 18, y: 36 },
+  { id: 'syntax', label: 'Sintaxis', icon: '🧩', status: 'empty', description: 'Estructura de oraciones', x: 82, y: 36 },
+  { id: 'lexicon', label: 'Léxico', icon: '📚', status: 'empty', description: 'Entradas y significados', x: 18, y: 64 },
+  { id: 'neography', label: 'Neografía', icon: '✍️', status: 'empty', description: 'Glifos y sistema de escritura', x: 50, y: 82 },
+  { id: 'semantics', label: 'Semántica', icon: '💡', status: 'empty', description: 'Campos semánticos y relaciones', x: 82, y: 64 },
+  { id: 'translator', label: 'Traductor', icon: '🔁', status: 'empty', description: 'Traducción y glosado interlineal', x: 6, y: 50 },
+  { id: 'workbench', label: 'Workbench', icon: '🛠️', status: 'empty', description: 'Cola de trabajo y completado', x: 94, y: 50 },
 ];
 
 const EDGES = [
@@ -79,12 +82,13 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
       let status: ModuleNode['status'] = 'empty';
       const moduleStats = stats?.[node.id as keyof typeof stats];
       if (moduleStats) {
-        const hasData = Object.values(moduleStats).some((v) => typeof v === 'number' && v > 0);
+        const values = Object.values(moduleStats).filter((v): v is number => typeof v === 'number');
+        const hasData = values.some((v) => v > 0);
         if (hasData) status = 'partial';
       }
       if (node.id === 'lexicon' && moduleStats && typeof (moduleStats as any).entries === 'number' && (moduleStats as any).entries > 10) status = 'complete';
       if (node.id === 'grammar' && moduleStats && typeof (moduleStats as any).rules === 'number' && typeof (moduleStats as any).categories === 'number' && (moduleStats as any).rules > 0 && (moduleStats as any).categories > 0) status = 'complete';
-      return { ...node, status };
+      return { ...node, status, moduleStats };
     });
   }, [stats]);
 
@@ -197,6 +201,62 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
               </span>
               <span className="text-[9px] text-white/40 capitalize">{node.status === 'complete' ? 'Completo' : node.status === 'partial' ? 'Parcial' : 'Vacío'}</span>
             </div>
+            {node.moduleStats && (
+              <div className="flex items-center gap-2 mt-1.5 text-[9px] text-white/40">
+                {node.id === 'grammar' && (
+                  <>
+                    {(node.moduleStats as any).rules ? <span>Reglas: {(node.moduleStats as any).rules}</span> : null}
+                    {(node.moduleStats as any).categories ? <span>Categorías: {(node.moduleStats as any).categories}</span> : null}
+                  </>
+                )}
+                {node.id === 'phonology' && (
+                  <>
+                    {(node.moduleStats as any).sounds ? <span>Sonidos: {(node.moduleStats as any).sounds}</span> : null}
+                    {(node.moduleStats as any).rules ? <span>Reglas: {(node.moduleStats as any).rules}</span> : null}
+                  </>
+                )}
+                {node.id === 'syntax' && (
+                  <>
+                    {(node.moduleStats as any).rules ? <span>Reglas: {(node.moduleStats as any).rules}</span> : null}
+                    {(node.moduleStats as any).trees ? <span>Árboles: {(node.moduleStats as any).trees}</span> : null}
+                  </>
+                )}
+                {node.id === 'lexicon' && (
+                  <>
+                    {(node.moduleStats as any).entries ? <span>Entradas: {(node.moduleStats as any).entries}</span> : null}
+                    {(node.moduleStats as any).categories ? <span>Cat: {(node.moduleStats as any).categories}</span> : null}
+                  </>
+                )}
+                {node.id === 'neography' && (
+                  <>
+                    {(node.moduleStats as any).glyphs ? <span>Glifos: {(node.moduleStats as any).glyphs}</span> : null}
+                    {(node.moduleStats as any).rules ? <span>Reglas: {(node.moduleStats as any).rules}</span> : null}
+                  </>
+                )}
+                {node.id === 'semantics' && (
+                  <>
+                    {(node.moduleStats as any).fields ? <span>Campos: {(node.moduleStats as any).fields}</span> : null}
+                    {(node.moduleStats as any).relations ? <span>Relaciones: {(node.moduleStats as any).relations}</span> : null}
+                  </>
+                )}
+                {node.id === 'translator' && (
+                  <>
+                    {(node.moduleStats as any).translations ? <span>Traducciones: {(node.moduleStats as any).translations}</span> : null}
+                  </>
+                )}
+                {node.id === 'workbench' && (
+                  <>
+                    {(node.moduleStats as any).pending ? <span>Pendientes: {(node.moduleStats as any).pending}</span> : null}
+                    {(node.moduleStats as any).completed ? <span>Completadas: {(node.moduleStats as any).completed}</span> : null}
+                  </>
+                )}
+                {node.id === 'collections' && (
+                  <>
+                    {(node.moduleStats as any).collections ? <span>Colecciones: {(node.moduleStats as any).collections}</span> : null}
+                  </>
+                )}
+              </div>
+            )}
           </div>
         );
       })}

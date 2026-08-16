@@ -211,6 +211,25 @@ en un componente propio, manteniendo la limpieza del archivo central.
 
 ---
 
+## [2026-08-14] Checkpoint: Enriquecer `LanguageHomeCanvas` y corregir logo LOXAR
+**Rama:** `main`. **Motivo:** avanzar en la UI lista para GitHub: el canvas de inicio ahora muestra
+métricas reales por módulo y el logo pasa de “0” a “X” sobre la O, manteniendo la identidad LOXAR.
+**Cambios:**
+- `src/components/LanguageHomeCanvas.tsx`: se expandió el tipado de `stats` para incluir
+  `grammar`, `phonology`, `syntax`, `lexicon`, `neography`, `semantics`, `translator`,
+  `workbench` y `collections`. Los nodos ahora muestran métricas vivas debajo del estado
+  (`Reglas`, `Categorías`, `Sonidos`, `Entradas`, `Pendientes`, etc.) y la distribución de
+  nodos se ajustó para mejor lectura en el canvas.
+- `src/App.tsx`: el tab `dashboard` ahora envía un objeto `stats` completo a `LanguageHomeCanvas`
+  con conteos derivados de `activeGrammar`, `activeLexicon` e `incompleteEntries`, además de
+  placeholders controlados para módulos sin datos numéricos todavía.
+- `src/components/icons/AppLogoIcon.tsx`: se agregó la segunda diagonal `x1="72" y1="28" x2="28" y2="72"`
+  para que el logo sea una X atravesando el círculo, dejando la marca LOXAR lista para CV/repos.
+- Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+  `npx vitest run` 122 passed.
+
+---
+
 ## [2026-08-14] Checkpoint: Extraer `AppOfflineBannerLayer` de `App.tsx`
 **Rama:** `main`. **Motivo:** seguir reduciendo `App.tsx` aislando el banner offline en un componente
 propio, manteniendo la limpieza del archivo central.

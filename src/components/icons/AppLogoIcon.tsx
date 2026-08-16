@@ -13,8 +13,9 @@ const AppLogoIcon = ({ className }: { className?: string }) => (
     <rect x="14" y="14" width="72" height="72" rx="16" />
     {/* O central */}
     <circle cx="50" cy="50" r="18" />
-    {/* Trazo diagonal tipo “tache” para formar LOX */}
+    {/* Cruce tipo X sobre la O para formar LOX */}
     <line x1="28" y1="28" x2="72" y2="72" />
+    <line x1="72" y1="28" x2="28" y2="72" />
   </svg>
 );
 

@@ -29,7 +29,7 @@ import SettingsIcon from './components/icons/SettingsIcon';
 import SparkleIcon from './components/icons/SparkleIcon';
 
 // Components
-import LoadingOverlay from './components/LoadingOverlay';
+import AppLoadingLayer from './components/AppLoadingLayer';
 import WelcomeScreen from './components/WelcomeScreen';
 import CompletionDashboard from './components/CompletionDashboard';
 import EntryEditor from './components/EntryEditor';
@@ -404,7 +404,7 @@ const App = () => {
         <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished ? 'opacity-100' : 'opacity-0'}`}>
           <AmbientLights />
 
-          {isLoading && <LoadingOverlay message={loadingMessage} />}
+          <AppLoadingLayer isLoading={isLoading} loadingMessage={loadingMessage} />
           <AppOfflineBannerLayer showOfflineBanner={showOfflineBanner} />
 
           <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
@@ -518,8 +518,23 @@ const App = () => {
                         grammar: activeGrammar ? {
                           rules: (activeGrammar as any)?.morphology?.rules?.length + (activeGrammar as any)?.syntax?.rules?.length + (activeGrammar as any)?.phonology?.rules?.length,
                           categories: (activeGrammar as any)?.categories?.length,
+                          strategies: (activeGrammar as any)?.strategies?.length,
+                          roles: (activeGrammar as any)?.syntax?.roles?.length,
+                        } : undefined,
+                        phonology: activeGrammar ? {
+                          sounds: (activeGrammar as any)?.phonology?.consonants?.length + (activeGrammar as any)?.phonology?.vowels?.length,
+                          rules: (activeGrammar as any)?.phonology?.rules?.length,
+                        } : undefined,
+                        syntax: activeGrammar ? {
+                          rules: (activeGrammar as any)?.syntax?.rules?.length,
+                          trees: 0,
                         } : undefined,
                         lexicon: { entries: activeLexicon.length },
+                        neography: undefined,
+                        semantics: { fields: 0, relations: 0 },
+                        translator: { translations: 0 },
+                        workbench: { pending: incompleteEntries.length, completed: 0 },
+                        collections: { collections: 0 },
                       }}
                       onModuleClick={(moduleId) => setActiveTab(moduleId as any)}
                     />
