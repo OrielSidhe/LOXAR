@@ -2,14 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-background: #101e22;
+  --color-backgroundDark: #0a1316;
+  --color-surface: #16262c;
+  --color-surfaceLight: #223f49;
+  --color-border: #223f49;
+  --color-textPrimary: #F0FFF4;
+  --color-textSecondary: #b8e2f2;
+  --color-textMuted: #6c8d99;
+  --color-primary: #0db9f2;
+  --color-primaryDark: #098fb5;
+  --color-accent: #0db9f2;
+  --color-danger: #F87171;
+  --color-success: #4ADE80;
+  --color-warning: #FBBF24;
+}
+
 html,
 body,
 #root {
     height: 100%;
     margin: 0;
     padding: 0;
-    background-color: #101e22;
-    color: #F0FFF4;
+    background-color: var(--color-background);
+    color: var(--color-textPrimary);
     overflow: hidden;
 }
 
@@ -22,14 +39,14 @@ body,
 input,
 textarea,
 select {
-    background-color: #16262c;
-    color: #F0FFF4;
-    border-color: #223f49;
+    background-color: var(--color-surface);
+    color: var(--color-textPrimary);
+    border-color: var(--color-border);
 }
 
 input::placeholder,
 textarea::placeholder {
-    color: #6c8d99;
+    color: var(--color-textMuted);
 }
 
 /* Stitch Theme Utilities */
@@ -39,16 +56,16 @@ textarea::placeholder {
 }
 
 ::-webkit-scrollbar-track {
-    background: #101e22;
+    background: var(--color-background);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #223f49;
+    background: var(--color-border);
     border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #0db9f2;
+    background: var(--color-accent);
 }
 
 .glass-panel {
@@ -83,7 +100,7 @@ textarea::placeholder {
 
 .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #223f49 transparent;
+    scrollbar-color: var(--color-border) transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar {

@@ -5,6 +5,8 @@ import AlertTriangleIcon from './icons/AlertTriangleIcon';
 import SparkleIcon from './icons/SparkleIcon';
 import InfoIcon from './icons/InfoIcon';
 import { testAiConnection, loadAiSettings, saveAiSettings, AiSettings, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
+import EyeIcon from './icons/EyeIcon';
+import EyeOffIcon from './icons/EyeOffIcon';
 
 interface AiSettingsModalProps {
     onClose: () => void;
@@ -31,6 +33,7 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
     const [testResult, setTestResult] = useState<TestResultState>({ status: 'idle', message: '' });
     const [showDebug, setShowDebug] = useState(false);
     const [debugEntries, setDebugEntries] = useState<ReturnType<typeof getDebugLog>>([]);
+    const [showApiKey, setShowApiKey] = useState(false);
 
     const refreshDebug = () => setDebugEntries([...getDebugLog()]);
 
@@ -117,13 +120,23 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
                         <div className="space-y-4 animate-fade-in">
                             <div className="space-y-2">
                                 <label className="block text-sm font-medium text-text-secondary">API Key de Gemini</label>
-                                <input
-                                    type="password"
-                                    value={settings.geminiApiKey}
-                                    onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })}
-                                    placeholder="AIzaSy..."
-                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showApiKey ? 'text' : 'password'}
+                                        value={settings.geminiApiKey}
+                                        onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })}
+                                        placeholder="AIzaSy..."
+                                        className="w-full bg-background border border-subtle rounded-md px-3 py-2 pr-10 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowApiKey(v => !v)}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary"
+                                        aria-label={showApiKey ? 'Ocultar API key' : 'Mostrar API key'}
+                                    >
+                                        {showApiKey ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                                    </button>
+                                </div>
                                 <p className="text-xs text-text-secondary">
                                     Obtén tu API Key gratis en <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-accent hover:underline">Google AI Studio</a>.
                                 </p>

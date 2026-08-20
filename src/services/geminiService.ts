@@ -29,13 +29,8 @@ export const DEFAULT_OLLAMA_MODEL = 'llama3';
 
 // --- OS keychain bridge (Rust `secret` commands) ---
 async function readSecret(): Promise<string> {
-    try {
-        const res = await invoke<string | null>('get_secret');
-        return res ?? '';
-    } catch (e) {
-        console.warn('Keychain read failed; using empty key for this session.', e);
-        return '';
-    }
+    const res = await invoke<string | null>('get_secret');
+    return res ?? '';
 }
 
 async function writeSecret(secret: string): Promise<void> {
@@ -76,8 +71,11 @@ export const loadAiSettings = async (): Promise<AiSettings> => {
             secretKey = legacyKey;
             const { geminiApiKey, ...rest } = fromStore;
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
-            // Clear fallback once migrated.
             localStorage.removeItem(KEYCHAIN_FALLBACK_KEY);
+        } else {
+            // Keychain returned empty and no legacy key: try dev fallback.
+            const fallbackKey = localStorage.getItem(KEYCHAIN_FALLBACK_KEY) || '';
+            if (fallbackKey) secretKey = fallbackKey;
         }
     } catch (e) {
         keychainAvailable = false;

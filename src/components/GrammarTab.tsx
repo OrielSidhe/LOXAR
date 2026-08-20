@@ -30,6 +30,8 @@ interface GrammarTabProps {
     conlangName?: string;
     onAddLexicalException?: (entryId: string, featureKey: string, surfaceForm: string) => void;
     onExportGrammar?: () => void;
+    activeModule?: GrammarModule;
+    onModuleChange?: (module: GrammarModule) => void;
 }
 
 type GrammarModule = 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'notes';
@@ -45,8 +47,10 @@ interface ProgressMetric {
 // (not localStorage — keeps it simple and resets on reload, exactly as required).
 let wizardAutoOpenedThisSession = false;
 
-const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar }: GrammarTabProps) => {
-    const [activeModule, setActiveModule] = useState<GrammarModule>('syntax');
+const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange }: GrammarTabProps) => {
+    const [internalModule, setInternalModule] = useState<GrammarModule>('syntax');
+    const activeModule = activeModuleProp ?? internalModule;
+    const setActiveModule = onModuleChange ?? setInternalModule;
     const [editedManifest, setEditedManifest] = useState<GrammarManifest>(JSON.parse(JSON.stringify(manifest)));
     const [isDirty, setIsDirty] = useState(false);
     const [isImporterOpen, setIsImporterOpen] = useState(false);

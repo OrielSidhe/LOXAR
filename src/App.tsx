@@ -86,6 +86,7 @@ const App = () => {
 
   const [tabHistory, setTabHistory] = useState<Array<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>>(['dashboard']);
   const activeTab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' = tabHistory[tabHistory.length - 1] ?? 'dashboard';
+  const [activeGrammarModule, setActiveGrammarModule] = useState<any>('syntax');
 
   const setActiveTab = useCallback((tab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' | ((prev: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools') => 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools')) => {
     setTabHistory(prev => {
@@ -571,8 +572,13 @@ const App = () => {
                         collections: { collections: 0 },
                       }}
                       onModuleClick={(moduleId) => {
-                        const tab = moduleId === 'lexicon' ? 'table' : moduleId;
-                        setActiveTab(tab as any);
+                        if (moduleId === 'phonology' || moduleId === 'syntax') {
+                          setActiveTab('grammar');
+                          setActiveGrammarModule(moduleId);
+                        } else {
+                          const tab = moduleId === 'lexicon' ? 'table' : moduleId;
+                          setActiveTab(tab as any);
+                        }
                       }}
                     />
                   </div>
@@ -687,6 +693,8 @@ const App = () => {
                     conlangName={activeMetadata?.conlangName}
                     onAddLexicalException={handleAddLexicalException}
                     onExportGrammar={handleExportGrammar}
+                    activeModule={activeGrammarModule}
+                    onModuleChange={setActiveGrammarModule}
                   />
                 )}
                 {activeTab === 'translator' && (
