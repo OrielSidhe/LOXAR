@@ -1,19 +1,65 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import XCircleIcon from './icons/XCircleIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import AlertTriangleIcon from './icons/AlertTriangleIcon';
 import SparkleIcon from './icons/SparkleIcon';
 import InfoIcon from './icons/InfoIcon';
 import { testAiConnection, loadAiSettings, saveAiSettings, AiSettings, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
+import { DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle } from '../services/aiProviderRegistry';
 import EyeIcon from './icons/EyeIcon';
 import EyeOffIcon from './icons/EyeOffIcon';
 
-interface AiSettingsModalProps {
-    onClose: () => void;
-}
+const ENDPOINT_STYLES: { value: ProviderEndpointStyle; label: string }[] = [
+  { value: 'openai-chat', label: 'OpenAI-compatible chat (/v1/chat/completions)' },
+  { value: 'openai-completion', label: 'OpenAI-compatible completion (/v1/completions)' },
+  { value: 'anthropic-messages', label: 'Anthropic Messages API' },
+  { value: 'ollama', label: 'Ollama (/api/generate)' },
+  { value: 'gemini', label: 'Google Gemini SDK' },
+  { value: 'custom', label: 'Custom (request/response mappers)' },
+];
 
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-const OLLAMA_MODELS = ['llama3', 'llama3.1', 'llama3.2', 'llama2', 'mistral', 'mixtral', 'codellama', 'phi3', 'gemma2', 'qwen2', 'deepseek-coder-v2'];
+const PRESET_PROVIDERS: AIProviderConfig[] = [
+  {
+    id: 'stepfun',
+    name: 'StepFun',
+    baseURL: 'https://api.stepfun.com/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'step-2-16k',
+    models: ['step-2-16k', 'step-1-8k', 'step-1-32k', 'step-1-128k', 'step-1-256k'],
+  },
+  {
+    id: 'nous',
+    name: 'NousResearch',
+    baseURL: 'https://api.nousresearch.com/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'hermes-3-llama-3.1-405b',
+    models: ['hermes-3-llama-3.1-405b', 'hermes-3-llama-3.1-70b', 'hermes-2-mixtral-8x7b'],
+  },
+  {
+    id: 'openai',
+    name: 'OpenAI',
+    baseURL: 'https://api.openai.com/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'gpt-4o',
+    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  },
+  {
+    id: 'groq',
+    name: 'Groq',
+    baseURL: 'https://api.groq.com/openai/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'llama-3.1-70b-versatile',
+    models: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+  },
+];
 
 type TestResultState = {
     status: 'idle' | 'success' | 'error';
@@ -21,14 +67,34 @@ type TestResultState = {
     details?: string;
 };
 
-const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
-    const [settings, setSettings] = useState<AiSettings>({
-        provider: 'gemini',
-        geminiApiKey: '',
-        geminiModel: DEFAULT_GEMINI_MODEL,
-        ollamaUrl: 'http://localhost:11434',
-        ollamaModel: DEFAULT_OLLAMA_MODEL,
-    });
+interface ProviderFormData {
+    id: string;
+    name: string;
+    baseURL: string;
+    apiKey: string;
+    authHeader: string;
+    endpointStyle: ProviderEndpointStyle;
+    defaultModel: string;
+    models: string[];
+}
+
+const emptyProvider = (): ProviderFormData => ({
+    id: '',
+    name: '',
+    baseURL: '',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: '',
+    models: [],
+});
+
+const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [legacySettings, setLegacySettings] = useState<AiSettings | null>(null);
+    const [providers, setProviders] = useState<AIProviderConfig[]>([]);
+    const [activeProviderId, setActiveProviderId] = useState<string>('');
+    const [editingProvider, setEditingProvider] = useState<ProviderFormData | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
     const [isTesting, setIsTesting] = useState(false);
     const [testResult, setTestResult] = useState<TestResultState>({ status: 'idle', message: '' });
     const [showDebug, setShowDebug] = useState(false);
@@ -37,22 +103,62 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
 
     const refreshDebug = () => setDebugEntries([...getDebugLog()]);
 
+    const normalizeProviders = (legacy: AiSettings | null): AIProviderConfig[] => {
+        const list: AIProviderConfig[] = [];
+        if (legacy?.provider === 'gemini' || legacy?.geminiModel) {
+            list.push({
+                id: 'gemini',
+                name: 'Google Gemini',
+                baseURL: 'https://generativelanguage.googleapis.com/v1beta',
+                apiKey: legacy?.geminiApiKey || '',
+                authHeader: 'x-goog-api-key',
+                endpointStyle: 'gemini',
+                defaultModel: legacy?.geminiModel || DEFAULT_GEMINI_MODEL,
+                models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+            });
+        }
+        if (legacy?.provider === 'ollama' || legacy?.ollamaUrl) {
+            list.push({
+                id: 'ollama',
+                name: 'Ollama (Local)',
+                baseURL: legacy?.ollamaUrl || 'http://localhost:11434',
+                apiKey: '',
+                authHeader: 'Authorization',
+                endpointStyle: 'ollama',
+                defaultModel: legacy?.ollamaModel || DEFAULT_OLLAMA_MODEL,
+                models: ['llama3', 'llama3.1', 'llama3.2', 'llama2', 'mistral', 'mixtral', 'codellama', 'phi3', 'gemma2', 'qwen2', 'deepseek-coder-v2'],
+            });
+        }
+        return list.length ? list : DEFAULT_PROVIDERS;
+    };
+
     useEffect(() => {
         let active = true;
-        loadAiSettings().then(s => { if (active) setSettings(s); });
+        loadAiSettings().then(s => {
+            if (!active) return;
+            setLegacySettings(s);
+            const normalized = normalizeProviders(s);
+            setProviders(normalized);
+            setActiveProviderId(normalized[0]?.id || '');
+        });
         return () => { active = false; };
     }, []);
 
+    const activeProvider = providers.find(p => p.id === activeProviderId) || null;
+
     const handleSave = async () => {
-        await saveAiSettings(settings);
+        // TODO: migrate to new generic storage format instead of legacy AiSettings
+        if (legacySettings) {
+            await saveAiSettings(legacySettings);
+        }
         onClose();
     };
 
     const handleTest = async () => {
+        if (!activeProvider) return;
         setIsTesting(true);
         setTestResult({ status: 'idle', message: '' });
         try {
-            await saveAiSettings(settings);
             const result = await testAiConnection();
             if (result.success) {
                 setTestResult({ status: 'success', message: 'Conexion exitosa.' });
@@ -81,9 +187,70 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
         refreshDebug();
     };
 
+    const startCreateProvider = () => {
+        setEditingProvider(emptyProvider());
+        setIsCreating(true);
+    };
+
+    const startEditProvider = (provider: AIProviderConfig) => {
+        setEditingProvider({
+            id: provider.id,
+            name: provider.name,
+            baseURL: provider.baseURL,
+            apiKey: provider.apiKey,
+            authHeader: provider.authHeader,
+            endpointStyle: provider.endpointStyle,
+            defaultModel: provider.defaultModel,
+            models: provider.models,
+        });
+        setIsCreating(false);
+    };
+
+    const saveEditingProvider = () => {
+        if (!editingProvider) return;
+        setProviders(prev => {
+            const exists = prev.find(p => p.id === editingProvider.id);
+            if (exists) {
+                return prev.map(p => p.id === editingProvider.id ? { ...editingProvider } : p);
+            }
+            return [...prev, { ...editingProvider, id: editingProvider.id || `custom-${Date.now()}` }];
+        });
+        setEditingProvider(null);
+        setIsCreating(false);
+    };
+
+    const deleteProvider = (id: string) => {
+        setProviders(prev => prev.filter(p => p.id !== id));
+        setActiveProviderId(prev => prev === id ? (providers[0]?.id || '') : prev);
+    };
+
+    const applyPreset = (preset: AIProviderConfig) => {
+        const exists = providers.find(p => p.id === preset.id);
+        const newProvider: AIProviderConfig = exists
+            ? { ...preset, apiKey: exists.apiKey }
+            : { ...preset, apiKey: '' };
+        setProviders(prev => {
+            if (exists) {
+                return prev.map(p => p.id === preset.id ? newProvider : p);
+            }
+            return [...prev, newProvider];
+        });
+        setActiveProviderId(preset.id);
+    };
+
+    const updateActiveProvider = (patch: Partial<AIProviderConfig>) => {
+        if (!activeProvider) return;
+        setProviders(prev => prev.map(p => p.id === activeProvider.id ? { ...p, ...patch } : p));
+    };
+
+    const updateEditingProvider = (patch: Partial<ProviderFormData>) => {
+        if (!editingProvider) return;
+        setEditingProvider({ ...editingProvider, ...patch });
+    };
+
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background-dark/80 backdrop-blur-sm p-4">
-            <div className="bg-surface-dark border border-border-dark rounded-xl shadow-glow w-full max-w-md flex flex-col max-h-[90vh] overflow-hidden animate-scale-in">
+            <div className="bg-surface-dark border border-border-dark rounded-xl shadow-glow w-full max-w-2xl flex flex-col max-h-[90vh] overflow-hidden animate-scale-in">
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-border-dark bg-surface-dark/50">
@@ -98,34 +265,102 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
 
                 {/* Body */}
                 <div className="p-6 overflow-y-auto space-y-6">
-                    {/* App info banner */}
                     <div className="text-xs text-text-secondary bg-background/50 p-2 rounded border border-subtle">
                         {APP_NAME} v{APP_VERSION} — Las llamadas a la API incluyen identificacion de aplicacion.
                     </div>
 
+                    {/* Providers list */}
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-text-secondary">Proveedor de Inteligencia Artificial</label>
-                        <select
-                            value={settings.provider}
-                            onChange={e => setSettings({ ...settings, provider: e.target.value as 'gemini' | 'ollama' })}
-                            className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                        >
-                            <option value="gemini">Google Gemini (Nube)</option>
-                            <option value="ollama">Ollama (Local)</option>
-                        </select>
+                        <div className="flex items-center justify-between">
+                            <label className="block text-sm font-medium text-text-secondary">Proveedores</label>
+                            <button onClick={startCreateProvider} className="text-xs px-2 py-1 rounded-md bg-accent/20 text-accent hover:bg-accent/30 transition-colors">
+                                + Agregar proveedor
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {providers.map(provider => (
+                                <div key={provider.id} className={`flex items-center gap-2 p-2 rounded-md border ${activeProviderId === provider.id ? 'border-accent bg-accent/10' : 'border-subtle bg-background/50'}`}>
+                                    <button onClick={() => setActiveProviderId(provider.id)} className="flex-1 text-left text-sm text-text-primary">
+                                        <div className="font-medium">{provider.name}</div>
+                                        <div className="text-xs text-text-secondary">{provider.baseURL} · {provider.defaultModel}</div>
+                                    </button>
+                                    <button onClick={() => startEditProvider(provider)} className="text-text-secondary hover:text-text-primary text-xs px-2 py-1 rounded hover:bg-white/5">
+                                        Editar
+                                    </button>
+                                    <button onClick={() => deleteProvider(provider.id)} className="text-text-secondary hover:text-danger text-xs px-2 py-1 rounded hover:bg-white/5">
+                                        Eliminar
+                                    </button>
+                                </div>
+                            ))}
+                            {providers.length === 0 && (
+                                <p className="text-xs text-text-secondary italic">No hay proveedores configurados. Agrega uno o elige un preset.</p>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Gemini-specific fields */}
-                    {settings.provider === 'gemini' && (
+                    {/* Presets */}
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-text-secondary">Presets</label>
+                        <div className="flex flex-wrap gap-2">
+                            {PRESET_PROVIDERS.map(preset => (
+                                <button key={preset.id} onClick={() => applyPreset(preset)} className="text-xs px-2 py-1 rounded-md border border-subtle text-text-secondary hover:text-text-primary hover:border-accent transition-colors">
+                                    {preset.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Active provider editor */}
+                    {activeProvider && (
                         <div className="space-y-4 animate-fade-in">
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium text-text-secondary">API Key de Gemini</label>
+                                <label className="block text-sm font-medium text-text-secondary">Nombre</label>
+                                <input
+                                    type="text"
+                                    value={activeProvider.name}
+                                    onChange={e => updateActiveProvider({ name: e.target.value })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-text-secondary">Base URL</label>
+                                <input
+                                    type="text"
+                                    value={activeProvider.baseURL}
+                                    onChange={e => updateActiveProvider({ baseURL: e.target.value })}
+                                    placeholder="https://..."
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-text-secondary">Endpoint style</label>
+                                <select
+                                    value={activeProvider.endpointStyle}
+                                    onChange={e => updateActiveProvider({ endpointStyle: e.target.value as ProviderEndpointStyle })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                >
+                                    {ENDPOINT_STYLES.map(style => (
+                                        <option key={style.value} value={style.value}>{style.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-text-secondary">Auth header</label>
+                                <input
+                                    type="text"
+                                    value={activeProvider.authHeader}
+                                    onChange={e => updateActiveProvider({ authHeader: e.target.value })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-text-secondary">API Key</label>
                                 <div className="relative">
                                     <input
                                         type={showApiKey ? 'text' : 'password'}
-                                        value={settings.geminiApiKey}
-                                        onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })}
-                                        placeholder="AIzaSy..."
+                                        value={activeProvider.apiKey}
+                                        onChange={e => updateActiveProvider({ apiKey: e.target.value })}
+                                        placeholder="sk-..."
                                         className="w-full bg-background border border-subtle rounded-md px-3 py-2 pr-10 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                                     />
                                     <button
@@ -137,58 +372,15 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
                                         {showApiKey ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                                     </button>
                                 </div>
-                                <p className="text-xs text-text-secondary">
-                                    Obtén tu API Key gratis en <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer" className="text-accent hover:underline">Google AI Studio</a>.
-                                </p>
                             </div>
                             <div className="space-y-2">
-                                <label className="block text-sm font-medium text-text-secondary">Modelo de Gemini</label>
-                                <select
-                                    value={settings.geminiModel}
-                                    onChange={e => setSettings({ ...settings, geminiModel: e.target.value })}
-                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                >
-                                    {GEMINI_MODELS.map(m => <option key={m} value={m}>{m}</option>)}
-                                </select>
-                                <p className="text-xs text-text-secondary">
-                                    Recomendado: <code>gemini-2.5-flash</code>. El modelo <code>gemini-1.5-flash</code> esta siendo descontinuado por Google.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Ollama-specific fields */}
-                    {settings.provider === 'ollama' && (
-                        <div className="space-y-4 animate-fade-in">
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-text-secondary">URL de Ollama</label>
+                                <label className="block text-sm font-medium text-text-secondary">Modelo</label>
                                 <input
                                     type="text"
-                                    value={settings.ollamaUrl}
-                                    onChange={e => setSettings({ ...settings, ollamaUrl: e.target.value })}
-                                    placeholder="http://localhost:11434"
+                                    value={activeProvider.defaultModel}
+                                    onChange={e => updateActiveProvider({ defaultModel: e.target.value })}
                                     className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                                 />
-                                <p className="text-xs text-text-secondary">
-                                    Asegurate de tener Ollama ejecutandose localmente.
-                                </p>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="block text-sm font-medium text-text-secondary">Modelo de Ollama</label>
-                                <input
-                                    type="text"
-                                    list="ollama-models"
-                                    value={settings.ollamaModel}
-                                    onChange={e => setSettings({ ...settings, ollamaModel: e.target.value })}
-                                    placeholder="Selecciona o escribe un modelo..."
-                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                                />
-                                <datalist id="ollama-models">
-                                    {OLLAMA_MODELS.map(m => <option key={m} value={m} />)}
-                                </datalist>
-                                <p className="text-xs text-text-secondary">
-                                    Selecciona un modelo recomendado o escribe uno personalizado.
-                                </p>
                             </div>
                         </div>
                     )}
@@ -197,7 +389,7 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
                     <div className="pt-4 border-t border-border-dark flex flex-col gap-3">
                         <button
                             onClick={handleTest}
-                            disabled={isTesting || (settings.provider === 'gemini' && !settings.geminiApiKey)}
+                            disabled={isTesting || !activeProvider}
                             className="w-full py-2 bg-background border border-accent text-accent rounded-md font-medium hover:bg-accent/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isTesting ? (
@@ -229,10 +421,7 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
 
                     {/* Debug panel toggle */}
                     <div className="border-t border-border-dark pt-4">
-                        <button
-                            onClick={() => { refreshDebug(); setShowDebug(v => !v); }}
-                            className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary transition-colors"
-                        >
+                        <button onClick={() => { refreshDebug(); setShowDebug(v => !v); }} className="flex items-center gap-2 text-xs text-text-secondary hover:text-text-primary transition-colors">
                             <InfoIcon className="w-4 h-4" />
                             {showDebug ? 'Ocultar' : 'Mostrar'} depuracion de llamadas
                         </button>
@@ -243,10 +432,7 @@ const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ onClose }) => {
                                     <span className="text-xs font-mono text-text-secondary">
                                         Registro de llamadas ({debugEntries.length})
                                     </span>
-                                    <button
-                                        onClick={handleClearDebug}
-                                        className="text-xs text-accent hover:underline"
-                                    >
+                                    <button onClick={handleClearDebug} className="text-xs text-accent hover:underline">
                                         Limpiar
                                     </button>
                                 </div>

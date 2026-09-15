@@ -30,7 +30,7 @@ const HighlightText = ({ text, highlight }: { text: string; highlight?: string }
     <>
       {parts.map((part, idx) =>
         regex.test(part) ? (
-          <mark key={idx} className="bg-accent/30 text-text-primary rounded px-0.5">{part}</mark>
+          <mark key={idx} className="bg-amber-400/40 text-amber-50 rounded px-0.5 font-semibold">{part}</mark>
         ) : (
           <span key={idx}>{part}</span>
         )

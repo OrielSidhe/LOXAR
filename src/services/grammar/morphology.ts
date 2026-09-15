@@ -76,10 +76,11 @@ export const realizeLexeme = (
   const freeMorphemes: string[] = [];
   slots.forEach((slot, idx) => {
     const real = chooseRealization(slot, { preceding: form.slice(-1), isFirst: idx === 0 });
+    const affixForm = real.form ?? real.realization ?? '';
     switch (real.kind) {
       case 'affix':
-        form = applyAffix(form, real.position, real.form);
-        segments.push({ kind: 'affix', form: real.form, feature: slot.feature, position: real.position });
+        form = applyAffix(form, real.position, affixForm);
+        segments.push({ kind: 'affix', form: affixForm, feature: slot.feature, position: real.position });
         break;
       case 'mutation':
         form = applyMutation(form, real.ruleId, manifest.mutationRules ?? []);
@@ -94,8 +95,8 @@ export const realizeLexeme = (
         segments[0] = { kind: 'stem', form: real.replace, feature: slot.feature };
         break;
       case 'particle':
-        freeMorphemes.push(real.form);
-        segments.push({ kind: 'particle', form: real.form, feature: slot.feature });
+        freeMorphemes.push(affixForm);
+        segments.push({ kind: 'particle', form: affixForm, feature: slot.feature });
         break;
     }
   });

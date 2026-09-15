@@ -423,22 +423,34 @@ export interface SyntaxCanvas {
 
 export interface GrammarManifest {
     meta: { author: string; version: string; sourceFormat: 'json' | 'markdown'; lastUpdated: string };
-    phonology?: PhonologyConfig; // canonical phonology source of truth
+    phonology?: PhonologyConfig;
     typology: { wordOrder: string; alignment: string; morphology: string; headDirection: string };
     roles: SyntacticRole[];
     strategies: MorphosyntacticStrategy[];
-    paradigms: CategoryParadigm[]; // real inflection engine data
+    paradigms: CategoryParadigm[];
     mutationRules: MutationRule[];
-    affixInventory?: GrammarAffix[]; // legacy quick-affix list (engine falls back to it)
+    affixInventory?: GrammarAffix[];
     exceptions: GrammarException[];
     clauseTree?: ClauseAST;
     syntaxCanvas?: SyntaxCanvas;
     preview?: GrammarPreviewConfig;
     notes: string[];
-    /** UI-only hints (e.g. whether to surface the tone/mutation area). Not consumed by the engine. */
     ui?: { showTone: boolean };
-    /** Optional extracted typological profile (see TypologicalProfile). Not consumed by the engine; used as a reference/guide layer. */
     typologicalProfile?: TypologicalProfile;
+    /** Capa Pragmática — motor de sintaxis basado en intención de oración */
+    pragmaticEngine?: PragmaticEngineState;
+}
+
+import type { PragmaticBlockId, PragmaticSlotState } from './services/grammar/pragmaticTypes';
+
+/** Estado del motor pragmático guardado en el manifiesto */
+export interface PragmaticEngineState {
+    /** Tipología activa del idioma */
+    typology: 'flexive' | 'agglutinative' | 'isolating';
+    /** Tipo de oración seleccionado en el constructor */
+    activeClauseType: string | null;
+    /** Slots llenados del constructor */
+    slots: PragmaticSlotState[];
 }
 
 // ── Loxar Bridge ─────────────────────────────────────────────────────────────

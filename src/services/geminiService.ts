@@ -1,4 +1,3 @@
-import { GoogleGenAI } from '@google/genai';
 import { invoke } from '@tauri-apps/api/core';
 import { LexiconEntry, MissingWord, NewLexiconEntry, GenerativeProfile, GenerationMode, GrammarManifest } from '../types';
 import { FlexibleGrammar } from '../types/grammar-flexible';
@@ -8,6 +7,18 @@ import {
     buildCorrectSignificadoPrompt, buildDetermineSingleCategoryPrompt, buildAnalyzePhonemesPrompt,
     buildGenerateLanguageSamplePrompt,
 } from './prompts';
+import {
+    getProvider,
+    invalidateProviderCache,
+    testProviderConnection,
+    completeWithProvider,
+    DEFAULT_PROVIDERS,
+    type AISettings as GenericAISettings,
+    type AIProviderConfig,
+    type ChatMessage,
+    type ProviderRequestOptions,
+    type TestConnectionResult,
+} from './aiProviderRegistry';
 
 export interface AiSettings {
     provider: 'gemini' | 'ollama';
@@ -17,12 +28,8 @@ export interface AiSettings {
     ollamaModel: string;
 }
 
-// Non-secret settings (provider, models, URLs) live in localStorage.
-// The secret Gemini API key lives ONLY in the OS keychain (Windows Credential
-// Manager / macOS Keychain / libsecret) via the `secret` Tauri commands —
-// never in cleartext storage and never baked into the bundle.
 const SETTINGS_KEY = 'conlang_ai_settings';
-const KEYCHAIN_FALLBACK_KEY = 'conlang_ai_key_fallback'; // dev-only, when keychain is unavailable
+const KEYCHAIN_FALLBACK_KEY = 'conlang_ai_key_fallback';
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
 export const DEFAULT_OLLAMA_MODEL = 'llama3';
@@ -39,6 +46,55 @@ async function writeSecret(secret: string): Promise<void> {
     } else {
         await invoke('delete_secret');
     }
+}
+
+function toGenericSettings(settings: AiSettings): GenericAISettings {
+    const providers: AIProviderConfig[] = [];
+
+    if (settings.provider === 'gemini') {
+        providers.push({
+            id: 'gemini',
+            name: 'Google Gemini',
+            baseURL: 'https://generativelanguage.googleapis.com/v1beta',
+            apiKey: settings.geminiApiKey,
+            authHeader: 'x-goog-api-key',
+            endpointStyle: 'gemini',
+            defaultModel: settings.geminiModel || DEFAULT_GEMINI_MODEL,
+            models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+        });
+    }
+
+    if (settings.provider === 'ollama') {
+        providers.push({
+            id: 'ollama',
+            name: 'Ollama (Local)',
+            baseURL: settings.ollamaUrl || 'http://localhost:11434',
+            apiKey: '',
+            authHeader: 'Authorization',
+            endpointStyle: 'ollama',
+            defaultModel: settings.ollamaModel || DEFAULT_OLLAMA_MODEL,
+            models: ['llama3', 'llama3.1', 'llama3.2', 'llama2', 'mistral', 'mixtral', 'codellama', 'phi3', 'gemma2', 'qwen2', 'deepseek-coder-v2'],
+        });
+    }
+
+    return {
+        activeProviderId: settings.provider === 'gemini' ? 'gemini' : 'ollama',
+        providers: providers.length ? providers : DEFAULT_PROVIDERS,
+    };
+}
+
+function fromGenericSettings(generic: GenericAISettings): AiSettings {
+    const active = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
+    const gemini = generic.providers.find(p => p.id === 'gemini');
+    const ollama = generic.providers.find(p => p.id === 'ollama');
+
+    return {
+        provider: active?.endpointStyle === 'gemini' ? 'gemini' : active?.endpointStyle === 'ollama' ? 'ollama' : 'gemini',
+        geminiApiKey: gemini?.apiKey || '',
+        geminiModel: gemini?.defaultModel || DEFAULT_GEMINI_MODEL,
+        ollamaUrl: ollama?.baseURL || 'http://localhost:11434',
+        ollamaModel: ollama?.defaultModel || DEFAULT_OLLAMA_MODEL,
+    };
 }
 
 export const loadAiSettings = async (): Promise<AiSettings> => {
@@ -58,7 +114,6 @@ export const loadAiSettings = async (): Promise<AiSettings> => {
         console.error('Error reading AI settings', e);
     }
 
-    // One-time migration: any legacy cleartext key is moved into the OS keychain.
     const legacyKey = typeof fromStore.geminiApiKey === 'string' ? fromStore.geminiApiKey : '';
     let secretKey = '';
     let keychainAvailable = true;
@@ -73,19 +128,15 @@ export const loadAiSettings = async (): Promise<AiSettings> => {
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
             localStorage.removeItem(KEYCHAIN_FALLBACK_KEY);
         } else {
-            // Keychain returned empty and no legacy key: try dev fallback.
             const fallbackKey = localStorage.getItem(KEYCHAIN_FALLBACK_KEY) || '';
             if (fallbackKey) secretKey = fallbackKey;
         }
     } catch (e) {
         keychainAvailable = false;
-        // Keychain unavailable (e.g. running in browser dev mode). Fall back to
-        // the dev-only localStorage copy so AI features still work locally.
         const fallbackKey = localStorage.getItem(KEYCHAIN_FALLBACK_KEY) || '';
         if (fallbackKey) {
             secretKey = fallbackKey;
         } else if (legacyKey) {
-            // Keep legacy key both in-memory and in fallback storage for this session.
             secretKey = legacyKey;
             try { localStorage.setItem(KEYCHAIN_FALLBACK_KEY, legacyKey); } catch { /* ignore */ }
         }
@@ -104,9 +155,9 @@ export const loadAiSettings = async (): Promise<AiSettings> => {
 
 export const isAiAvailable = async (): Promise<boolean> => {
   try {
-    const s = await loadAiSettings();
-    if (s.provider === 'ollama') return Boolean(s.ollamaUrl);
-    return Boolean(s.geminiApiKey);
+    const settings = await loadAiSettings();
+    if (settings.provider === 'ollama') return Boolean(settings.ollamaUrl);
+    return Boolean(settings.geminiApiKey);
   } catch {
     return false;
   }
@@ -145,15 +196,64 @@ export const saveAiSettings = async (settings: AiSettings): Promise<void> => {
     try {
         await writeSecret(geminiApiKey);
     } catch (e) {
-        // Keychain unavailable (likely dev/browser mode). Persist a dev-only
-        // fallback copy in localStorage so AI features still work while testing.
         console.warn('Keychain write failed; storing API key in dev fallback localStorage for this session.', e);
         if (geminiApiKey) {
             try { localStorage.setItem(KEYCHAIN_FALLBACK_KEY, geminiApiKey); } catch { /* ignore */ }
         }
     }
-    // Invalidate gemini instance so the next call rebuilds it with the new key.
-    aiInstance = null;
+    invalidateProviderCache();
+};
+
+export const testAiConnection = async (): Promise<TestConnectionResult> => {
+    const settings = await loadAiSettings();
+    try {
+        const generic = toGenericSettings(settings);
+        const providerConfig = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
+        if (!providerConfig) {
+            return {
+                success: false,
+                error: 'No hay ningún proveedor configurado.',
+                details: 'Agrega un proveedor desde la configuración de IA.',
+            };
+        }
+
+        if (!providerConfig.apiKey && providerConfig.endpointStyle !== 'ollama') {
+            return {
+                success: false,
+                error: 'API Key faltante',
+                details: 'No se ha configurado una API Key para este proveedor. Ve a Configuración de IA y agrega tu clave.',
+            };
+        }
+
+        const result = await testProviderConnection(providerConfig);
+        recordDebug({
+            timestamp: new Date().toISOString(),
+            provider: providerConfig.name,
+            model: providerConfig.defaultModel,
+            endpoint: providerConfig.baseURL,
+            payloadPreview: providerConfig.endpointStyle === 'ollama' ? 'GET /api/tags' : `{ "model": "${providerConfig.defaultModel}", "contents": [{ "role": "user", "parts": [{ "text": "Hola" }] }] }`,
+            status: result.success ? 'ok' : 'error',
+            error: result.error,
+            responsePreview: result.details,
+        });
+        return result;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Error desconocido';
+        recordDebug({
+            timestamp: new Date().toISOString(),
+            provider: settings.provider === 'gemini' ? 'Gemini' : 'Ollama',
+            model: settings.provider === 'gemini' ? settings.geminiModel : settings.ollamaModel,
+            endpoint: settings.provider === 'gemini' ? 'generativelanguage.googleapis.com' : settings.ollamaUrl,
+            payloadPreview: '?',
+            status: 'error',
+            error: message,
+        });
+        return {
+            success: false,
+            error: message,
+            details: message,
+        };
+    }
 };
 
 // --- App identification ---
@@ -183,212 +283,49 @@ const recordDebug = (entry: DebugEntry): void => {
     if (debugLog.length > MAX_DEBUG_ENTRIES) debugLog.pop();
 };
 
-let aiInstance: GoogleGenAI | null = null;
-const getAI = (apiKey: string): GoogleGenAI => {
-    if (!aiInstance) {
-        aiInstance = new GoogleGenAI({ apiKey });
-    }
-    return aiInstance;
-};
-
-export interface TestConnectionResult {
-    success: boolean;
-    error?: string;
-    details?: string;
-}
-
-export const testAiConnection = async (): Promise<TestConnectionResult> => {
-    const settings = await loadAiSettings();
-    try {
-        if (settings.provider === 'gemini') {
-            if (!settings.geminiApiKey) {
-                return {
-                    success: false,
-                    error: 'API Key faltante',
-                    details: 'No se ha configurado una API Key de Gemini. Ve a Configuración de IA y agrega tu clave.',
-                };
-            }
-            const ai = getAI(settings.geminiApiKey);
-            const endpoint = `generativelanguage.googleapis.com/v1beta/models/${settings.geminiModel || DEFAULT_GEMINI_MODEL}:generateContent`;
-            const start = Date.now();
-            await ai.models.generateContent({
-                model: settings.geminiModel || DEFAULT_GEMINI_MODEL,
-                contents: [{ role: "user", parts: [{ text: "Hola" }] }],
-            });
-            const elapsed = Date.now() - start;
-            recordDebug({
-                timestamp: new Date().toISOString(),
-                provider: 'gemini',
-                model: settings.geminiModel || DEFAULT_GEMINI_MODEL,
-                endpoint,
-                payloadPreview: `{ "model": "${settings.geminiModel || DEFAULT_GEMINI_MODEL}", "contents": [{ "role": "user", "parts": [{ "text": "Hola" }] }] }`,
-                status: 'ok',
-                responsePreview: `OK (${elapsed}ms)`,
-            });
-            return { success: true };
-        } else {
-            const url = settings.ollamaUrl.replace(/\/$/, '') + '/api/tags';
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000);
-            let response: Response;
-            try {
-                response = await fetch(url, {
-                    signal: controller.signal,
-                    headers: { 'User-Agent': APP_USER_AGENT },
-                });
-            } finally {
-                clearTimeout(timeoutId);
-            }
-            if (!response.ok) {
-                const text = await response.text().catch(() => '');
-                const details = `Ollama respondió con código ${response.status} (${response.statusText}). URL: ${url}. Respuesta: ${text.slice(0, 500)}`;
-                recordDebug({
-                    timestamp: new Date().toISOString(),
-                    provider: 'ollama',
-                    model: settings.ollamaModel || DEFAULT_OLLAMA_MODEL,
-                    endpoint: url,
-                    payloadPreview: 'GET /api/tags',
-                    status: 'error',
-                    error: `HTTP ${response.status}`,
-                    responsePreview: text.slice(0, 200),
-                });
-                return {
-                    success: false,
-                    error: `HTTP ${response.status}`,
-                    details,
-                };
-            }
-            recordDebug({
-                timestamp: new Date().toISOString(),
-                provider: 'ollama',
-                model: settings.ollamaModel || DEFAULT_OLLAMA_MODEL,
-                endpoint: url,
-                payloadPreview: 'GET /api/tags',
-                status: 'ok',
-                responsePreview: 'OK',
-            });
-            return { success: true };
-        }
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Error desconocido';
-        const settings = await loadAiSettings().catch(() => null);
-        const provider = settings?.provider || 'unknown';
-        const model = provider === 'gemini'
-            ? (settings?.geminiModel || DEFAULT_GEMINI_MODEL)
-            : (settings?.ollamaModel || DEFAULT_OLLAMA_MODEL);
-        const endpoint = provider === 'gemini'
-            ? `generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
-            : `${(settings?.ollamaUrl || '').replace(/\/$/, '')}/api/tags`;
-        recordDebug({
-            timestamp: new Date().toISOString(),
-            provider,
-            model,
-            endpoint,
-            payloadPreview: provider === 'gemini' ? `{ "model": "${model}", "contents": [...] }` : 'GET /api/tags',
-            status: 'error',
-            error: message,
-        });
-        let details = message;
-        if (error instanceof Error && (error as any).cause) {
-            details += ` | Causa: ${String((error as any).cause)}`;
-        }
-        // Specific hints for common errors
-        if (error instanceof Error && error.message.includes('fetch')) {
-            details += ' | Verifica que Ollama esté ejecutándose y la URL sea correcta.';
-        }
-        console.error("Connection test failed:", message, error);
-        return {
-            success: false,
-            error: message,
-            details,
-        };
-    }
-};
-
 export const normalizeText = (text: string): string => {
     return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
 export const callAi = async (prompt: string, fallbackResult: any = null): Promise<string> => {
     const settings = await loadAiSettings();
+    const generic = toGenericSettings(settings);
+    const providerConfig = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
+    if (!providerConfig) throw new Error('No hay ningún proveedor configurado.');
+
+    if (!providerConfig.apiKey && providerConfig.endpointStyle !== 'ollama') {
+        throw new Error("No se ha configurado la API Key para el proveedor activo.");
+    }
+
     try {
-        if (settings.provider === 'gemini') {
-            if (!settings.geminiApiKey) throw new Error("No se ha configurado la API Key de Gemini.");
-            const ai = getAI(settings.geminiApiKey);
-            const endpoint = `generativelanguage.googleapis.com/v1beta/models/${settings.geminiModel || DEFAULT_GEMINI_MODEL}:generateContent`;
-            const start = Date.now();
-            const response = await ai.models.generateContent({
-                model: settings.geminiModel || DEFAULT_GEMINI_MODEL,
-                contents: [{ role: "user", parts: [{ text: prompt }] }],
-            });
-            const elapsed = Date.now() - start;
-            const result = response.text || "";
-            recordDebug({
-                timestamp: new Date().toISOString(),
-                provider: 'gemini',
-                model: settings.geminiModel || DEFAULT_GEMINI_MODEL,
-                endpoint,
-                payloadPreview: `{ "model": "${settings.geminiModel || DEFAULT_GEMINI_MODEL}", "prompt_len": ${prompt.length} }`,
-                status: 'ok',
-                responsePreview: result.slice(0, 200) || '(vacío)',
-            });
-            return result;
-        } else {
-            // Ollama
-            const url = settings.ollamaUrl.replace(/\/$/, '') + '/api/generate';
-            const body = JSON.stringify({
-                model: settings.ollamaModel || DEFAULT_OLLAMA_MODEL,
-                prompt: prompt,
-                stream: false,
-            });
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'User-Agent': APP_USER_AGENT,
-                },
-                body,
-            });
-            if (!response.ok) {
-                const errText = await response.text().catch(() => '');
-                recordDebug({
-                    timestamp: new Date().toISOString(),
-                    provider: 'ollama',
-                    model: settings.ollamaModel || DEFAULT_OLLAMA_MODEL,
-                    endpoint: url,
-                    payloadPreview: `{ "model": "${settings.ollamaModel || DEFAULT_OLLAMA_MODEL}", "prompt_len": ${prompt.length} }`,
-                    status: 'error',
-                    error: `HTTP ${response.status}`,
-                    responsePreview: errText.slice(0, 200),
-                });
-                throw new Error(`Ollama respondió con código ${response.status}`);
-            }
-            const data = await response.json();
-            const result = data.response || "";
-            recordDebug({
-                timestamp: new Date().toISOString(),
-                provider: 'ollama',
-                model: settings.ollamaModel || DEFAULT_OLLAMA_MODEL,
-                endpoint: url,
-                payloadPreview: `{ "model": "${settings.ollamaModel || DEFAULT_OLLAMA_MODEL}", "prompt_len": ${prompt.length} }`,
-                status: 'ok',
-                responsePreview: result.slice(0, 200) || '(vacío)',
-            });
-            return result;
-        }
+        const result = await completeWithProvider(
+            providerConfig,
+            [{ role: 'user', content: prompt }],
+            { model: providerConfig.defaultModel }
+        );
+        recordDebug({
+            timestamp: new Date().toISOString(),
+            provider: providerConfig.name,
+            model: providerConfig.defaultModel,
+            endpoint: providerConfig.baseURL,
+            payloadPreview: `{ "model": "${providerConfig.defaultModel}", "prompt_len": ${prompt.length} }`,
+            status: 'ok',
+            responsePreview: result.slice(0, 200) || '(vacío)',
+        });
+        return result;
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Error desconocido';
         console.error("AI Provider Error:", message, error);
+        recordDebug({
+            timestamp: new Date().toISOString(),
+            provider: providerConfig.name,
+            model: providerConfig.defaultModel,
+            endpoint: providerConfig.baseURL,
+            payloadPreview: `{ "model": "${providerConfig.defaultModel}", "prompt_len": ${prompt.length} }`,
+            status: 'error',
+            error: message,
+        });
         if (fallbackResult !== null) {
-            recordDebug({
-                timestamp: new Date().toISOString(),
-                provider: (await loadAiSettings().catch(() => ({ provider: 'unknown' }))).provider || 'unknown',
-                model: '?',
-                endpoint: '?',
-                payloadPreview: `(fallback, prompt_len: ${prompt.length})`,
-                status: 'error',
-                error: message,
-            });
             return JSON.stringify(fallbackResult);
         }
         throw new Error(message);
@@ -402,7 +339,6 @@ export const callAi = async (prompt: string, fallbackResult: any = null): Promis
 export const extractJson = (text: string): string | null => {
     if (!text) return null;
     let cleaned = text.replace(/```json|```/gi, '').trim();
-    // Encontrar el primer objeto/array y su cierre correspondiente.
     const firstObj = cleaned.indexOf('{');
     const firstArr = cleaned.indexOf('[');
     let start = -1;
@@ -462,7 +398,6 @@ export const generateRootAndLexeme = async (
     const responseText = await callAi(prompt, { raiz: '', lexema: '' });
     const parsed = parseJsonSafely(responseText, { raiz: '', lexema: '' });
 
-    // Mapeo flexible tolerante a acentos y mayúsculas/minúsculas
     const getProp = (obj: any, keys: string[]): string => {
         for (const key of keys) {
             const normalizedKey = key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -512,7 +447,7 @@ export const categorizeWords = async (words: string[]): Promise<MissingWord[]> =
 
 export const generateBatchWords = async (
     words: MissingWord[], 
-    _lexiconSample: LexiconEntry[], 
+    _lexiconSample: LexiconEntry[],
     profile: GenerativeProfile,
     onProgress?: (processed: number, total: number) => void
 ): Promise<NewLexiconEntry[]> => {
@@ -542,20 +477,25 @@ export const cleanseJson = async (text: string): Promise<string> => {
     const prompt = `Extrae únicamente el JSON válido de este bloque de texto, que puede venir dañado o entre texto suelto: ${text}`;
     try {
         const settings = await loadAiSettings();
-        if (settings.provider === 'gemini') {
-            const ai = getAI(settings.geminiApiKey);
-            const response = await ai.models.generateContent({
-                model: settings.geminiModel || DEFAULT_GEMINI_MODEL,
+        const generic = toGenericSettings(settings);
+        const providerConfig = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
+        if (!providerConfig) return text;
+
+        if (providerConfig.endpointStyle === 'gemini') {
+            const { GoogleGenAI } = require('@google/genai') as { GoogleGenAI: new (opts: { apiKey: string }) => unknown };
+            const ai = new GoogleGenAI({ apiKey: providerConfig.apiKey });
+            const response = await (ai as any).models.generateContent({
+                model: providerConfig.defaultModel,
                 contents: [{ role: "user", parts: [{ text: prompt }] }]
             });
-            const respText = response.text || text;
+            const respText = (response as { text?: string }).text || text;
             return respText.replace(/```json|```/g, '').trim();
         } else {
-             const url = settings.ollamaUrl.replace(/\/$/, '') + '/api/generate';
+             const url = providerConfig.baseURL.replace(/\/$/, '') + '/api/generate';
              const response = await fetch(url, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ model: settings.ollamaModel || DEFAULT_OLLAMA_MODEL, prompt: prompt, stream: false })
+                 body: JSON.stringify({ model: providerConfig.defaultModel, prompt: prompt, stream: false })
              });
              if (!response.ok) throw new Error("Network error");
              const data = await response.json();
@@ -563,7 +503,7 @@ export const cleanseJson = async (text: string): Promise<string> => {
         }
     } catch (error) {
         console.error("Error cleansing JSON:", error);
-        return text; // Return raw text if failed
+        return text;
     }
 };
 
@@ -591,7 +531,7 @@ export const generateLanguageSample = async (
 export const determineSingleCategory = async (significado: string): Promise<string | null> => {
     const prompt = buildDetermineSingleCategoryPrompt(significado);
     const responseText = await callAi(prompt, { categoria: 'desconocida' });
-    const parsed = parseJsonSafely(responseText, { categoria: 'desconocida' });
+    const parsed = parseJsonSafely<{categoria: string}>(responseText, { categoria: 'desconocida' });
     return parsed.categoria || null;
 };
 
@@ -626,7 +566,6 @@ export const parseGrammarAdvanced = async (
     const hasExisting = !!context?.existingManifest;
     const profile = context?.typologicalProfile;
 
-    // Compact controlled vocabulary (15 marking strategies from the legend)
     const markingLegend = [
         'positional','prefix','suffix','infix','circumfix','transfix_templatic',
         'clitic','particle','auxiliary_periphrastic','tone_change','stress_shift',
@@ -645,7 +584,7 @@ PERFIL TIPOLÓGICO DE REFERENCIA (extraído del documento):
 ` : '';
 
     const existingContext = hasExisting ? `
-MANIFESTO EXISTENTE (conserva valores previos si el documento no los redefine):
+MANIFIESTO EXISTENTE (conserva valores previos si el documento no los redefine):
 - wordOrder: ${context!.existingManifest!.typology.wordOrder}
 - alignment: ${context!.existingManifest!.typology.alignment}
 - morphology: ${context!.existingManifest!.typology.morphology}

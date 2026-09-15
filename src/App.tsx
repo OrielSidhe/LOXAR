@@ -522,7 +522,7 @@ const App = () => {
               onGoHome={goHome}
             />
 
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm ml-16">
               {activeTab !== 'dashboard' && (
                 <div className="flex items-center gap-2 mb-4">
                   <button
@@ -549,6 +549,9 @@ const App = () => {
                     <LanguageHomeCanvas
                       conlangName={activeMetadata?.conlangName}
                       activeModule={activeTab}
+                      conlangNames={lexiconHook.lexiconNames}
+                      onSelectConlang={lexiconHook.setActiveLexicon}
+                      lexicon={activeLexicon}
                       stats={{
                         grammar: activeGrammar ? {
                           rules: (activeGrammar as any)?.morphology?.rules?.length + (activeGrammar as any)?.syntax?.rules?.length + (activeGrammar as any)?.phonology?.rules?.length,
@@ -572,12 +575,22 @@ const App = () => {
                         collections: { collections: 0 },
                       }}
                       onModuleClick={(moduleId) => {
-                        if (moduleId === 'phonology' || moduleId === 'syntax') {
+                        const grammarSubModules = ['overview', 'phonology', 'typology', 'morphology', 'syntax', 'semantics', 'roles', 'strategies', 'pragmatic', 'notes'];
+                        if (grammarSubModules.includes(moduleId as string)) {
                           setActiveTab('grammar');
                           setActiveGrammarModule(moduleId);
+                        } else if (moduleId === 'lexicon') {
+                          setActiveTab('table');
+                        } else if (moduleId === 'workbench') {
+                          setActiveTab('workbench');
+                        } else if (moduleId === 'collections') {
+                          setActiveTab('collections');
+                        } else if (moduleId === 'neography') {
+                          setActiveTab('writing');
+                        } else if (moduleId === 'translator') {
+                          setActiveTab('translator');
                         } else {
-                          const tab = moduleId === 'lexicon' ? 'table' : moduleId;
-                          setActiveTab(tab as any);
+                          setActiveTab(moduleId as any);
                         }
                       }}
                     />

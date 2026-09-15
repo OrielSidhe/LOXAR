@@ -1,8 +1,8 @@
 import React from 'react';
 
 export interface GrammarModuleSidebarProps {
-  activeModule: 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'notes';
-  onSelectModule: (module: 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'notes') => void;
+  activeModule: 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'pragmatic' | 'notes';
+  onSelectModule: (module: 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'pragmatic' | 'notes') => void;
 }
 
 const GrammarModuleSidebar = ({ activeModule, onSelectModule }: GrammarModuleSidebarProps) => {
@@ -15,6 +15,7 @@ const GrammarModuleSidebar = ({ activeModule, onSelectModule }: GrammarModuleSid
         { id: 'semantics' as const, label: 'Semántica', icon: '💭' },
         { id: 'roles' as const, label: 'Roles', icon: '👥' },
         { id: 'strategies' as const, label: 'Estrategias', icon: '⚡' },
+        { id: 'pragmatic' as const, label: 'Pragmática', icon: '🧭' },
         { id: 'notes' as const, label: 'Notas', icon: '📝' }
     ];
 

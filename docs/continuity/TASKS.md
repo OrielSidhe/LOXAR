@@ -968,6 +968,29 @@ una sola fuente de verdad.
 - Validaciones: `npm run typecheck` 0 errores, `npm run build` OK.
 
 ---
+## [2026-09-09] Checkpoint: Capa Pragmática — motor de sintaxis basado en intención de oración
+**Rama:** `master`. **Motivo:** implementar la Capa Pragmática (E-A-R-I-C-K-Q-F) según especificación arquitectónica, reutilizando el sistema existente en lugar de crear uno paralelo.
+
+**Cambios:**
+- `src/services/grammar/pragmaticTypes.ts` (NUEVO): tipos del motor pragmático — `PragmaticBlockId`, `PragmaticClauseType`, `PragmaticBlockRef`, `GrammaticalFunction`, `PragmaticSlotState`, `SentenceBuilderState`.
+- `src/services/grammarDb.ts` (NUEVO): servicio CRUD con initPragmaticDb(), catálogo de funciones gramaticales, tipos de oración, bloques constructivos, plantillas, helpers `buildInitialSlots()` / `buildModuleOrder()`. Persistencia Tauri SQLite + localStorage fallback.
+- `src/types.ts`: `GrammarManifest` extendido con `pragmaticEngine?: PragmaticEngineState` (backward compatible). `PragmaticEngineState` importado desde `pragmaticTypes.ts`.
+- `src/components/GrammarPragmaticPanel.tsx` (NUEVO): panel UI del constructor de oraciones con selector de tipo de oración, builder de slots por bloque, preview de oración generada, botones de plantilla.
+- `src/components/GrammarModuleSidebar.tsx`: agregado módulo 'pragmatic' con ícono '🧭'.
+- `src/components/GrammarTab.tsx`: cableado del módulo 'pragmatic' en el switch de renderizado.
+- `src/components/GrammarTabHeader.tsx`: agregado 'pragmatic' al tipo activeModule y título 'Pragmática'.
+- `docs/sql/grammar-pragmatic-schema.sql` (NUEVO): schema SQL con 9 tablas + seed data (10 tipos de oración, 11 funciones gramaticales).
+
+**Homologación con código existente:**
+- Funciones gramaticales reutilizan keys canónicas de `taxonomy.ts` (sustantivo, verbo, adjetivo, etc.) en vez de duplicar catálogo.
+- `grammarDb.ts` sigue el patrón de `sqlStorage.ts` (Tauri SQLite + localStorage fallback).
+- `TypologyProfile` reutilizado desde `pragmaticTypes.ts` — alineado con `GrammarTypologyPanel` existente.
+- `PragmaticSlotState` unificado en `pragmaticTypes.ts`; `types.ts` importa para `GrammarManifest`.
+
+**Validaciones:** `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK.
+**Próximo bloque ejecutable:** runtime — validar con `npm run tauri dev` que el panel pragmático aparece en la sidebar de Grammar, seleccionar tipo de oración llena slots correctamente, y preview genera superficie coherente.
+
+---
 **Rama:** `feature/sql-migration-clean`. **Ejecución:** subagent-driven (auto, decisión del usuario: "Realiza todas las tareas tú").
 ---
 

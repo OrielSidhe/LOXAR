@@ -131,6 +131,15 @@ textarea::placeholder {
   animation: progress-indeterminate 2s infinite ease-in-out;
 }
 
+@keyframes scale-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
 /* Microinteracciones botones */
 button, .btn-interactive {
   transition: transform 0.12s ease, box-shadow 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;

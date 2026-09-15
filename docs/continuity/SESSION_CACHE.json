@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-08-16T02:43:00.000Z",
+  "lastUpdated": "2026-09-09T00:00:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "canvas",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Implementar navegación por historial, botones volver/inicio, panel resumen en canvas home y consolidar boundaries de Suspense.",
+    "lastPrompt": "Implementar Capa Pragmática (E-A-R-I-C-K-Q-F) para LOXAR: motor de sintaxis basado en intención de oración con SQL schema, UI sentence builder y pragmaticEngine en GrammarManifest. Reutilizar taxonomy.ts y sqlStorage.ts patterns.",
     "lastModelUsed": "gemini-2.5-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Se agregaron tests de conlangs externos (Toki Pona, Esperanto, Klingon, Lojban, Na'vi), se implementaron botones Léxico/Workbench en el nodo de Léxico del canvas inicial y se mapeó el click de Léxico a la tab table. Validaciones verdes."
+  "sessionSummary": "Capa Pragmática implementada: pragmaticTypes.ts (tipos E-A-R-I-C-K-Q-F), grammarDb.ts (CRUD SQLite+fallback), GrammarPragmaticPanel (UI constructor), GrammarManifest extendido con pragmaticEngine, GrammarModuleSidebar/GrammarTab/GrammarTabHeader cableados. 3 errores TS corregidos (PragmaticSlotState unificado, GrammarModule 'pragmatic' en header, defaultFunction fallback). Build verde: typecheck 0 errores, lint OK."
 }

@@ -4,7 +4,7 @@ import SparkleIcon from './icons/SparkleIcon';
 import DownloadIcon from './icons/DownloadIcon';
 
 export interface GrammarTabHeaderProps {
-  activeModule: 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'notes';
+  activeModule: 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'pragmatic' | 'notes';
   onOpenWizard: () => void;
   onOpenImporter: () => void;
   onSave: () => void;
@@ -29,6 +29,7 @@ const GrammarTabHeader = ({
     semantics: 'Semántica',
     roles: 'Roles Sintácticos',
     strategies: 'Estrategias Morfosintácticas',
+    pragmatic: 'Pragmática',
     notes: 'Notas',
   };
 

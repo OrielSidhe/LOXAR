@@ -16,6 +16,7 @@ import GrammarTypologyPanel from './GrammarTypologyPanel';
 import GrammarNotesPanel from './GrammarNotesPanel';
 import GrammarStrategiesPanel from './GrammarStrategiesPanel';
 import GrammarMorphologyPanel from './GrammarMorphologyPanel';
+import GrammarPragmaticPanel from './GrammarPragmaticPanel';
 import GrammarRolesPanel from './GrammarRolesPanel';
 import GrammarSyntaxPanel from './GrammarSyntaxPanel';
 import { normalizeCategory, getEntryForm, getDefaultPreviewEntries, isMeaningfulTypology } from '../utils/grammarPreview';
@@ -34,7 +35,7 @@ interface GrammarTabProps {
     onModuleChange?: (module: GrammarModule) => void;
 }
 
-type GrammarModule = 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'notes';
+type GrammarModule = 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'pragmatic' | 'notes';
 
 interface ProgressMetric {
     category: string;
@@ -375,6 +376,14 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
         />
     );
 
+    const renderPragmatic = () => (
+        <GrammarPragmaticPanel
+            manifest={editedManifest}
+            lexicon={lexicon}
+            onUpdateManifest={(updates) => updateManifest(updates)}
+        />
+    );
+
     const renderPhonology = () => (
         <GrammarPhonologyPanel
             manifest={editedManifest}
@@ -426,6 +435,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
             case 'semantics': return renderSemantics();
             case 'roles': return renderRoles();
             case 'strategies': return renderStrategies();
+            case 'pragmatic': return renderPragmatic();
             case 'notes': return renderNotes();
             default: return renderOverview();
         }
