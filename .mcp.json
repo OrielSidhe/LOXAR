@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "graft": {
+      "command": "C:\Program Files\nodejs\node",
+      "args": [
+        "C:\Users\victo\AppData\Roaming\npm\node_modules\@nanonets\graft\dist\cli.js",
+        "mcp"
+      ],
+      "timeoutMs": 30000
+    }
+  }
+}
