@@ -76,7 +76,8 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
   onUpdateManifest,
 }) => {
   const engine = manifest.pragmaticEngine ?? {
-    typology: 'isolating',
+    typology: {},
+    typologyLabel: 'isolating',
     activeClauseType: null,
     slots: [],
   };
@@ -106,7 +107,7 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
   // Cuando cambia el tipo de oración, recalcular slots
   const handleClauseTypeChange = (id: PragmaticClauseTypeId) => {
     setClauseTypeId(id);
-    const newSlots = buildInitialSlots(id, engine.typology);
+    const newSlots = buildInitialSlots(id, engine.typologyLabel);
     setSlots(newSlots);
     onUpdateManifest({
       pragmaticEngine: {
@@ -116,15 +117,15 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
       },
     });
     // Cargar plantillas
-    getTemplates(id, engine.typology).then(setTemplates);
+    getTemplates(id, engine.typologyLabel).then(setTemplates);
   };
 
   // Cuando cambia la tipología, recargar plantillas
   React.useEffect(() => {
     if (clauseTypeId) {
-      getTemplates(clauseTypeId, engine.typology).then(setTemplates);
+      getTemplates(clauseTypeId, engine.typologyLabel).then(setTemplates);
     }
-  }, [engine.typology, clauseTypeId]);
+  }, [engine.typologyLabel, clauseTypeId]);
 
   // Actualizar un slot
   const updateSlot = (blockId: PragmaticBlockId, field: keyof PragmaticSlotState, value: any) => {
@@ -160,7 +161,7 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
     return parts.filter(Boolean).join(' ');
   }, [slots, moduleOrder, lexicon, functions]);
 
-  const typology: TypologyProfile = engine.typology;
+  const typology: TypologyProfile = engine.typologyLabel;
 
   return (
     <div className="space-y-4">
@@ -180,8 +181,8 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
             {(['flexive', 'agglutinative', 'isolating'] as TypologyProfile[]).map((t) => (
               <button
                 key={t}
-                onClick={() => {
-                  const newEngine = { ...engine, typology: t };
+                  onClick={() => {
+                  const newEngine = { ...engine, typologyLabel: t, typology: engine.typology };
                   onUpdateManifest({ pragmaticEngine: newEngine });
                 }}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all ${

@@ -27,6 +27,7 @@ import type {
 } from './grammar/pragmaticTypes';
 import { PRAGMATIC_BLOCKS } from './grammar/pragmaticTypes';
 import { isTauri } from './sqlStorage';
+import type { TypologicalProfile as TypologicalProfileObj, PragmaticEngineState as PragmaticEngineStateObj } from '../types/pragmaticTypes';
 
 const DB_PATH = 'sqlite:loxar.db';
 const PRAG_PREFIX = 'loxar_prag_';
@@ -403,14 +404,16 @@ export function buildModuleOrder(clauseTypeId: string): PragmaticBlockId[] {
 // ── Persist pragmaticEngine state to manifest ────────────
 
 export interface PragmaticEngineState {
-  typology: TypologyProfile;
+  typology: TypologicalProfileObj;
+  typologyLabel: TypologyProfile;
   activeClauseType: string | null;
   slots: PragmaticSlotState[];
 }
 
-export function createDefaultPragmaticState(): PragmaticEngineState {
+export function createDefaultPragmaticState(label: TypologyProfile = 'isolating'): PragmaticEngineState {
   return {
-    typology: 'isolating',
+    typology: {},
+    typologyLabel: label,
     activeClauseType: null,
     slots: [],
   };

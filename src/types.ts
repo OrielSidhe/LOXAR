@@ -201,12 +201,6 @@ export type StrategyType = 'position' | 'affix' | 'clitic' | 'tone' | 'mutation'
  * Values beyond the 7 engine types are preserved as descriptive notes and not
  * consumed by the realization engine.
  */
-export type MarkingStrategy =
-  | 'positional' | 'prefix' | 'suffix' | 'infix' | 'circumfix'
-  | 'transfix_templatic' | 'clitic' | 'particle' | 'auxiliary_periphrastic'
-  | 'tone_change' | 'stress_shift' | 'root_internal_mutation_apophony'
-  | 'reduplication' | 'suppletion' | 'zero_unmarked';
-
 export interface MorphosyntacticStrategy {
   id: string;
   name: string;
@@ -223,63 +217,9 @@ export interface MorphosyntacticStrategy {
   notes?: string;
 }
 
-/**
- * TypologicalProfile — the extraction target derived from the Universal
- * Typological Matrix. It is the GUIDE for what `parseGrammarAdvanced` should
- * pull out of ANY user document (txt/md/doc). Inventories are OPEN string[]
- * so languages with unusual inventories (e.g. Quavanol's 20+ cases) are kept
- * verbatim rather than forced into a fixed enum. This is the "núcleo + escritura"
- * scope: phonology, morphology, syntax, nominal, verbal, modifiers, writing.
- * Pragmatics and lexicon are intentionally excluded from the saved profile.
- */
-export interface TypologicalProfile {
-  meta?: {
-    modality?: string[];
-    naturalness?: string;
-    vitality_status?: string;
-  };
-  morphology?: {
-    synthesis_level?: string;
-    fusion_degree?: string;
-    vowel_harmony?: boolean;
-    consonant_mutation?: boolean;
-  };
-  syntax?: {
-    basic_word_order?: string;
-    flexibility?: string;
-    morphosyntactic_alignment?: string;
-    head_directionality?: string;
-    pro_drop_behavior?: string;
-  };
-  nominal?: {
-    noun_classes?: { active: boolean; inventory: string[] };
-    number_system?: { active: boolean; inventory: string[] };
-    case_system?: { active: boolean; inventory: string[] };
-    definiteness?: { marking_strategy: string[] };
-  };
-  verbal?: {
-    tense_system?: { active: boolean; inventory: string[] };
-    aspect_system?: { active: boolean; inventory: string[] };
-    mood_system?: { inventory: string[] };
-    valency?: { inventory: string[] };
-  };
-  modifiers?: {
-    adjective_typology?: string;
-    adverb_formation?: string;
-    adpositions?: string;
-  };
-  writing?: {
-    exists?: boolean;
-    script_type?: string;
-    directionality?: string;
-    case_distinction?: boolean;
-  };
-  /** Syntactic roles: typical catalog + any language-specific open roles. */
-  syntacticRoles?: { catalog: string[]; custom: string[] };
-  /** Marking strategies declared in the document (from the legend vocabulary). */
-  markingStrategies?: MarkingStrategy[];
-}
-
+// ── Tipos avanzados de tipología (re-export desde pragmaticTypes canónico) ──
+import type { TypologicalProfile, PragmaticEngineState } from './types/pragmaticTypes';
+export type { MarkingStrategy, TypologicalProfile, PragmaticEngineState } from './types/pragmaticTypes';
 export interface GrammarAffix {
   id: string;
   form: string;
@@ -441,18 +381,7 @@ export interface GrammarManifest {
     pragmaticEngine?: PragmaticEngineState;
 }
 
-import type { PragmaticBlockId, PragmaticSlotState } from './services/grammar/pragmaticTypes';
-
 /** Estado del motor pragmático guardado en el manifiesto */
-export interface PragmaticEngineState {
-    /** Tipología activa del idioma */
-    typology: 'flexive' | 'agglutinative' | 'isolating';
-    /** Tipo de oración seleccionado en el constructor */
-    activeClauseType: string | null;
-    /** Slots llenados del constructor */
-    slots: PragmaticSlotState[];
-}
-
 // ── Loxar Bridge ─────────────────────────────────────────────────────────────
 
 export interface LoxarBridge {
