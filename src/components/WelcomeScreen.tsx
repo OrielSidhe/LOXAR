@@ -40,10 +40,8 @@ const WelcomeScreen = ({ onCreateLexicon, onContinue, onImport, onStartTour }: W
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
-            <div className="absolute inset-0 bg-background-dark/80 backdrop-blur-md"></div>
-
-            <div className="relative z-10 text-center max-w-3xl bg-surface-dark/50 p-10 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in bg-background-dark">
+            <div className="relative z-10 text-center max-w-3xl bg-surface-dark/95 p-10 rounded-3xl border border-white/10 shadow-2xl">
                 <AppLogoIcon className="w-24 h-24 text-primary mx-auto mb-6 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
                 <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-primary font-display mb-4 tracking-wider drop-shadow-sm">LOXAR</h1>
                 <p className="text-lg text-text-secondary mb-10 leading-relaxed font-light tracking-wide">

@@ -147,7 +147,10 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
   const handleOpenModal = useCallback((modal: any) => setActiveModal(modal), [setActiveModal]);
   const handleCloseModal = useCallback(() => setActiveModal('none'), [setActiveModal]);
 
-  const handleCreateNewLexicon = useCallback(() => setActiveModal('create_lexicon'), [setActiveModal]);
+  const handleCreateNewLexicon = useCallback(() => {
+    setShowWelcome(false);
+    setActiveModal('create_lexicon');
+  }, [setActiveModal, setShowWelcome]);
 
   const handleConfirmCreateLexicon = useCallback((name: string, language: string) => {
     try {

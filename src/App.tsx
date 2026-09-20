@@ -78,6 +78,7 @@ const App = () => {
 
   const [splashFinished, setSplashFinished] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
@@ -391,6 +392,21 @@ const App = () => {
     }
   }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
 
+  // ── Welcome screen: respetar setting "showWelcomeOnStart" ──
+  useEffect(() => {
+    if (hasSeenWelcome) return;
+    loadSessionCache().then((cache) => {
+      // showWelcomeOnStart por defecto = true (mostrar bienvenida)
+      // Si el usuario lo desactivó en settings, ir directo al dashboard
+      const shouldShowWelcome = cache.showWelcomeOnStart !== false;
+      setShowWelcome(shouldShowWelcome);
+      setHasSeenWelcome(true);
+    }).catch(() => {
+      setShowWelcome(true);
+      setHasSeenWelcome(true);
+    });
+  }, [hasSeenWelcome]);
+
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
@@ -418,7 +434,7 @@ const App = () => {
           onTourEnd={onTourEnd}
         />
 
-        <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished ? 'opacity-100' : 'opacity-0'}`}>
+        <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished && !showWelcome ? 'opacity-100' : 'opacity-0'}`}>
           <AppAmbientLightsLayer />
 
           <AppLoadingLayer isLoading={isLoading} loadingMessage={loadingMessage} />

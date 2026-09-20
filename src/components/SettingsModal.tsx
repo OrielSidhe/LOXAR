@@ -30,6 +30,7 @@ type Settings = {
   aiCacheEnabled: boolean;
   debugLogging: boolean;
   safeMode: boolean;
+  showWelcomeOnStart: boolean;
 };
 
 type SectionId = 'appearance' | 'ai' | 'backup' | 'behavior' | 'performance' | 'data' | 'advanced';
@@ -69,6 +70,7 @@ const DEFAULTS: Settings = {
   aiCacheEnabled: true,
   debugLogging: false,
   safeMode: false,
+  showWelcomeOnStart: true,
 };
 
 const SettingsModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
@@ -86,6 +88,7 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
         themeId: (cache.themeId as ThemeId) || prev.themeId,
         soundsEnabled: cache.soundsEnabled ?? prev.soundsEnabled,
         tourOnStart: cache.tourCompleted === false ? false : prev.tourOnStart,
+        showWelcomeOnStart: cache.showWelcomeOnStart ?? prev.showWelcomeOnStart,
         backupFolder: cache.exportPath || prev.backupFolder,
       }));
     });
@@ -118,6 +121,7 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
       themeId: settings.themeId,
       soundsEnabled: settings.soundsEnabled,
       tourCompleted: !settings.tourOnStart,
+      showWelcomeOnStart: settings.showWelcomeOnStart,
       exportPath: settings.backupFolder || null,
     });
     setSaved(true);
@@ -269,6 +273,7 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
                 <ToggleRow label="Auto-guardado" value={settings.autoSave} onChange={(v) => update({ autoSave: v })} />
                 <ToggleRow label="Confirmar eliminaciones" value={settings.confirmDelete} onChange={(v) => update({ confirmDelete: v })} />
                 <ToggleRow label="Tour automático al iniciar" value={settings.tourOnStart} onChange={(v) => update({ tourOnStart: v })} />
+                <ToggleRow label="Mostrar pantalla de bienvenida" value={settings.showWelcomeOnStart} onChange={(v) => update({ showWelcomeOnStart: v })} />
                 <ToggleRow label="Guías interactivas" value={settings.aiAutoComplete} onChange={(v) => update({ aiAutoComplete: v })} />
                 <SelectRow
                   label="Modo de interfaz"
