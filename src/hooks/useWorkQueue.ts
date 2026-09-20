@@ -1,6 +1,9 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { LexiconEntry, WorkQueueItem, GenerationMode, MissingWord } from '../types';
 import { generateRootAndLexeme } from '../services/geminiService';
+import { generateWordPool } from '../services/phoneticGenerator';
+import { loadCoreLexicon, assignSemantics } from '../data/coreLexicon';
+import type { AssignedWord } from '../types/coreLexicon';
 
 export function useWorkQueue(options: {
     getLexiconSample: (count: number) => LexiconEntry[];
@@ -15,6 +18,9 @@ export function useWorkQueue(options: {
 
     const [workQueue, setWorkQueue] = useState<WorkQueueItem[]>([]);
     const [queueCursor, setQueueCursor] = useState(0);
+    const [auditPreview, setAuditPreview] = useState<AssignedWord[]>([]);
+    const [isGeneratingPool, setIsGeneratingPool] = useState(false);
+    const [poolGenerated, setPoolGenerated] = useState(0);
 
     const queueActive = workQueue.length > 0;
     const currentQueueItem = queueActive ? workQueue[Math.min(queueCursor, workQueue.length - 1)] : null;
@@ -101,6 +107,69 @@ export function useWorkQueue(options: {
         };
     }, [currentQueueItem]);
 
+    // ── Flujo estocástico: Generación → Asignación Semántica → Auditoría ──
+
+    const handleGeneratePool = useCallback(async (count: number) => {
+        setIsGeneratingPool(true);
+        try {
+            // 1. Generar pool fonotáctico estocástico
+            const pool = generateWordPool(generativeProfile, count);
+            const words = pool.words.map(w => w.form);
+            setPoolGenerated(pool.generated);
+
+            // 2. Cargar core lexicon (lazy)
+            const coreLexicon = await loadCoreLexicon();
+
+            // 3. Asignar semánticamente
+            const assigned = assignSemantics(words, coreLexicon, generativeProfile);
+
+            // 4. Presentar para auditoría
+            setAuditPreview(assigned);
+            setActiveTab('audit');
+            showNotification(
+                `Pool generado: ${pool.generated} palabras con asignaciones semánticas`,
+                'success'
+            );
+        } catch (e) {
+            showNotification(
+                e instanceof Error ? e.message : 'Error generando el pool',
+                'error'
+            );
+        } finally {
+            setIsGeneratingPool(false);
+        }
+    }, [generativeProfile, setActiveTab, showNotification]);
+
+    const handleAuditApprove = useCallback((approved: AssignedWord[]) => {
+        // Aprobar todas las palabras y encolarlas en el workbench
+        const items = approved.map(a => ({
+            Significado: a.concept,
+            Categoría: a.category,
+            Raíz: a.form,
+            Léxema: [a.form],
+        }));
+        enqueueItems(items);
+        setAuditPreview([]);
+        showNotification(`${approved.length} palabras aprobadas y encoladas en el léxico`, 'success');
+        setActiveTab('workbench');
+    }, [enqueueItems, setActiveTab, showNotification]);
+
+    const handleAuditReject = useCallback((index: number) => {
+        setAuditPreview(prev => prev.map((a, i) =>
+            i === index ? { ...a, status: 'rejected' as const } : a
+        ));
+    }, []);
+
+    const handleAuditEdit = useCallback((index: number, edits: Partial<AssignedWord>) => {
+        setAuditPreview(prev => prev.map((a, i) =>
+            i === index ? { ...a, ...edits } : a
+        ));
+    }, []);
+
+    const clearAuditPreview = useCallback(() => {
+        setAuditPreview([]);
+    }, []);
+
     return {
         workQueue,
         queueCursor,
@@ -114,8 +183,16 @@ export function useWorkQueue(options: {
         queueClear,
         handleEnqueue,
         handleGenerateBatch,
+        handleGeneratePool,
+        handleAuditApprove,
+        handleAuditReject,
+        handleAuditEdit,
+        clearAuditPreview,
         queueInitialData,
         setWorkQueue,
         setQueueCursor,
+        auditPreview,
+        isGeneratingPool,
+        poolGenerated,
     };
-}
+};

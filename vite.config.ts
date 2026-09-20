@@ -47,6 +47,7 @@ export default defineConfig({
         manualChunks: {
           react: ['react', 'react-dom'],
           tauri: ['@tauri-apps/api'],
+          'core-lexicon': ['src/data/coreLexicon/concepts.json'],
         },
       },
     },

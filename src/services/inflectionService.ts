@@ -47,10 +47,13 @@ const applyRule = (rule: InflectionRule, baseLexeme: string): { name: string, re
     return { name: rule.name, result };
 };
 
-const getAllRules = (paradigm: InflectionParadigm, baseLexeme: string): { name: string, result: string }[] => [
-    ...paradigm.rules.map(rule => applyRule(rule, baseLexeme)),
-    ...(paradigm.paradigms?.flatMap(p => getAllRules(p, baseLexeme)) || [])
-];
+const getAllRules = (paradigm: InflectionParadigm, baseLexeme: string, depth: number = 0): { name: string, result: string }[] => {
+    if (depth > 10) return []; // Protección contra explosión combinatoria
+    return [
+        ...paradigm.rules.map(rule => applyRule(rule, baseLexeme)),
+        ...(paradigm.paradigms?.flatMap(p => getAllRules(p, baseLexeme, depth + 1)) || [])
+    ];
+};
 
 export const generateInflectedForms = (entry: LexiconEntry, paradigm: InflectionParadigm, profile: InflectionProfile): { name: string, result: string }[] => {
     const baseLexeme = (entry.Léxema[0] || entry.Raíz).replace(/-$/, '');

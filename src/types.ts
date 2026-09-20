@@ -87,6 +87,8 @@ export interface GenerativeProfile {
   derivationalAffixes: DerivationalAffix[];
 }
 
+// ── Extended Core Lexicon ───────────────────────────────────
+
 export interface Glyph {
   id: string;
   name: string;
