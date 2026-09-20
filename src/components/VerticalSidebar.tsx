@@ -42,7 +42,7 @@ const VerticalSidebar: React.FC<VerticalSidebarProps> = ({ active, onChange, onO
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <aside className={`fixed left-0 top-0 h-screen bg-surface-dark/70 backdrop-blur-md border-r border-border-dark/60 z-40 flex flex-col items-center py-3 gap-1 transition-all duration-300 ${collapsed ? 'w-12' : 'w-16'}`}>
+    <aside className={`shrink-0 h-full bg-surface-dark border-r border-border-dark/60 flex flex-col items-center py-3 gap-1 transition-all duration-300 ${collapsed ? 'w-12' : 'w-16'}`}>
       <div className="mb-3 flex items-center justify-center">
         <span className="text-[10px] font-black tracking-widest text-accent">LOX</span>
       </div>

@@ -58,6 +58,8 @@ type GraphCanvasProps = {
   conlangNames?: string[];
   onSelectConlang?: (name: string) => void;
   lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
+  /** Si true, muestra solo el nodo raíz (lienzo en blanco para crecimiento orgánico) */
+  minimalMode?: boolean;
 };
 
 // ── Level Data ─────────────────────────────────────────
@@ -144,6 +146,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   conlangNames = [],
   onSelectConlang,
   lexicon = [],
+  minimalMode = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [level, setLevel] = useState<LevelId>('root');
@@ -152,8 +155,12 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [dragging, setDragging] = useState<{ type: 'pan' | 'node'; nodeId?: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
 
-  const NODES = level === 'root' ? ROOT_NODES : level === 'grammar' ? GRAMMAR_NODES : level === 'lexicon' ? LEXICON_NODES : [];
-  const EDGES = level === 'root' ? ROOT_EDGES : level === 'grammar' ? GRAMMAR_EDGES : level === 'lexicon' ? LEXICON_EDGES : [];
+  const NODES = level === 'root'
+    ? (minimalMode ? [] : ROOT_NODES)
+    : level === 'grammar' ? GRAMMAR_NODES : level === 'lexicon' ? LEXICON_NODES : [];
+  const EDGES = level === 'root'
+    ? (minimalMode ? [] : ROOT_EDGES)
+    : level === 'grammar' ? GRAMMAR_EDGES : level === 'lexicon' ? LEXICON_EDGES : [];
 
   const getNodePosition = useCallback((node: GraphNode) => {
     return nodePositions[node.id] ?? { x: node.x, y: node.y };
