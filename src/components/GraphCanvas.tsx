@@ -14,6 +14,7 @@
 
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import SyntaxFlowline from './SyntaxFlowline';
+import ModulePalette, { type ModuleNodeType } from './ModulePalette';
 
 // ── Types ──────────────────────────────────────────────
 type LevelId = 'root' | 'grammar' | 'lexicon' | 'syntax';
@@ -154,9 +155,11 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
   const [dragging, setDragging] = useState<{ type: 'pan' | 'node'; nodeId?: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [dynamicNodes, setDynamicNodes] = useState<GraphNode[]>([]);
+  const [draggingPalette, setDraggingPalette] = useState<ModuleNodeType | null>(null);
 
   const NODES = level === 'root'
-    ? (minimalMode ? [] : ROOT_NODES)
+    ? [...(minimalMode ? [] : ROOT_NODES), ...dynamicNodes]
     : level === 'grammar' ? GRAMMAR_NODES : level === 'lexicon' ? LEXICON_NODES : [];
   const EDGES = level === 'root'
     ? (minimalMode ? [] : ROOT_EDGES)
@@ -190,6 +193,56 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   }, [dragging, transform.zoom]);
 
   const handleMouseUp = useCallback(() => setDragging(null), []);
+
+  // ── Palette Drag & Drop ──────────────────────────────
+  const createNodeFromPalette = useCallback((type: ModuleNodeType, clientX: number, clientY: number): GraphNode => {
+    // Convertir coordenadas de pantalla a coordenadas del canvas (considerando pan/zoom)
+    const rect = containerRef.current?.getBoundingClientRect();
+    const x = rect ? (clientX - rect.left - transform.x) / transform.zoom : clientX;
+    const y = rect ? (clientY - rect.top - transform.y) / transform.zoom : clientY;
+
+    const id = `dyn_${type}_${Date.now()}`;
+    const labels: Record<ModuleNodeType, { label: string; icon: string; description: string }> = {
+      grammar:    { label: 'Gramática',  icon: '📐', description: 'Motor gramatical' },
+      syntax:     { label: 'Sintaxis',   icon: '🧩', description: 'Estructura oracional' },
+      lexicon:    { label: 'Léxico',     icon: '📚', description: 'Diccionario' },
+      phonology:  { label: 'Fonología',  icon: '🔊', description: 'Inventario fonético' },
+      morphology: { label: 'Morfología', icon: '🔧', description: 'Afijos y reglas' },
+      semantics:  { label: 'Semántica',  icon: '💡', description: 'Campos semánticos' },
+      neography:  { label: 'Neografía',  icon: '✍️', description: 'Sistema de escritura' },
+      translator: { label: 'Traductor',  icon: '🔁', description: 'Traducción' },
+    };
+    const info = labels[type] ?? { label: type, icon: '❓', description: type };
+
+    return {
+      id,
+      label: info.label,
+      icon: info.icon,
+      x: x - 110, // centrar horizontalmente en el drop point
+      y: y - 50,  // centrar verticalmente
+      w: 220,
+      h: 100,
+      level: 'root',
+      status: 'empty',
+      description: info.description,
+      ports: [{ id: 'in', label: 'In', side: 'left', color: 'cyan' }],
+    };
+  }, [transform.x, transform.y, transform.zoom]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('application/loxar-module') as ModuleNodeType;
+    if (!type) return;
+
+    const newNode = createNodeFromPalette(type, e.clientX, e.clientY);
+    setDynamicNodes(prev => [...prev, newNode]);
+    setDraggingPalette(null);
+  }, [createNodeFromPalette]);
 
   // ── Node Drag ───────────────────────────────────────
   const handleNodeMouseDown = useCallback((e: React.MouseEvent, node: GraphNode) => {
@@ -267,9 +320,16 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </div>
       </div>
 
+      {/* Module Palette (drag source) */}
+      <ModulePalette
+        onDragStart={(type) => setDraggingPalette(type)}
+        onDragEnd={() => setDraggingPalette(null)}
+      />
+
       {/* Canvas Viewport */}
       <div className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+        onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
+        onDragOver={handleDragOver} onDrop={handleDrop}>
         {/* Grid */}
         <div className="absolute inset-0 pointer-events-none opacity-20"
           style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: `${32 * transform.zoom}px ${32 * transform.zoom}px`, backgroundPosition: `${transform.x}px ${transform.y}px` }} />
