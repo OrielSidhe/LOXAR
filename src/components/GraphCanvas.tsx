@@ -15,6 +15,7 @@
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import SyntaxFlowline from './SyntaxFlowline';
 import ModulePalette, { type ModuleNodeType } from './ModulePalette';
+import GrammarNode from './GrammarNode';
 
 // ── Types ──────────────────────────────────────────────
 type LevelId = 'root' | 'grammar' | 'lexicon' | 'syntax';
@@ -218,10 +219,10 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       id,
       label: info.label,
       icon: info.icon,
-      x: x - 110, // centrar horizontalmente en el drop point
-      y: y - 50,  // centrar verticalmente
-      w: 220,
-      h: 100,
+      x: x - 130, // centrar horizontalmente en el drop point
+      y: y - 60,  // centrar verticalmente
+      w: 260,
+      h: 140,
       level: 'root',
       status: 'empty',
       description: info.description,
@@ -243,6 +244,69 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     setDynamicNodes(prev => [...prev, newNode]);
     setDraggingPalette(null);
   }, [createNodeFromPalette]);
+
+  // ── Render node body ───────────────────────────────
+  const renderNodeBody = (node: GraphNode) => {
+    const isGrammarNode = node.id.startsWith('dyn_grammar_');
+
+    if (isGrammarNode) {
+      return (
+        <div className="relative w-full h-full">
+          <GrammarNode
+            rulesCount={0}
+            status="inactive"
+            onZoom={() => zoomIntoNode('grammar')}
+            connected={false}
+          />
+        </div>
+      );
+    }
+
+    const hasChildren = ['grammar', 'lexicon', 'syntax'].includes(node.id);
+    return (
+      <>
+        <div className="flex items-center gap-2 mb-1.5">
+          <span className="text-lg">{node.icon}</span>
+          <span className="text-[10px] text-white/50">{node.description}</span>
+        </div>
+        {node.stats && (
+          <div className="bg-black/20 rounded-lg p-1.5 space-y-0.5 border border-white/5">
+            {node.stats.map((s, i) => (
+              <div key={i} className="flex justify-between text-[10px]">
+                <span className="text-white/40">{s.label}:</span>
+                <span className="text-accent font-mono font-semibold">{s.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {hasChildren && (
+          <button onClick={(e) => { e.stopPropagation(); zoomIntoNode(node.id); }}
+            className="mt-2 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent transition-colors w-full justify-center">
+            <span>🔍</span><span>Zoom</span>
+          </button>
+        )}
+        {['lexicon', 'workbench', 'phonology', 'neography', 'semantics', 'translator'].includes(node.id) && level === 'root' && (
+          <button onClick={(e) => { e.stopPropagation(); onNavigate?.(node.id === 'lexicon' ? 'table' : node.id); }}
+            className="mt-1 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors w-full justify-center">
+            <span>→</span><span>Ir a pantalla</span>
+          </button>
+        )}
+        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5">
+          <div className="flex items-center gap-1">
+            <span className={`relative flex h-1.5 w-1.5`}>
+              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${STATUS_DOT[node.status]}`} />
+              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${STATUS_DOT[node.status]}`} />
+            </span>
+            <span className="text-[8px] text-white/40 capitalize">{node.status === 'complete' ? 'Completo' : node.status === 'partial' ? 'Parcial' : 'Vacío'}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            {node.ports.filter(p => p.side === 'left').map(p => (<span key={p.id} className="w-1.5 h-1.5 rounded-full bg-accent border border-white/20 shadow-[0_0_4px_rgba(0,240,255,0.5)]" title={p.label} />))}
+            {node.ports.filter(p => p.side === 'right').map(p => (<span key={p.id} className="w-1.5 h-1.5 rounded-full bg-purple-400 border border-white/20 shadow-[0_0_4px_rgba(168,85,247,0.5)]" title={p.label} />))}
+          </div>
+        </div>
+      </>
+    );
+  };
 
   // ── Node Drag ───────────────────────────────────────
   const handleNodeMouseDown = useCallback((e: React.MouseEvent, node: GraphNode) => {
@@ -370,65 +434,31 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             const isActive = activeModule === node.id;
             const isHovered = hoveredNode === node.id;
             const hasChildren = ['grammar', 'lexicon', 'syntax'].includes(node.id);
+            const isGrammarNode = node.id.startsWith('dyn_grammar_');
+
+            const nodeClasses = isGrammarNode
+              ? `absolute rounded-xl border border-cyan-400/50 bg-surface-dark/95 backdrop-blur-xl shadow-[0_0_25px_rgba(0,240,255,0.1)] transition-all duration-300 pointer-events-auto cursor-pointer select-none ${isActive ? 'scale-[1.03] z-20' : isHovered ? 'scale-[1.02] z-10' : 'z-10'}`
+              : `absolute rounded-xl border backdrop-blur-xl transition-all duration-300 pointer-events-auto cursor-pointer select-none ${colors.border} ${colors.bg} ${isActive ? `${colors.glow} scale-[1.03] z-20` : isHovered ? 'scale-[1.02] z-10' : 'z-10'}`;
 
             return (
               <div key={node.id} data-node-id={node.id}
-                className={`absolute rounded-xl border backdrop-blur-xl transition-all duration-300 pointer-events-auto cursor-pointer select-none ${colors.border} ${colors.bg} ${isActive ? `${colors.glow} scale-[1.03] z-20` : isHovered ? 'scale-[1.02] z-10' : 'z-10'}`}
+                className={nodeClasses}
                 style={{ left: pos.x, top: pos.y, width: node.w, minHeight: node.h, zIndex: isActive ? 20 : isHovered ? 15 : 10 }}
                 onPointerEnter={() => setHoveredNode(node.id)} onPointerLeave={() => setHoveredNode(null)}
                 onMouseDown={(e) => handleNodeMouseDown(e, node)}>
-                {/* Header */}
-                <div className="h-8 px-3 flex items-center justify-between border-b border-white/10 rounded-t-xl bg-white/5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider">{node.label}</span>
+                {/* Header (grammar nodes have their own header) */}
+                {!isGrammarNode && (
+                  <div className="h-8 px-3 flex items-center justify-between border-b border-white/10 rounded-t-xl bg-white/5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-2.5 rounded-full bg-accent animate-pulse" />
+                      <span className="text-[10px] font-bold text-accent uppercase tracking-wider">{node.label}</span>
+                    </div>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-mono border border-accent/20">{node.id.toUpperCase().slice(0, 3)}</span>
                   </div>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-mono border border-accent/20">{node.id.toUpperCase().slice(0, 3)}</span>
-                </div>
+                )}
                 {/* Body */}
-                <div className="p-2.5">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-lg">{node.icon}</span>
-                    <span className="text-[10px] text-white/50">{node.description}</span>
-                  </div>
-                  {node.stats && (
-                    <div className="bg-black/20 rounded-lg p-1.5 space-y-0.5 border border-white/5">
-                      {node.stats.map((s, i) => (
-                        <div key={i} className="flex justify-between text-[10px]">
-                          <span className="text-white/40">{s.label}:</span>
-                          <span className="text-accent font-mono font-semibold">{s.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {/* Zoom Button */}
-                  {hasChildren && (
-                    <button onClick={(e) => { e.stopPropagation(); zoomIntoNode(node.id); }}
-                      className="mt-2 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent transition-colors w-full justify-center">
-                      <span>🔍</span><span>Zoom</span>
-                    </button>
-                  )}
-                  {/* Navigate Button (for nodes that map to existing tabs) */}
-                  {['lexicon', 'workbench', 'phonology', 'neography', 'semantics', 'translator'].includes(node.id) && level === 'root' && (
-                    <button onClick={(e) => { e.stopPropagation(); onNavigate?.(node.id === 'lexicon' ? 'table' : node.id); }}
-                      className="mt-1 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors w-full justify-center">
-                      <span>→</span><span>Ir a pantalla</span>
-                    </button>
-                  )}
-                  {/* Status + Ports */}
-                  <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5">
-                    <div className="flex items-center gap-1">
-                      <span className={`relative flex h-1.5 w-1.5`}>
-                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${STATUS_DOT[node.status]}`} />
-                        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${STATUS_DOT[node.status]}`} />
-                      </span>
-                      <span className="text-[8px] text-white/40 capitalize">{node.status === 'complete' ? 'Completo' : node.status === 'partial' ? 'Parcial' : 'Vacío'}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {node.ports.filter(p => p.side === 'left').map(p => (<span key={p.id} className="w-1.5 h-1.5 rounded-full bg-accent border border-white/20 shadow-[0_0_4px_rgba(0,240,255,0.5)]" title={p.label} />))}
-                      {node.ports.filter(p => p.side === 'right').map(p => (<span key={p.id} className="w-1.5 h-1.5 rounded-full bg-purple-400 border border-white/20 shadow-[0_0_4px_rgba(168,85,247,0.5)]" title={p.label} />))}
-                    </div>
-                  </div>
+                <div className={isGrammarNode ? 'flex-1' : 'flex-1 p-2.5'}>
+                  {renderNodeBody(node)}
                 </div>
               </div>
             );
