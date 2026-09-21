@@ -609,6 +609,19 @@ const App = () => {
                           setActiveTab(moduleId as any);
                         }
                       }}
+                      onZoomToNode={(moduleId) => {
+                        // Zoom desde un nodo del grafo → abrir el panel correspondiente
+                        const grammarSubModules = ['overview', 'phonology', 'typology', 'morphology', 'syntax', 'semantics', 'roles', 'strategies', 'pragmatic', 'notes'];
+                        if (grammarSubModules.includes(moduleId)) {
+                          setActiveTab('grammar');
+                          setActiveGrammarModule(moduleId);
+                        } else if (moduleId === 'lexicon') {
+                          setActiveTab('table');
+                        } else if (moduleId === 'phonology') {
+                          setActiveTab('grammar');
+                          setActiveGrammarModule('phonology');
+                        }
+                      }}
                     />
                   </div>
                 )}
@@ -724,6 +737,7 @@ const App = () => {
                     onExportGrammar={handleExportGrammar}
                     activeModule={activeGrammarModule}
                     onModuleChange={setActiveGrammarModule}
+                    onBack={() => setActiveTab('dashboard')}
                   />
                 )}
                 {activeTab === 'translator' && (

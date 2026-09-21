@@ -33,6 +33,8 @@ interface GrammarTabProps {
     onExportGrammar?: () => void;
     activeModule?: GrammarModule;
     onModuleChange?: (module: GrammarModule) => void;
+    /** Callback para volver al grafo/canvas */
+    onBack?: () => void;
 }
 
 type GrammarModule = 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'pragmatic' | 'notes';
@@ -48,7 +50,7 @@ interface ProgressMetric {
 // (not localStorage — keeps it simple and resets on reload, exactly as required).
 let wizardAutoOpenedThisSession = false;
 
-const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange }: GrammarTabProps) => {
+const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange, onBack }: GrammarTabProps) => {
     const [internalModule, setInternalModule] = useState<GrammarModule>('syntax');
     const activeModule = activeModuleProp ?? internalModule;
     const setActiveModule = onModuleChange ?? setInternalModule;
@@ -381,6 +383,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
             manifest={editedManifest}
             lexicon={lexicon}
             onUpdateManifest={(updates) => updateManifest(updates)}
+            onBack={onBack}
         />
     );
 

@@ -39,6 +39,8 @@ interface GrammarPragmaticPanelProps {
   manifest: GrammarManifest;
   lexicon: LexiconEntry[];
   onUpdateManifest: (updates: Partial<GrammarManifest>) => void;
+  /** Callback para volver al grafo/canvas */
+  onBack?: () => void;
 }
 
 const SLOT_COLORS: Record<PragmaticBlockId, string> = {
@@ -74,6 +76,7 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
   manifest,
   lexicon,
   onUpdateManifest,
+  onBack,
 }) => {
   const engine = manifest.pragmaticEngine ?? {
     typology: {},
@@ -165,6 +168,18 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* ── Back to Graph ── */}
+      {onBack && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-accent bg-white/5 hover:bg-accent/10 rounded-lg px-3 py-1.5 transition-colors"
+          >
+            <span>←</span><span>Volver al Grafo</span>
+          </button>
+        </div>
+      )}
+
       {/* ── Selector de tipo de oración ── */}
       <div className="bg-background rounded-lg p-6 border border-border-dark">
         <h3 className="text-xl font-bold text-white mb-4">

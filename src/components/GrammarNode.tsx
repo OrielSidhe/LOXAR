@@ -15,11 +15,13 @@
 import React from 'react';
 
 export interface GrammarNodeProps {
+  /** Etiqueta tipológica del conlang (ej: 'flexive', 'agglutinative', 'isolating') */
+  typologyLabel?: string;
   /** Número de reglas compiladas */
   rulesCount?: number;
   /** Estado del motor */
   status?: 'active' | 'inactive' | 'compiling';
-  /** Callback para zoom al hacer clic en "Zoom" */
+  /** Callback para zoom — abre el GrammarPragmaticPanel */
   onZoom?: () => void;
   /** Callback para swap engine */
   onSwap?: () => void;
@@ -28,6 +30,7 @@ export interface GrammarNodeProps {
 }
 
 const GrammarNode: React.FC<GrammarNodeProps> = ({
+  typologyLabel,
   rulesCount = 0,
   status = 'inactive',
   onZoom,
@@ -70,7 +73,7 @@ const GrammarNode: React.FC<GrammarNodeProps> = ({
           <div className="bg-white/5 border border-cyan-400/40 hover:border-cyan-400 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,240,255,0.15)] group">
             <span className="text-2xl font-black font-mono text-cyan-400 group-hover:scale-110 transition-transform">E</span>
             <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.5">Ergative Case</span>
-            <span className="text-[8px] font-mono text-white/30">/-e/ Suffix</span>
+            <span className="text-[8px] font-mono text-cyan-300/60">{typologyLabel ? typologyLabel.charAt(0).toUpperCase() + typologyLabel.slice(1) : '—'}</span>
           </div>
 
           {/* X - X-Bar Syntax */}

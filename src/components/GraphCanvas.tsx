@@ -62,6 +62,14 @@ type GraphCanvasProps = {
   lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
   /** Si true, muestra solo el nodo raíz (lienzo en blanco para crecimiento orgánico) */
   minimalMode?: boolean;
+  /** Estado del motor pragmático (para mostrar datos reales en GrammarNode) */
+  pragmaticEngine?: {
+    typologyLabel?: string;
+    rulesCount?: number;
+    activeClauseType?: string | null;
+  };
+  /** Callback al hacer clic en "Zoom" del nodo Gramática — abre el panel pragmático */
+  onZoomToGrammar?: () => void;
 };
 
 // ── Level Data ─────────────────────────────────────────
@@ -149,6 +157,8 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   onSelectConlang,
   lexicon = [],
   minimalMode = false,
+  pragmaticEngine,
+  onZoomToGrammar,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [level, setLevel] = useState<LevelId>('root');
@@ -253,9 +263,10 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       return (
         <div className="relative w-full h-full">
           <GrammarNode
-            rulesCount={0}
-            status="inactive"
-            onZoom={() => zoomIntoNode('grammar')}
+            rulesCount={pragmaticEngine?.rulesCount ?? 0}
+            typologyLabel={pragmaticEngine?.typologyLabel}
+            status={pragmaticEngine?.activeClauseType ? 'active' : 'inactive'}
+            onZoom={() => onZoomToGrammar?.()}
             connected={false}
           />
         </div>

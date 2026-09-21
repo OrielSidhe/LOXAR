@@ -26,6 +26,8 @@ type LanguageHomeCanvasProps = {
   conlangNames?: string[];
   onSelectConlang?: (name: string) => void;
   lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
+  /** Callback al hacer Zoom en un nodo del grafo — abre el panel correspondiente */
+  onZoomToNode?: (moduleId: string) => void;
 };
 
 const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
@@ -36,6 +38,7 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
   conlangNames = [],
   onSelectConlang,
   lexicon = [],
+  onZoomToNode,
 }) => {
   const handleNavigate = useCallback((tab: string) => {
     const tabMap: Record<string, string> = {
@@ -65,6 +68,7 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
       conlangNames={conlangNames}
       onSelectConlang={onSelectConlang}
       lexicon={lexicon}
+      onZoomToGrammar={() => onZoomToNode?.('pragmatic')}
     />
   );
 };
