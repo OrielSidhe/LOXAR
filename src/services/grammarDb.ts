@@ -293,7 +293,7 @@ export async function initPragmaticDb(): Promise<void> {
 export async function getGrammaticalFunctions(): Promise<GrammaticalFunction[]> {
   if (!isTauri()) return SEED_FUNCTIONS;
   const db = await getDb();
-  await ensureSchema(db);
+  await initPragmaticDb();
   const rows = (await db.select('SELECT * FROM grammatical_functions ORDER BY label')) as Row[];
   return rows.map((r) => ({
     id: r.id,
@@ -309,7 +309,7 @@ export async function getGrammaticalFunctions(): Promise<GrammaticalFunction[]> 
 export async function getPragmaticClauseTypes(): Promise<PragmaticClauseType[]> {
   if (!isTauri()) return SEED_CLAUSE_TYPES as PragmaticClauseType[];
   const db = await getDb();
-  await ensureSchema(db);
+  await initPragmaticDb();
   const rows = (await db.select('SELECT * FROM pragmatic_clause_types ORDER BY id')) as Row[];
   return rows.map((r) => ({
     id: r.id,
@@ -336,7 +336,7 @@ export async function getConstructionBlocks(): Promise<Record<PragmaticBlockId, 
     return result as Record<PragmaticBlockId, PragmaticBlock>;
   }
   const db = await getDb();
-  await ensureSchema(db);
+  await initPragmaticDb();
   const rows = (await db.select('SELECT * FROM construction_blocks')) as Row[];
   const result: Record<string, PragmaticBlock> = {};
   for (const r of rows) {
@@ -379,7 +379,7 @@ export async function getTemplates(
     return (ct as any)?.templates?.[typology] ?? [];
   }
   const db = await getDb();
-  await ensureSchema(db);
+  await initPragmaticDb();
   const rows = (await db.select(
     'SELECT template FROM sentence_templates WHERE clause_type_id = $1 AND typology = $2 ORDER BY id',
     [clauseTypeId, typology],
@@ -426,4 +426,4 @@ export function buildModuleOrder(clauseTypeId: string): PragmaticBlockId[] {
 
 // ── Persist pragmaticEngine state to manifest ────────────
 
-export { createDefaultPragmaticState } from '../types/pragmaticTypes';
+export { createDefaultPragmaticState, morphologyToTypologyProfile } from '../types/pragmaticTypes';

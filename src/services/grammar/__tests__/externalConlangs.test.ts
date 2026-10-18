@@ -179,7 +179,14 @@ describe('External Conlang Grammars (parser smoke tests)', () => {
 
   it('Klingon: parseLocal extrae fonología con consonantes complejas', () => {
     const result = parseLocal(KLINGON_GRAMMAR);
-    expect(result.manifest.phonology.consonants.length).toBeGreaterThan(0);
+    const consonants = result.manifest.phonology.consonants;
+    // COMPLETENESS: every consonant in the fixture must be extracted,
+    // including digraphs (ch, gh) and trigraph (tlh).
+    const expected = ['p','b','t','d','n','s','q','m','l','w','ch','gh','h','j','r','v','tlh'];
+    for (const c of expected) {
+      expect(consonants).toContain(c);
+    }
+    expect(consonants.length).toBe(expected.length);
     expect(result.manifest.paradigms.length).toBeGreaterThan(0);
   });
 
@@ -208,7 +215,14 @@ describe('External Conlang Grammars (parser smoke tests)', () => {
     const result = parseLocal(NAVI_GRAMMAR);
     expect(result.manifest.typology.wordOrder).toBe('SVO');
     expect(result.manifest.typology.morphology).toBe('agglutinative');
-    expect(result.manifest.phonology.consonants.length).toBeGreaterThan(0);
+    const consonants = result.manifest.phonology.consonants;
+    // COMPLETENESS: verify all declared consonants extracted, including
+    // digraphs (ts, px, tx, kx) and the marginal 'y' (consonantal in Na'vi).
+    const expected = ['p','t','k','m','n','s','h','r','l','v','w','y','f','ts','px','tx','kx'];
+    for (const c of expected) {
+      expect(consonants).toContain(c);
+    }
+    expect(consonants.length).toBe(expected.length);
   });
 
   it("Na'vi: parseLocal extrae sufijos de caso e infijos", () => {

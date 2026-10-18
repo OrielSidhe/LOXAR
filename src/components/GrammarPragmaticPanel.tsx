@@ -29,8 +29,10 @@ import {
   getTemplates,
   buildInitialSlots,
   buildModuleOrder,
+  morphologyToTypologyProfile,
+  getConstructionBlocks,
 } from '../services/grammarDb';
-import { displayOf } from '../data/taxonomy';
+import { displayOf, resolveLexicalCategory } from '../data/taxonomy';
 import InfoHint from './InfoHint';
 import PlusIcon from './icons/PlusIcon';
 import TrashIcon from './icons/TrashIcon';
@@ -79,8 +81,8 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
   onBack,
 }) => {
   const engine = manifest.pragmaticEngine ?? {
-    typology: {},
-    typologyLabel: 'isolating',
+    typology: manifest.typologicalProfile ?? {},
+    typologyLabel: morphologyToTypologyProfile(manifest.typology?.morphology),
     activeClauseType: null,
     slots: [],
   };
@@ -92,8 +94,14 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
   const [clauseTypes, setClauseTypes] = useState<Record<string, any>>({});
   const [functions, setFunctions] = useState<Record<string, any>>({});
   const [templates, setTemplates] = useState<string[]>([]);
+  // Blocks loaded from DB (block_slot_fillers); initial state from PRAGMATIC_BLOCKS constant
+  const initialBlocks: Record<string, any> = {};
+  for (const [id, blk] of Object.entries(PRAGMATIC_BLOCKS)) {
+    initialBlocks[id] = { ...blk, id, allowedFunctions: blk.allowedFunctions };
+  }
+  const [blocks, setBlocks] = useState<Record<string, any>>(initialBlocks);
 
-  // Cargar datos del catálogo
+  // Cargar datos del catálogo (incluye block_slot_fillers desde DB)
   React.useEffect(() => {
     getPragmaticClauseTypes().then((cts) => {
       const map: Record<string, any> = {};
@@ -104,6 +112,9 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
       const map: Record<string, any> = {};
       fns.forEach((fn) => { map[fn.id] = fn; });
       setFunctions(map);
+    });
+    getConstructionBlocks().then((dbBlocks) => {
+      setBlocks(dbBlocks);
     });
   }, []);
 
@@ -245,7 +256,7 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
           {/* Módulos en orden */}
           <div className="space-y-3">
             {moduleOrder.map((bid, idx) => {
-              const blk = PRAGMATIC_BLOCKS[bid];
+              const blk = blocks[bid] ?? PRAGMATIC_BLOCKS[bid];
               const slot = slots.find((s) => s.blockId === bid);
               if (!slot) return null;
               const fn = slot.functionId ? functions[slot.functionId] : null;
@@ -281,7 +292,7 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
                     className="flex-1 bg-background border border-border-dark rounded px-2 py-1 text-sm text-white focus:border-primary outline-none"
                   >
                     <option value="">— función —</option>
-                    {blk.allowedFunctions.map((fnId) => {
+                    {(blk.allowedFunctions as string[]).map((fnId: string) => {
                       const f = functions[fnId];
                       return (
                         <option key={fnId} value={fnId}>
@@ -300,10 +311,15 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
                     <option value="">— lexema —</option>
                     {lexicon
                       .filter((e) => {
-                        if (!slot.functionId) return true;
-                        const fn = functions[slot.functionId!];
-                        if (!fn) return true;
-                        return e.Categoría?.toLowerCase().replace(/\s+/g, '_') === slot.functionId;
+                        const catKey = resolveLexicalCategory(e.Categoría);
+                        if (!slot.functionId) {
+                          // Without a selected function: only show entries matching
+                          // this block's allowed functions (from block_slot_fillers).
+                          const blockAllowed = blocks[bid]?.allowedFunctions ?? [];
+                          return blockAllowed.includes(catKey);
+                        }
+                        // With a selected function: only show entries of that category.
+                        return catKey === slot.functionId;
                       })
                       .map((e) => (
                         <option key={e.ID} value={e.ID}>

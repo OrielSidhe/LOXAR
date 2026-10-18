@@ -331,11 +331,16 @@ function parsePhonology(content: string): {
   const consonantListMatch = content.match(/consonantes?:\s*([^\n]+)/i);
   if (consonantListMatch) {
     const raw = consonantListMatch[1];
-    // Extraer tokens individuales (letras o digraphs conocidos)
-    const tokens = raw.match(/\b(ch|th|ae|oe|[b-df-hj-np-tv-zñ])\b/gi) || [];
+    // Segmentación longest-match: split por coma/espacio, preservar dígrafos
+    const KNOWN_DIPHONES = ['ch', 'gh', 'th', 'lh', 'nh', 'tlh', 'ts', 'sh', 'zh', 'ng', 'tr', 'dr', 'px', 'tx', 'kx'];
+    const tokens = raw
+      .split(/[\s,]+/)
+      .map(t => t.trim().toLowerCase())
+      .filter(t => t.length > 0)
+      .flatMap(t => (KNOWN_DIPHONES.includes(t) ? [t] : t.split('')))
+      .filter(ch => /[b-df-hj-np-tv-zñ]/.test(ch));
     tokens.forEach(t => {
-      const lower = t.toLowerCase();
-      if (!phonology.consonants.includes(lower)) phonology.consonants.push(lower);
+      if (!phonology.consonants.includes(t)) phonology.consonants.push(t);
     });
   }
 

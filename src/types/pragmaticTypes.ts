@@ -125,9 +125,9 @@ export interface PragmaticEngineState {
   slots: PragmaticSlotState[];
 }
 
-/** Estado pragmático por defecto */
+/** Estado pragmático por defecto — requiere un label explícito derivado del manifest */
 export function createDefaultPragmaticState(
-  label: TypologyProfile = 'isolating',
+  label: TypologyProfile,
 ): PragmaticEngineState {
   return {
     typology: {},
@@ -135,4 +135,20 @@ export function createDefaultPragmaticState(
     activeClauseType: null,
     slots: [],
   };
+}
+
+/**
+ * Deriva el TypologyProfile (etiqueta tipológica para el motor) a partir del
+ * campo `morphology` del manifest activo.
+ *
+ * Esta es la ÚNICA fuente de verdad para el valor default de typologyLabel.
+ * La UI nunca hardcodea 'isolating'; siempre deriva del manifest.
+ */
+export function morphologyToTypologyProfile(morphology: string | undefined): TypologyProfile {
+  if (!morphology || typeof morphology !== 'string') return 'isolating';
+  const m = morphology.toLowerCase().trim();
+  if (m.includes('isolat') || m.includes('analyt')) return 'isolating';
+  if (m.includes('agglutin')) return 'agglutinative';
+  if (m.includes('fusion') || m.includes('flex') || m.includes('polysynth') || m.includes('templatic')) return 'flexive';
+  return 'isolating';
 }
