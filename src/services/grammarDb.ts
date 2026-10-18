@@ -27,7 +27,6 @@ import type {
 } from './grammar/pragmaticTypes';
 import { PRAGMATIC_BLOCKS } from './grammar/pragmaticTypes';
 import { isTauri } from './sqlStorage';
-import type { TypologicalProfile as TypologicalProfileObj, PragmaticEngineState as PragmaticEngineStateObj } from '../types/pragmaticTypes';
 
 const DB_PATH = 'sqlite:loxar.db';
 const PRAG_PREFIX = 'loxar_prag_';
@@ -98,6 +97,17 @@ async function ensureSchema(db: any): Promise<void> {
   await db.execute(`
     CREATE INDEX IF NOT EXISTS idx_templates_ct_typ
       ON sentence_templates(clause_type_id, typology)
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS block_slot_fillers (
+      block_id TEXT NOT NULL REFERENCES construction_blocks(id) ON DELETE CASCADE,
+      function_id TEXT NOT NULL REFERENCES grammatical_functions(id) ON DELETE CASCADE,
+      PRIMARY KEY (block_id, function_id)
+    )
+  `);
+  await db.execute(`
+    CREATE INDEX IF NOT EXISTS idx_fillers_block
+      ON block_slot_fillers(block_id)
   `);
 }
 
@@ -241,6 +251,19 @@ export async function initPragmaticDb(): Promise<void> {
         `INSERT INTO construction_blocks (id, label, description, required) VALUES ($1, $2, $3, $4)`,
         [id, blk.label, blk.description, blk.required ? 1 : 0],
       );
+    }
+  }
+
+  // Seed block_slot_fillers if empty
+  const fillerCount = (await db.select('SELECT COUNT(*) as c FROM block_slot_fillers')) as Row[];
+  if (fillerCount[0].c === 0) {
+    for (const [id, blk] of Object.entries(PRAGMATIC_BLOCKS)) {
+      for (const fnId of blk.allowedFunctions) {
+        await db.execute(
+          `INSERT OR IGNORE INTO block_slot_fillers (block_id, function_id) VALUES ($1, $2)`,
+          [id, fnId],
+        );
+      }
     }
   }
 
@@ -403,18 +426,4 @@ export function buildModuleOrder(clauseTypeId: string): PragmaticBlockId[] {
 
 // ── Persist pragmaticEngine state to manifest ────────────
 
-export interface PragmaticEngineState {
-  typology: TypologicalProfileObj;
-  typologyLabel: TypologyProfile;
-  activeClauseType: string | null;
-  slots: PragmaticSlotState[];
-}
-
-export function createDefaultPragmaticState(label: TypologyProfile = 'isolating'): PragmaticEngineState {
-  return {
-    typology: {},
-    typologyLabel: label,
-    activeClauseType: null,
-    slots: [],
-  };
-}
+export { createDefaultPragmaticState } from '../types/pragmaticTypes';

@@ -163,29 +163,6 @@ export const isAiAvailable = async (): Promise<boolean> => {
   }
 };
 
-export const parseGrammarText = async (text: string): Promise<import('../types').GrammarManifest> => {
-  const prompt = `Eres un lingüista. Convierte la descripción de gramática en JSON estricto que cumpla este esquema:
-{
-  "meta": { "author": "user", "version": "1.0", "sourceFormat": "markdown", "lastUpdated": "<iso>" },
-  "typology": { "wordOrder": "SVO|SOV|VSO|VOS|OVS|OSV|Free", "alignment": "string", "morphology": "string", "headDirection": "string" },
-  "roles": [ { "id": "subject", "name": "Sujeto" } ],
-  "strategies": [ { "id": "s1", "name": "string", "type": "affix|position|clitic|tone|mutation|particle|auxiliary", "appliesTo": ["subject"], "affixRule": { "position": "suffix", "form": "-x" } } ],
-  "paradigms": [ { "category": "verbo", "slots": [ { "feature": "tense", "order": 1, "realization": { "kind": "affix", "position": "suffix", "form": "-t" } } ] } ],
-  "mutationRules": [],
-  "exceptions": [],
-  "notes": []
-}
-Responde ÚNICAMENTE con el JSON. Descripción:\n${text}`;
-  const res = await callAi(prompt);
-  const json = extractJson(res) ?? (await cleanseJson(res));
-  const manifest = JSON.parse(json);
-  manifest.meta = { ...manifest.meta, lastUpdated: new Date().toISOString() };
-  manifest.exceptions = manifest.exceptions ?? [];
-  manifest.mutationRules = manifest.mutationRules ?? [];
-  manifest.paradigms = manifest.paradigms ?? [];
-  return manifest as import('../types').GrammarManifest;
-};
-
 export const saveAiSettings = async (settings: AiSettings): Promise<void> => {
     const { geminiApiKey, ...rest } = settings;
     try {

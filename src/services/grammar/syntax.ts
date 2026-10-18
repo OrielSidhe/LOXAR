@@ -1,4 +1,9 @@
-import type { GrammarManifest, LexiconEntry } from '../../types';
+import type {
+  GrammarManifest,
+  LexiconEntry,
+  SyntaxNode as CanvasNode,
+  SyntaxConnection as CanvasConnection,
+} from '../../types';
 import type {
   ClauseFeatures,
   ClauseAST,
@@ -100,6 +105,103 @@ const linearizeAst = (root: VerbNode, manifest: GrammarManifest): string => {
   return pieces.join(' ').trim();
 };
 
+const ROLE_COLORS: Record<string, string> = {
+  root: '#6366f1',
+  subject: '#3b82f6',
+  object: '#10b981',
+  modifier: '#f59e0b',
+  particle: '#ec4899',
+  auxiliary_verb: '#8b5cf6',
+  clitic: '#06b6d2',
+  connector: '#6b7280',
+};
+
+const CAT_MAP: Record<string, string> = {
+  verb: 'verbo',
+  noun: 'sustantivo',
+  adjective: 'adjetivo',
+  particle: 'partícula',
+};
+
+const buildAstCanvas = (
+  root: VerbNode,
+  manifest: GrammarManifest
+): { nodes: CanvasNode[]; connections: CanvasConnection[] } => {
+  const nodes: CanvasNode[] = [];
+  const connections: CanvasConnection[] = [];
+  let counter = 0;
+
+  const walk = (node: SyntaxNode, parentId: string | null, depth: number) => {
+    const nodeId = node.id || `ast_${counter++}`;
+    const category = CAT_MAP[node.lexeme.category] || 'sustantivo';
+    const entry: LexiconEntry = {
+      ID: nodeId, Raíz: node.lexeme.root, Léxema: [node.lexeme.root],
+      Categoría: category, Significado: [node.lexeme.root], extraData: {},
+    } as LexiconEntry;
+
+    // Root verb is conjugated; auxiliaries and particles stay in root form.
+    const feat = node.role === 'auxiliary_verb' || node.lexeme.category === 'particle'
+      ? {} : node.features;
+    const sf = realizeLexeme(entry, feat, manifest);
+
+    const role = node.role || 'root';
+    const nodeType = node.lexeme.category === 'particle' ? 'morpheme' : 'word';
+
+    nodes.push({
+      id: nodeId,
+      type: nodeType,
+      role,
+      label: sf.form,
+      x: 0,
+      y: depth * 100 + 120,
+      children: [],
+      lexiconCategory: node.lexeme.category,
+      literalForm: sf.form,
+      color: ROLE_COLORS[role] || '#6366f1',
+      lexeme: entry,
+      features: node.features,
+      morphemes: sf.segments,
+    });
+
+    if (parentId) {
+      connections.push({
+        id: `conn_${counter++}`,
+        fromId: parentId,
+        toId: nodeId,
+        connectionType: 'dependency',
+      });
+    }
+
+    for (const child of node.dependents) {
+      walk(child, nodeId, depth + 1);
+    }
+  };
+
+  walk(root, null, 0);
+
+  // Horizontal layout: distribute nodes at each depth evenly across canvas.
+  const depthGroups: Record<number, CanvasNode[]> = {};
+  for (const n of nodes) {
+    const depth = n.y === 120 ? 0 : Math.round((n.y - 120) / 100);
+    (depthGroups[depth] ||= []).push(n);
+  }
+
+  for (const depthStr in depthGroups) {
+    const depth = Number(depthStr);
+    const group = depthGroups[depth];
+    const margin = depth === 0 ? 0 : 40;
+    const canvasWidth = 760;
+    const spacing = group.length > 1
+      ? (canvasWidth - 2 * margin) / (group.length - 1)
+      : 0;
+    group.forEach((n, i) => {
+      n.x = margin + i * spacing;
+    });
+  }
+
+  return { nodes, connections };
+};
+
 export const realizeClause = (
   clause: ClauseFeatures | ClauseAST,
   manifest: GrammarManifest
@@ -143,11 +245,12 @@ export const realizeClause = (
 
   // --- Nuevo camino: AST ---
   const sentence = linearizeAst(clause.root, manifest);
+  const { nodes, connections } = buildAstCanvas(clause.root, manifest);
   const canvas = {
     level: 1 as const,
     typologySelected: true,
-    nodes: [] as any[],
-    connections: [] as any[],
+    nodes,
+    connections,
     exceptions: [] as any[],
     lastPreviewResult: sentence,
   };

@@ -52,7 +52,6 @@ import AppSettingsModalLayer from './components/AppSettingsModalLayer';
 import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
-import LanguageTreeCanvas from './components/LanguageTreeCanvas';
 import LanguageHomeCanvas from './components/LanguageHomeCanvas';
 import AppWelcomeSection from './components/AppWelcomeSection';
 import AppToastLayer from './components/AppToastLayer';
@@ -68,6 +67,7 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
 import { listLexiconNames, loadLexicon } from './services/sqlStorage';
+import { initPragmaticDb } from './services/grammarDb';
 import { scanForLoxarProjects } from './services/projectDiscovery';
 
 const ModalManager = lazy(() => import('./components/ModalManager'));
@@ -406,6 +406,11 @@ const App = () => {
       setHasSeenWelcome(true);
     });
   }, [hasSeenWelcome]);
+
+  // ── Initialize pragmatic grammar database on mount ──
+  useEffect(() => {
+    initPragmaticDb().catch(e => console.error('[App] Failed to init pragmatic DB:', e));
+  }, []);
 
   return (
     <ErrorBoundary>
