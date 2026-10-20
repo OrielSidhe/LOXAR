@@ -317,7 +317,18 @@ export async function getGrammaticalFunctions(): Promise<GrammaticalFunction[]> 
 // ── Clause types ──────────────────────────────────────────
 
 export async function getPragmaticClauseTypes(): Promise<PragmaticClauseType[]> {
-  if (!isTauri()) return SEED_CLAUSE_TYPES as PragmaticClauseType[];
+  if (!isTauri()) {
+    const custom: PragmaticClauseType[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('loxar_custom_clause_type_')) {
+        try {
+          custom.push(JSON.parse(localStorage.getItem(key) ?? ''));
+        } catch { /* skip corrupt entries */ }
+      }
+    }
+    return [...SEED_CLAUSE_TYPES, ...custom] as PragmaticClauseType[];
+  }
   const db = await getDb();
   await initPragmaticDb();
   const rows = (await db.select('SELECT * FROM pragmatic_clause_types ORDER BY id')) as Row[];
@@ -333,6 +344,37 @@ export async function getPragmaticClauseTypes(): Promise<PragmaticClauseType[]> 
 export async function getClauseType(id: string): Promise<PragmaticClauseType | null> {
   const types = await getPragmaticClauseTypes();
   return types.find((t) => t.id === id) ?? null;
+}
+
+export async function saveClauseType(ct: PragmaticClauseType): Promise<void> {
+  if (!isTauri()) {
+    const key = `loxar_custom_clause_type_${ct.id}`;
+    localStorage.setItem(key, JSON.stringify(ct));
+    return;
+  }
+  const db = await getDb();
+  await initPragmaticDb();
+  await db.execute(
+    'INSERT OR REPLACE INTO pragmatic_clause_types (id, label, description, blocks, templates, created_at) VALUES (?, ?, ?, ?, ?, datetime(\'now\'))',
+    [ct.id, ct.label, ct.description ?? '', j(ct.blocks), JSON.stringify(ct.templates ?? {})],
+  );
+  await db.execute('DELETE FROM clause_type_blocks WHERE clause_type_id = ?', [ct.id]);
+  for (const ref of ct.blocks) {
+    await db.execute(
+      'INSERT OR REPLACE INTO clause_type_blocks (clause_type_id, block_id, slot_order, default_function_id) VALUES (?, ?, ?, ?)',
+      [ct.id, ref.blockId, ref.order, ref.defaultFunction ?? null],
+    );
+  }
+}
+
+export async function deleteClauseType(id: string): Promise<void> {
+  if (!isTauri()) {
+    localStorage.removeItem(`loxar_custom_clause_type_${id}`);
+    return;
+  }
+  const db = await getDb();
+  await initPragmaticDb();
+  await db.execute('DELETE FROM pragmatic_clause_types WHERE id = ?', [id]);
 }
 
 // ── Blocks ────────────────────────────────────────────────
