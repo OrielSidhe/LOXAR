@@ -113,6 +113,37 @@ export default function ASTEditor({ ast, onChange, onInspect }: Props) {
   const [zoom, setZoom] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // Inline prompt modal (replaces window.prompt / alert / confirm — LISTÓN: zero window.prompt)
+  const [promptOpen, setPromptOpen] = useState(false);
+  const [promptTitle, setPromptTitle] = useState('');
+  const [promptValue, setPromptValue] = useState('');
+  const promptResolve = useRef<(v: string | null) => void>(() => {});
+  const promptInputRef = useRef<HTMLInputElement>(null);
+
+  const showPrompt = useCallback(
+    (title: string, defaultValue: string): Promise<string | null> => {
+      setPromptTitle(title);
+      setPromptValue(defaultValue);
+      setPromptOpen(true);
+      return new Promise((resolve) => {
+        promptResolve.current = resolve;
+      });
+    },
+    []
+  );
+
+  const closePrompt = (value: string | null) => {
+    setPromptOpen(false);
+    promptResolve.current(value);
+  };
+
+  useEffect(() => {
+    if (promptOpen) {
+      promptInputRef.current?.focus();
+      promptInputRef.current?.select();
+    }
+  }, [promptOpen]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{ id: string | null; startX: number; startY: number; origin: { x: number; y: number } } | null>(null);
   const panState = useRef<{ startX: number; startY: number; origin: { x: number; y: number } } | null>(null);
@@ -167,35 +198,36 @@ export default function ASTEditor({ ast, onChange, onInspect }: Props) {
     setZoom(next);
   };
 
-  const handleAdd = (parentId: string) => {
-    const role = window.prompt(
+  const handleAdd = async (parentId: string) => {
+    const role = await showPrompt(
       'Rol del nuevo nodo (subject, object, modifier, particle, auxiliary_verb):',
       'modifier',
     );
     if (!role) return;
-    const label = window.prompt('Etiqueta / raíz de la palabra:', 'nuevo');
+    const label = await showPrompt('Etiqueta / raíz de la palabra:', 'nuevo');
     if (!label) return;
     const child = makeNode(role, label);
     const next = addDependent(ast, parentId, child);
     if (next === null) {
       // A5: cycle detected — visible feedback, not silent truncation
-      window.alert('No se puede añadir este nodo aquí: crearía un ciclo en el árbol.');
+      await showPrompt('No se puede añadir este nodo aquí: crearía un ciclo en el árbol.', 'OK');
       return;
     }
     onChange(next);
   };
 
-  const handleDelete = (nodeId: string) => {
+  const handleDelete = async (nodeId: string) => {
     if (nodeId === ast?.root?.id) {
-      window.alert('No puedes borrar la raíz (verbo).');
+      await showPrompt('No puedes borrar la raíz (verbo).', 'OK');
       return;
     }
-    if (!window.confirm('¿Borrar este nodo y su subárbol?')) return;
+    const confirmed = await showPrompt('¿Borrar este nodo y su subárbol? (escribe "borrar" para confirmar)', '');
+    if (confirmed?.toLowerCase() !== 'borrar') return;
     onChange(removeNode(ast, nodeId));
   };
 
-  const handleRelabel = (nodeId: string, current: string) => {
-    const label = window.prompt('Nueva raíz / etiqueta:', current);
+  const handleRelabel = async (nodeId: string, current: string) => {
+    const label = await showPrompt('Nueva raíz / etiqueta:', current);
     if (!label || label === current) return;
     onChange(updateNode(ast, nodeId, { label }));
   };
@@ -359,6 +391,49 @@ export default function ASTEditor({ ast, onChange, onInspect }: Props) {
           </div>
         );
       })}
+
+      {/* Inline prompt modal (replaces window.prompt) */}
+      {promptOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => closePrompt(null)}
+        >
+          <div
+            className="bg-surface-dark border border-cyan-400/30 rounded-xl p-4 w-80 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-bold text-cyan-300 mb-3">{promptTitle}</h3>
+            <input
+              ref={promptInputRef}
+              type="text"
+              value={promptValue}
+              onChange={(e) => setPromptValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  closePrompt(promptValue);
+                } else if (e.key === 'Escape') {
+                  closePrompt(null);
+                }
+              }}
+              className="w-full px-2 py-1 text-sm bg-black/30 border border-white/20 rounded text-white focus:outline-none focus:border-cyan-400/50"
+            />
+            <div className="flex gap-2 mt-3 justify-end">
+              <button
+                onClick={() => closePrompt(null)}
+                className="px-2 py-1 text-xs rounded bg-surface border border-border-dark text-white hover:bg-white/10"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => closePrompt(promptValue)}
+                className="px-2 py-1 text-xs rounded bg-cyan-400/20 border border-cyan-400/50 text-cyan-300 hover:bg-cyan-400/30"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

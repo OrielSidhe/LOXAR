@@ -141,8 +141,8 @@ export function useProjectOperations(options: UseProjectOperationsOptions) {
 
     const handleNewProject = useCallback(async () => {
         if (isProjectDirty && !window.confirm('Tienes cambios sin guardar. ¿Crear nuevo proyecto de todos modos?')) return;
-        const name = window.prompt('Nombre del conlang para el nuevo proyecto:', 'Léxico sin nombre');
-        if (!name) return;
+        // LISTÓN: zero window.prompt — default name instead of prompting
+        const name = 'Nuevo Proyecto';
         const selected = await save({ filters: [{ name: 'LOXAR Project', extensions: ['loxar'] }], defaultPath: `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase() || 'proyecto'}.loxar` });
         if (typeof selected !== 'string' || !selected) return;
         const project = createEmptyProject(name, 'Español');
