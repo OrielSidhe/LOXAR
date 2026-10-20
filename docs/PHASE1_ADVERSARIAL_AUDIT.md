@@ -107,23 +107,23 @@ Menciona `parseGrammarText` que fue eliminado en Phase 1.
 
 | ID | Severidad | Finding | Estado |
 |----|-----------|---------|--------|
-| 2.1 | **High** | `walk` sin guards defensivos | Not Resolved |
-| 2.4 | **High** | Cache poisoning en `dbPromise` | Not Resolved |
-| 2.5 | Medium | Divergencia `conjugateRoot` vs heurística | Not Resolved |
-| 2.2 | Medium | `node.features` undefined → crash | Not Resolved |
-| 2.6 | Medium | Sin test coverage para `buildAstCanvas` | Not Resolved |
-| 2.3 | Medium | Sin guard de null para `clause.root` | Not Resolved |
-| 2.7 | Medium | Sin detección de ciclos en `walk` | Not Resolved |
-| 3.1 | Medium | `children: []` siempre vacío | Not Resolved |
+| 2.1 | **High** | `walk` sin guards defensivos | **Resolved** (B2 — commit 456dae7) |
+| 2.4 | **High** | Cache poisoning en `dbPromise` | **Resolved** (B1 — Phase 1.5) |
+| 2.5 | Medium | Divergencia `conjugateRoot` vs heurística | **Resolved** (B3 — commit 456dae7) |
+| 2.2 | Medium | `node.features` undefined → crash | **Resolved** (B2 — commit 456dae7) |
+| 2.6 | Medium | Sin test coverage para `buildAstCanvas` | **Resolved** (B5 — commit 456dae7) |
+| 2.3 | Medium | Sin guard de null para `clause.root` | **Resolved** (B2.3 — commit 456dae7) |
+| 2.7 | Medium | Sin detección de ciclos en `walk` | **Resolved** (B2.7 — commit 456dae7) |
+| 3.1 | Medium | `children: []` siempre vacío | **Resolved** (B4 — commit 456dae7) |
 | 3.2 | Medium | `initPragmaticDb`: no retry, no UX feedback | Not Resolved |
-| 1.1 | Low | Walker parameter type no usa VerbNode específicamente | Not Resolved |
-| 1.2 | Low | `catMap` duplicado | Not Resolved |
+| 1.1 | Low | Walker parameter type no usa VerbNode específico | Not Resolved |
+| 1.2 | Low | `catMap` duplicado | **Resolved** (B4 — commit 456dae7) |
 | 1.3 | Low | `createDefaultPragmaticState` es dead code | Not Resolved |
 | 2.8 | Low | Recursión profunda teórica | Not Resolved |
-| 2.9 | Low | `linearizeAst.linearOf` sin guards (pre-existing) | Not Resolved |
-| 3.3 | Low | Depth reconstruido de `y` | Not Resolved |
+| 2.9 | Low | `linearizeAst.linearOf` sin guards | **Resolved** (B2 — commit 456dae7) |
+| 3.3 | Low | Depth reconstruido de `y` | **Resolved** (C4 — commit 456dae7) |
 | 3.4 | Low | `canvasWidth` hardcodeado | Not Resolved |
-| 3.5 | Low | `node_modules` exclude redundante | Not Resolved |
+| 3.5 | Low | `node_modules` exclude redundante | Resolved (Phase 1) |
 | 3.6 | Low | Counter compartido | Not Resolved |
 | 3.7 | Low | Comentario obsoleto en `grammarParser.ts` | Not Resolved |
 | 1.4/1.5/3.8/3.9/3.10 | — | Verificado / Resolved | Resolved |
