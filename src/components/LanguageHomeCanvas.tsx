@@ -55,14 +55,11 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
   const totalLexicon = stats?.lexicon?.entries ?? 0;
   const totalGrammar = (stats?.grammar?.rules ?? 0) + (stats?.grammar?.categories ?? 0) + (stats?.grammar?.strategies ?? 0) + (stats?.grammar?.roles ?? 0);
   const totalPhonology = (stats?.phonology?.sounds ?? 0) + (stats?.phonology?.rules ?? 0);
-  const isMinimal = totalLexicon === 0 && totalGrammar === 0 && totalPhonology === 0 && conlangName != null;
-
   return (
     <GraphCanvas
       conlangName={conlangName}
       activeModule={activeModule}
       stats={stats}
-      minimalMode={isMinimal}
       onModuleClick={onModuleClick}
       onNavigate={handleNavigate}
       conlangNames={conlangNames}

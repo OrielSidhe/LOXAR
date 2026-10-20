@@ -4,7 +4,7 @@
  * The returned object is plain data:
  *   - nodes: [{ id, label, role, form, features? }]
  *   - edges: [{ fromId, toId }]
- * ready to be drawn by the canvas component (SyntaxCanvasAST).
+ * ready to be drawn by a syntax canvas component.
  *
  * Keeping this separate means neither the canvas nor the builder depend
  * on React internals – they only consume plain data.
@@ -98,8 +98,19 @@ function guessCategory(role: string): 'verb' | 'noun' | 'adjective' | 'particle'
   return 'noun';
 }
 
-/** Immutably add `child` as a dependent of the node identified by `parentId`. */
-export function addDependent(ast: any, parentId: string, child: any): any {
+/** Immutably add `child` as a dependent of the node identified by `parentId`.
+ *  A5: Returns `null` if adding `child` would create a cycle
+ *  (i.e. parentId is already a descendant of child). The caller should
+ *  surface visible feedback instead of silently truncating. */
+export function addDependent(ast: any, parentId: string, child: any): any | null {
+  // A5: cycle detection — reject if parentId is already inside child's subtree
+  const containsNode = (node: any, targetId: string): boolean => {
+    if (!node) return false;
+    if (node.id === targetId) return true;
+    return (node.dependents || []).some((d: any) => containsNode(d, targetId));
+  };
+  if (child && containsNode(child, parentId)) return null; // reject cycle
+
   const next = cloneClauseAST(ast);
   const attach = (node: any): boolean => {
     if (!node) return false;

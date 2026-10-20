@@ -176,7 +176,13 @@ export default function ASTEditor({ ast, onChange, onInspect }: Props) {
     const label = window.prompt('Etiqueta / raíz de la palabra:', 'nuevo');
     if (!label) return;
     const child = makeNode(role, label);
-    onChange(addDependent(ast, parentId, child));
+    const next = addDependent(ast, parentId, child);
+    if (next === null) {
+      // A5: cycle detected — visible feedback, not silent truncation
+      window.alert('No se puede añadir este nodo aquí: crearía un ciclo en el árbol.');
+      return;
+    }
+    onChange(next);
   };
 
   const handleDelete = (nodeId: string) => {

@@ -4,8 +4,7 @@ const GrammarImporterModal = lazy(() => import('./GrammarImporterModal'));
 import { FlexibleGrammar } from '../types/grammar-flexible';
 import GrammarWizard from './GrammarWizard';
 import { displayOfRole, STRATEGY_TYPE_LABELS as TAX_STRATEGY_LABELS } from '../data/taxonomy';
-import { realizeClause, validatePhonology, buildClauseAST, astToDiagram } from '../services/grammar';
-import SyntaxCanvasAST from './SyntaxCanvasAST';
+import { realizeClause, validatePhonology, buildClauseAST } from '../services/grammar';
 import { cloneClauseAST, realizeEditedTree } from '../services/grammar/ast-view';
 import { isAiAvailable } from '../services/geminiService';
 import { validatePostImport } from '../services/grammar/postImportValidator';
@@ -282,9 +281,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
         }
         const result = realizeClause(ast, effectiveManifest);
         const violations = validatePhonology(result.sentence.replace(/ /g, ''), effectiveManifest.phonology);
-        // Derive a diagram description from the new AST (for the future canvas)
-        const diagram = astToDiagram(ast);
-        return { ...result, gloss: (effectiveManifest.typology.wordOrder || 'SVO').toUpperCase(), entries, violations, diagram };
+        return { ...result, gloss: (effectiveManifest.typology.wordOrder || 'SVO').toUpperCase(), entries, violations };
     }, [effectiveManifest, lexicon]);
 
     // Seed the editable AST from the preview participants (only when the

@@ -1,6 +1,11 @@
 import { useEffect, useCallback } from 'react';
 import { listen, emit } from '@tauri-apps/api/event';
 
+/** True only when running inside the Tauri desktop runtime. */
+const isTauri = (): boolean =>
+  typeof window !== 'undefined' &&
+  ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
+
 export interface WidgetBridge {
   openWidget: () => void;
   sendInflectionResult: (results: unknown[]) => void;
@@ -34,7 +39,8 @@ export function useWidgetBridge(options: UseWidgetBridgeOptions): WidgetBridge {
     let unlistenInflect: (() => void) | undefined;
 
     const setupListeners = async () => {
-      unlistenAddWord = await listen('widget:request-add-word', (event: { payload: string }) => {
+    if (!isTauri()) return; // Guard: @tauri-apps/api/event crashes in browser mode
+    unlistenAddWord = await listen('widget:request-add-word', (event: { payload: string }) => {
         onAddWord(event.payload);
       });
 
@@ -67,10 +73,12 @@ export function useWidgetBridge(options: UseWidgetBridgeOptions): WidgetBridge {
   }, [onAddWord, onAddInflection, onSearch, onInflectRequest]);
 
   const sendInflectionResult = useCallback((results: unknown[]) => {
+    if (!isTauri()) return; // Guard: no-op in browser
     emit('main:inflect-result', results);
   }, []);
 
   const sendSearchResult = useCallback((result: unknown) => {
+    if (!isTauri()) return; // Guard: no-op in browser
     emit('widget:search-result', result);
   }, []);
 
@@ -80,6 +88,7 @@ export function useWidgetBridge(options: UseWidgetBridgeOptions): WidgetBridge {
       inflectionProfile: unknown;
       metadata: unknown;
     }) => {
+      if (!isTauri()) return; // Guard: no-op in browser
       emit('widget:lexicon-data', data);
     },
     []

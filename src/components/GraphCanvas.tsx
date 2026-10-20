@@ -43,6 +43,14 @@ type LevelId = 'root' | 'grammar' | 'lexicon' | 'syntax';
 
 type NodePort = { id: string; label: string; side: 'left' | 'right'; color?: string };
 
+/** Default ports for dynamically created nodes (dragged from palette).
+ *  A1 fix: must include BOTH 'in' (left) and 'out' (right) so that
+ *  ModuleNodeComponent renders both Handle source + Handle target. */
+export const DYNAMIC_NODE_PORTS: NodePort[] = [
+  { id: 'in', label: 'In', side: 'left', color: 'cyan' },
+  { id: 'out', label: 'Out', side: 'right', color: 'cyan' },
+];
+
 type GraphNode = {
   id: string;
   label: string;
@@ -86,7 +94,7 @@ type GraphCanvasProps = {
   onSelectConlang?: (name: string) => void;
   lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
   /** Si true, muestra solo el nodo raíz (lienzo en blanco para crecimiento orgánico) */
-  minimalMode?: boolean;
+  // minimalMode removed (A3) — React Flow always renders root + dynamic nodes
   /** Estado del motor pragmático (para mostrar datos reales en GrammarNode) */
   pragmaticEngine?: {
     typologyLabel?: string;
@@ -395,7 +403,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   conlangNames = [],
   onSelectConlang,
   lexicon = [],
-  minimalMode = false,
+  // minimalMode removed (A3)
   pragmaticEngine,
   onZoomToGrammar,
 }) => {
@@ -567,7 +575,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
               level: 'root',
               status: 'empty' as const,
               description: info.description,
-              ports: [{ id: 'in', label: 'In', side: 'left', color: 'cyan' }],
+              ports: DYNAMIC_NODE_PORTS,
             },
             ...nodeCallbacks,
           },

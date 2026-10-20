@@ -47,6 +47,11 @@ debug_log.txt
 # Legacy Electron output
 dist-electron/
 
+# Playwright test artifacts
+test-results/
+tests-gui/result.json
+tests-gui/tests-gui/
+
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
 .graft/

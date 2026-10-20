@@ -11,7 +11,7 @@ import { defineConfig, devices } from '@playwright/test';
  * cubre con tests de lógica (projectFile / projectDiscovery) y validación manual.
  */
 export default defineConfig({
-  testDir: './tests-gui',
+  testDir: '.',
   timeout: 60000,
   expect: { timeout: 10000 },
   fullyParallel: false,

@@ -16,7 +16,6 @@ export interface GrammarSyntaxPanelProps {
     gloss: string;
     entries: { subject: LexiconEntry; verb: LexiconEntry; object: LexiconEntry };
     violations: string[];
-    diagram: any;
   };
   onSetSyntaxSubTab: (tab: 'canvas' | 'ast' | 'preview') => void;
   onSetEditableAst: (ast: any) => void;
