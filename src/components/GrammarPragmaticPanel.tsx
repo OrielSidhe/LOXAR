@@ -32,7 +32,7 @@ import {
   morphologyToTypologyProfile,
   getConstructionBlocks,
 } from '../services/grammarDb';
-import { displayOf, resolveLexicalCategory } from '../data/taxonomy';
+import { displayOf, resolveLexicalCategory, isSubcategory } from '../data/taxonomy';
 import InfoHint from './InfoHint';
 import PlusIcon from './icons/PlusIcon';
 import TrashIcon from './icons/TrashIcon';
@@ -315,11 +315,15 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
                         if (!slot.functionId) {
                           // Without a selected function: only show entries matching
                           // this block's allowed functions (from block_slot_fillers).
+                          // C2-BIS: hierarchical — subcategories (pronombre, nombre_propio,
+                          //         articulo…) match when the parent category is allowed.
                           const blockAllowed = blocks[bid]?.allowedFunctions ?? [];
-                          return blockAllowed.includes(catKey);
+                          return blockAllowed.some((allowed: string) =>
+                            catKey === allowed || isSubcategory(catKey, allowed)
+                          );
                         }
-                        // With a selected function: only show entries of that category.
-                        return catKey === slot.functionId;
+                        // With a selected function: show the category AND its subcategories.
+                        return slot.functionId === catKey || isSubcategory(catKey, slot.functionId);
                       })
                       .map((e) => (
                         <option key={e.ID} value={e.ID}>

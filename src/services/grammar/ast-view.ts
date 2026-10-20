@@ -31,10 +31,14 @@ export interface DiagramEdge {
 export function astToDiagram(ast: any): { nodes: DiagramNode[]; edges: DiagramEdge[] } {
   const nodes: DiagramNode[] = [];
   const edges: DiagramEdge[] = [];
+  const visited = new Set<string>();
 
   const walk = (node: any, parentId?: string) => {
     if (!node) return;
     const id = node.id || `n_${Math.random().toString(36).slice(2, 9)}`;
+    if (visited.has(id)) return; // B2.7: cycle detection
+    visited.add(id);
+
     const label = node.lexeme?.root || node.lexeme?.Raíz || '?';
     nodes.push({
       id,

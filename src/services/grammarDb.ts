@@ -39,9 +39,19 @@ async function getDb(): Promise<any> {
   if (!dbPromise) {
     dbPromise = import('@tauri-apps/plugin-sql').then((m: any) =>
       m.default.load(DB_PATH),
-    );
+    ).catch((err) => {
+      // Reset cache so the next call retries instead of returning a
+      // permanently-rejected promise (Finding 2.4: cache poisoning).
+      dbPromise = null;
+      throw err;
+    });
   }
   return dbPromise;
+}
+
+/** Test hook — allows resetting the dbPromise cache mid-test */
+export function _resetDbCache(): void {
+  dbPromise = null;
 }
 
 async function ensureSchema(db: any): Promise<void> {

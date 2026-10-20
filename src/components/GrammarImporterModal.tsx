@@ -318,7 +318,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                                         {/* Rules */}
                                         <div>
                                             <h3 className="text-lg font-bold mb-3 flex items-center gap-2"><CodeIcon className="h-5 w-5" /> Reglas Computables Detectadas</h3>
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                                                 {analysisResult.computationalRules.inflection.map((rule, idx) => (
                                                     <div key={idx} className="flex items-center justify-between p-3 bg-surface rounded border border-subtle">
                                                         <div>

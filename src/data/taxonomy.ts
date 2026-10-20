@@ -870,9 +870,20 @@ export function getDescendants(key: string): string[] {
  */
 export function isSubcategory(childKey: string, parentKey: string): boolean {
   if (childKey === parentKey) return true;
+  if (childKey === 'desconocida') return false;
   const entry = findLexical(childKey);
   if (!entry?.parent) return false;
   return isSubcategory(entry.parent, parentKey);
+}
+
+/**
+ * C2-BIS: Given a selected category key (e.g. 'sustantivo'), return all
+ * category keys that should match — the parent itself plus every descendant
+ * (pronombre, nombre_propio, articulo, etc.). Used by hierarchical filters.
+ */
+export function expandCategoryFilter(selectedKey: string): string[] {
+  const descendants = getDescendants(selectedKey);
+  return [selectedKey, ...descendants];
 }
 
 /**

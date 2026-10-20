@@ -1,18 +1,39 @@
 /**
  * GraphCanvas.tsx
  * ────────────────
- * Canvas infinito con deep-zoom multinivel para LOXAR.
+ * Infinite canvas powered by React Flow for LOXAR.
  *
  * Niveles:
  *   root     → Conlang central + módulos (vista principal)
  *   grammar  → Sub-módulos de gramática (grafo de nodos)
  *   lexicon  → Componentes del léxico (tipos, raíces, entradas)
- *   syntax   → Arnés AST con slots + preview
+ *   syntax   → Arnés AST con slots + preview (overlay sobre React Flow)
  *
- * Reutiliza datos existentes: taxonomy.ts, LexiconEntry, GrammarManifest.
+ * Tareas de React Flow:
+ *   1. Interactividad: useNodesState / useEdgesState + onNodesChange /
+ *     onEdgesChange / onConnect
+ *   2. onConnect usa addEdge(params, eds) para crear conexiones por drag
+ *   3. Estado inicial minimalista: initialEdges=[], initialNodes=[rootNode]
  */
 
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import ReactFlow, {
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Node,
+  Edge,
+  Connection,
+  NodeTypes,
+  NodeProps,
+  Position,
+  Handle,
+  Background,
+  BackgroundVariant,
+  ReactFlowInstance,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
 import SyntaxFlowline from './SyntaxFlowline';
 import ModulePalette, { type ModuleNodeType } from './ModulePalette';
 import GrammarNode from './GrammarNode';
@@ -45,15 +66,19 @@ type GraphEdge = {
   color?: string;
 };
 
-type Transform = { x: number; y: number; zoom: number };
-
 type GraphCanvasProps = {
   conlangName?: string | null;
   activeModule?: string;
   stats?: {
-    grammar?: { rules?: number; categories?: number };
+    grammar?: { rules?: number; categories?: number; strategies?: number; roles?: number };
+    phonology?: { sounds?: number; rules?: number };
+    syntax?: { rules?: number; trees?: number };
     lexicon?: { entries?: number; categories?: number };
-    phonology?: { sounds?: number };
+    neography?: { glyphs?: number; rules?: number };
+    semantics?: { fields?: number; relations?: number };
+    translator?: { translations?: number };
+    workbench?: { pending?: number; completed?: number };
+    collections?: { collections?: number };
   };
   onModuleClick?: (moduleId: string) => void;
   onNavigate?: (tab: string) => void;
@@ -128,6 +153,9 @@ const LEXICON_EDGES: GraphEdge[] = [
   { from: { node: 'entries', port: 'in' }, to: { node: 'import', port: 'in' }, label: 'data', color: 'purple' },
 ];
 
+// ── Root node ID ───────────────────────────────────────
+const ROOT_NODE_ID = 'conlang-root';
+
 // ── Helpers ────────────────────────────────────────────
 const STATUS_COLORS: Record<string, { border: string; bg: string; text: string; glow: string }> = {
   complete: { border: 'border-emerald-400/60', bg: 'bg-emerald-500/10', text: 'text-emerald-300', glow: 'shadow-[0_0_20px_rgba(52,211,153,0.15)]' },
@@ -141,12 +169,223 @@ const STATUS_DOT: Record<string, string> = {
   empty: 'bg-white/40',
 };
 
-function bezierPath(x1: number, y1: number, x2: number, y2: number): string {
-  const dx = Math.abs(x2 - x1) * 0.5;
-  return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+// ── Module labels for palette-created nodes ────────────
+const MODULE_LABELS: Record<ModuleNodeType, { label: string; icon: string; description: string }> = {
+  grammar:    { label: 'Gramática',  icon: '📐', description: 'Motor gramatical' },
+  syntax:     { label: 'Sintaxis',   icon: '🧩', description: 'Estructura oracional' },
+  lexicon:    { label: 'Léxico',     icon: '📚', description: 'Diccionario' },
+  phonology:  { label: 'Fonología',  icon: '🔊', description: 'Inventario fonético' },
+  morphology: { label: 'Morfología', icon: '🔧', description: 'Afijos y reglas de formación' },
+  semantics:  { label: 'Semántica',  icon: '💡', description: 'Campos semánticos' },
+  neography:  { label: 'Neografía',  icon: '✍️', description: 'Sistema de escritura' },
+  translator: { label: 'Traductor',  icon: '🔁', description: 'Traducción y corpus' },
+};
+
+// ── Node callback data interface ───────────────────────
+interface NodeCallbacks {
+  activeModule?: string;
+  onModuleClick?: (id: string) => void;
+  onNavigate?: (tab: string) => void;
+  onZoom?: (nodeId: string) => void;
+  level: LevelId;
+  pragmaticEngine?: GraphCanvasProps['pragmaticEngine'];
+  onZoomToGrammar?: () => void;
 }
 
-// ── Component ──────────────────────────────────────────
+// ── React Flow conversion helpers ─────────────────────
+const toRfNodes = (src: GraphNode[], callbacks: NodeCallbacks): Node[] =>
+  src.map(n => ({
+    id: n.id,
+    type: n.id.startsWith('dyn_grammar_') ? 'grammarNode' : 'moduleNode',
+    data: { node: n, ...callbacks },
+    position: { x: n.x, y: n.y },
+    sourcePosition: Position.Right,
+    targetPosition: Position.Left,
+    draggable: true,
+    selectable: true,
+    connectable: true,
+  }));
+
+const toRfEdges = (src: GraphEdge[]): Edge[] =>
+  src.map((e, i) => ({
+    id: `e-${e.from.node}-${e.to.node}-${i}`,
+    source: e.from.node,
+    target: e.to.node,
+    sourceHandle: e.from.port,
+    targetHandle: e.to.port,
+    label: e.label,
+    animated: true,
+    style: { stroke: e.color === 'purple' ? '#a855f7' : '#00f0ff' },
+  }));
+
+// ── Custom Node: Root (Conlang Selector) ──────────────
+const RootNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
+  const d = data as { conlangName?: string | null; conlangNames?: string[]; onSelectConlang?: (name: string) => void };
+  return (
+    <>
+      <Handle type="source" position={Position.Right} />
+      <Handle type="target" position={Position.Left} />
+      <div className={`
+        rounded-xl border-2 border-accent/60 bg-accent/10 backdrop-blur-md
+        px-4 py-4 shadow-[0_0_30px_rgba(13,185,242,0.2)] text-center
+        transition-all duration-300
+        ${selected ? 'border-accent shadow-[0_0_40px_rgba(13,185,242,0.4)] scale-105' : ''}
+      `}>
+        <div className="text-3xl mb-2">🌐</div>
+        <div className="text-xs font-bold tracking-widest text-accent uppercase mb-2">
+          {d.conlangName || 'Sin conlang'}
+        </div>
+        <div className="text-[10px] text-white/50 mb-3">Lengua central</div>
+        {d.conlangNames && d.conlangNames.length > 1 && (
+          <select
+            value={d.conlangName ?? ''}
+            onChange={(e) => { e.stopPropagation(); d.onSelectConlang?.(e.target.value); }}
+            className="w-full bg-black/30 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent/50 cursor-pointer"
+          >
+            {d.conlangNames.map(name => (
+              <option key={name} value={name} className="bg-background text-white">{name}</option>
+            ))}
+          </select>
+        )}
+        {d.conlangNames && d.conlangNames.length === 1 && (
+          <div className="text-[10px] text-white/40">{d.conlangNames[0]}</div>
+        )}
+      </div>
+    </>
+  );
+};
+
+// ── Custom Node: Module (all non-grammar modules) ──────
+const ModuleNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
+  const d = data as ModuleCallbacks;
+  const node: GraphNode = d.node;
+  const colors = STATUS_COLORS[node.status];
+  const isActive = d.activeModule === node.id || selected;
+  const isHovered = false; // handled by React Flow hover
+  const hasChildren = ['grammar', 'lexicon', 'syntax'].includes(node.id);
+
+  const nodeClasses = `
+    rounded-xl border backdrop-blur-xl transition-all duration-300
+    pointer-events-auto cursor-pointer select-none
+    ${colors.border} ${colors.bg}
+    ${isActive ? `${colors.glow} scale-[1.03] z-20` : 'z-10'}
+  `;
+
+  return (
+    <>
+      {node.ports.some(p => p.side === 'left') && (
+        <Handle type="target" position={Position.Left} />
+      )}
+      {node.ports.some(p => p.side === 'right') && (
+        <Handle type="source" position={Position.Right} />
+      )}
+      <div className={nodeClasses} style={{ width: node.w, minHeight: node.h }}>
+        {/* Header */}
+        <div className="h-8 px-3 flex items-center justify-between border-b border-white/10 rounded-t-xl bg-white/5">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-2.5 rounded-full bg-accent animate-pulse" />
+            <span className="text-[10px] font-bold text-accent uppercase tracking-wider">{node.label}</span>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-mono border border-accent/20">
+            {safeShortId(node.id)}
+          </span>
+        </div>
+        {/* Body */}
+        <div className="p-2.5">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-lg">{node.icon}</span>
+            <span className="text-[10px] text-white/50">{node.description}</span>
+          </div>
+          {node.stats && (
+            <div className="bg-black/20 rounded-lg p-1.5 space-y-0.5 border border-white/5">
+              {node.stats.map((s, i) => (
+                <div key={i} className="flex justify-between text-[10px]">
+                  <span className="text-white/40">{s.label}:</span>
+                  <span className="text-accent font-mono font-semibold">{s.value}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {hasChildren && (
+            <button
+              onClick={(e) => { e.stopPropagation(); d.onZoom?.(node.id); }}
+              className="mt-2 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent transition-colors w-full justify-center"
+            >
+              <span>🔍</span><span>Zoom</span>
+            </button>
+          )}
+          {['lexicon', 'workbench', 'phonology', 'neography', 'semantics', 'translator'].includes(node.id) && d.level === 'root' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); d.onNavigate?.(node.id === 'lexicon' ? 'table' : node.id); }}
+              className="mt-1 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors w-full justify-center"
+            >
+              <span>→</span><span>Ir a pantalla</span>
+            </button>
+          )}
+          <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5">
+            <div className="flex items-center gap-1">
+              <span className={`relative flex h-1.5 w-1.5`}>
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${STATUS_DOT[node.status]}`} />
+                <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${STATUS_DOT[node.status]}`} />
+              </span>
+              <span className="text-[8px] text-white/40 capitalize">
+                {node.status === 'complete' ? 'Completo' : node.status === 'partial' ? 'Parcial' : 'Vacío'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {node.ports.filter(p => p.side === 'left').map(p => (
+                <span key={p.id} className="w-1.5 h-1.5 rounded-full bg-accent border border-white/20 shadow-[0_0_4px_rgba(0,240,255,0.5)]" title={p.label} />
+              ))}
+              {node.ports.filter(p => p.side === 'right').map(p => (
+                <span key={p.id} className="w-1.5 h-1.5 rounded-full bg-purple-400 border border-white/20 shadow-[0_0_4px_rgba(168,85,247,0.5)]" title={p.label} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
+
+// ── Custom Node: Grammar Engine ────────────────────────
+const GrammarEngineNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
+  const d = data as { pragmaticEngine?: GraphCanvasProps['pragmaticEngine']; onZoom?: () => void; activeModule?: string };
+  const isActive = d.activeModule === 'grammar' || selected;
+
+  return (
+    <div className={isActive
+      ? "relative rounded-xl border border-cyan-400/50 bg-surface-dark/95 backdrop-blur-xl shadow-[0_0_25px_rgba(0,240,255,0.1)] transition-all duration-300 scale-[1.03]"
+      : "relative"}>
+      <Handle type="target" position={Position.Left} />
+      <GrammarNode
+        rulesCount={d.pragmaticEngine?.rulesCount ?? 0}
+        typologyLabel={d.pragmaticEngine?.typologyLabel}
+        status={d.pragmaticEngine?.activeClauseType ? 'active' : 'inactive'}
+        onZoom={() => d.onZoom?.()}
+        connected={false}
+      />
+      <Handle type="source" position={Position.Right} />
+    </div>
+  );
+};
+
+// ── Node types registration ────────────────────────────
+const nodeTypes: NodeTypes = {
+  rootNode: RootNodeComponent,
+  moduleNode: ModuleNodeComponent,
+  grammarNode: GrammarEngineNodeComponent,
+};
+
+// ── Utility ────────────────────────────────────────────
+const safeShortId = (id: string): string => {
+  const m = id.match(/^(\w{0,3})\w*/);
+  return (m?.[1] ?? id.slice(0, 3)).toUpperCase();
+};
+
+// ── ModuleCallbacks alias for cleaner typing ───────────
+type ModuleCallbacks = NodeCallbacks & { node: GraphNode };
+
+// ── Main component ─────────────────────────────────────
 const GraphCanvas: React.FC<GraphCanvasProps> = ({
   conlangName,
   activeModule,
@@ -160,86 +399,138 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   pragmaticEngine,
   onZoomToGrammar,
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [level, setLevel] = useState<LevelId>('root');
-  const [transform, setTransform] = useState<Transform>({ x: 0, y: 0, zoom: 1 });
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
-  const [dragging, setDragging] = useState<{ type: 'pan' | 'node'; nodeId?: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
-  const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>({});
-  const [dynamicNodes, setDynamicNodes] = useState<GraphNode[]>([]);
   const [draggingPalette, setDraggingPalette] = useState<ModuleNodeType | null>(null);
+  const [zoomValue, setZoomValue] = useState(100);
+  const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
 
-  const NODES = level === 'root'
-    ? [...(minimalMode ? [] : ROOT_NODES), ...dynamicNodes]
-    : level === 'grammar' ? GRAMMAR_NODES : level === 'lexicon' ? LEXICON_NODES : [];
-  const EDGES = level === 'root'
-    ? (minimalMode ? [] : ROOT_EDGES)
-    : level === 'grammar' ? GRAMMAR_EDGES : level === 'lexicon' ? LEXICON_EDGES : [];
+  // ── Initial nodes & edges (Task 3: Minimal Clean Graph) ──
+  // initialNodes contiene ÚNICAMENTE el nodo raíz del conlang.
+  // initialEdges está completamente vacío.
+  const initialNodes: Node[] = [
+    {
+      id: ROOT_NODE_ID,
+      type: 'rootNode',
+      data: { conlangName, conlangNames, onSelectConlang },
+      position: { x: 400, y: 300 },
+    },
+  ];
+  const initialEdges: Edge[] = [];
 
-  const getNodePosition = useCallback((node: GraphNode) => {
-    return nodePositions[node.id] ?? { x: node.x, y: node.y };
-  }, [nodePositions]);
+  // ── React Flow state (Task 1: Interactividad) ──
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // ── Pan / Zoom ──────────────────────────────────────
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setTransform(t => ({ ...t, zoom: Math.min(3, Math.max(0.2, t.zoom * delta)) }));
+  // ── onConnect (Task 2: addEdge) ──────────────────────────
+  const onConnect = useCallback(
+    (params: Connection) => setEdges(eds => addEdge(params, eds)),
+    [setEdges]
+  );
+
+  // ── Level navigation ──
+  const navigateToLevel = useCallback((targetLevel: LevelId) => {
+    setLevel(targetLevel);
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[data-node-id]')) return;
-    setDragging({ type: 'pan', startX: e.clientX - transform.x, startY: e.clientY - transform.y, origX: transform.x, origY: transform.y });
-  }, [transform.x, transform.y]);
+  const zoomIntoNode = useCallback((nodeId: string) => {
+    if (nodeId === 'grammar') setLevel('grammar');
+    else if (nodeId === 'lexicon') setLevel('lexicon');
+    else if (nodeId === 'syntax') setLevel('syntax');
+  }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragging) return;
-    if (dragging.type === 'pan') {
-      setTransform(t => ({ ...t, x: e.clientX - dragging.startX, y: e.clientY - dragging.startY }));
-    } else if (dragging.type === 'node' && dragging.nodeId) {
-      const dx = (e.clientX - dragging.startX) / transform.zoom;
-      const dy = (e.clientY - dragging.startY) / transform.zoom;
-      setNodePositions(prev => ({ ...prev, [dragging.nodeId!]: { x: dragging.origX + dx, y: dragging.origY + dy } }));
+  const handleNavigate = useCallback((tab: string) => {
+    onNavigate?.(tab === 'lexicon' ? 'table' : tab);
+  }, [onNavigate]);
+
+  // ── Node callbacks bundle ──
+  const nodeCallbacks: NodeCallbacks = useMemo(() => ({
+    activeModule,
+    onModuleClick,
+    onNavigate: handleNavigate,
+    onZoom: zoomIntoNode,
+    level,
+    pragmaticEngine,
+    onZoomToGrammar,
+  }), [activeModule, onModuleClick, handleNavigate, zoomIntoNode, level, pragmaticEngine, onZoomToGrammar]);
+
+  // ── Update nodes/edges when level changes ─────────────────────────
+  useEffect(() => {
+    if (level === 'root') {
+      const rootNode: Node = {
+        id: ROOT_NODE_ID,
+        type: 'rootNode',
+        data: { conlangName, conlangNames, onSelectConlang, onZoomToGrammar },
+        position: { x: 400, y: 300 },
+      };
+      // PURGE: se eliminó la generación automática de ROOT_NODES
+      // (Fonología, Gramática, Sintaxis, Léxico, Workbench, Neografía,
+      //  Semántica, Traductor). El lienzo inicial show ÚNICAMENTE el
+      // nodo raíz del conlang más nodos dinámicos agregados desde la paleta.
+      setNodes(nds => {
+        const dyn = nds.filter(
+          n => n.id !== ROOT_NODE_ID && !ROOT_NODES.some(rn => rn.id === n.id)
+        );
+        return [rootNode, ...dyn];
+      });
+      setEdges([]);
+    } else if (level === 'grammar') {
+      setNodes(toRfNodes(GRAMMAR_NODES, { ...nodeCallbacks, level }));
+      setEdges(toRfEdges(GRAMMAR_EDGES));
+    } else if (level === 'lexicon') {
+      setNodes(toRfNodes(LEXICON_NODES, { ...nodeCallbacks, level }));
+      setEdges(toRfEdges(LEXICON_EDGES));
+    } else if (level === 'syntax') {
+      setNodes([]);
+      setEdges([]);
     }
-  }, [dragging, transform.zoom]);
+  }, [level, conlangName, conlangNames, onSelectConlang, nodeCallbacks, onZoomToGrammar, setNodes, setEdges]);
 
-  const handleMouseUp = useCallback(() => setDragging(null), []);
+  // ── Fit view on level change ──
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      reactFlowInstanceRef.current?.fitView({ padding: 0.2, duration: 300 });
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [level]);
 
-  // ── Palette Drag & Drop ──────────────────────────────
-  const createNodeFromPalette = useCallback((type: ModuleNodeType, clientX: number, clientY: number): GraphNode => {
-    // Convertir coordenadas de pantalla a coordenadas del canvas (considerando pan/zoom)
-    const rect = containerRef.current?.getBoundingClientRect();
-    const x = rect ? (clientX - rect.left - transform.x) / transform.zoom : clientX;
-    const y = rect ? (clientY - rect.top - transform.y) / transform.zoom : clientY;
+  // ── React Flow init ──
+  const onInit = useCallback((instance: ReactFlowInstance) => {
+    reactFlowInstanceRef.current = instance;
+    instance.fitView();
+  }, []);
 
-    const id = `dyn_${type}_${Date.now()}`;
-    const labels: Record<ModuleNodeType, { label: string; icon: string; description: string }> = {
-      grammar:    { label: 'Gramática',  icon: '📐', description: 'Motor gramatical' },
-      syntax:     { label: 'Sintaxis',   icon: '🧩', description: 'Estructura oracional' },
-      lexicon:    { label: 'Léxico',     icon: '📚', description: 'Diccionario' },
-      phonology:  { label: 'Fonología',  icon: '🔊', description: 'Inventario fonético' },
-      morphology: { label: 'Morfología', icon: '🔧', description: 'Afijos y reglas' },
-      semantics:  { label: 'Semántica',  icon: '💡', description: 'Campos semánticos' },
-      neography:  { label: 'Neografía',  icon: '✍️', description: 'Sistema de escritura' },
-      translator: { label: 'Traductor',  icon: '🔁', description: 'Traducción' },
-    };
-    const info = labels[type] ?? { label: type, icon: '❓', description: type };
+  // ── Handle React Flow move (for zoom slider sync) ──
+  const onMove = useCallback(() => {
+    if (reactFlowInstanceRef.current) {
+      const zoom = reactFlowInstanceRef.current.getZoom();
+      setZoomValue(Math.round(zoom * 100));
+    }
+  }, []);
 
-    return {
-      id,
-      label: info.label,
-      icon: info.icon,
-      x: x - 130, // centrar horizontalmente en el drop point
-      y: y - 60,  // centrar verticalmente
-      w: 260,
-      h: 140,
-      level: 'root',
-      status: 'empty',
-      description: info.description,
-      ports: [{ id: 'in', label: 'In', side: 'left', color: 'cyan' }],
-    };
-  }, [transform.x, transform.y, transform.zoom]);
+  // ── Node click ──
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    if (node.id === ROOT_NODE_ID) return;
+    const moduleId = node.id.replace('dyn_', '');
+    onModuleClick?.(moduleId);
+  }, [onModuleClick]);
 
+  // ── Zoom slider ──
+  const handleZoomSliderChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const pct = Number(e.target.value);
+    reactFlowInstanceRef.current?.zoomTo(pct / 100);
+    setZoomValue(pct);
+  }, []);
+
+  // ── Reset view ──
+  const handleReset = useCallback(() => {
+    if (reactFlowInstanceRef.current) {
+      reactFlowInstanceRef.current.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 300 });
+    }
+    setZoomValue(100);
+  }, []);
+
+  // ── Palette drag & drop ──
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -248,116 +539,55 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const type = e.dataTransfer.getData('application/loxar-module') as ModuleNodeType;
-    if (!type) return;
+    if (!type || level !== 'root') return;
 
-    const newNode = createNodeFromPalette(type, e.clientX, e.clientY);
-    setDynamicNodes(prev => [...prev, newNode]);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const position = reactFlowInstanceRef.current?.project({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    }) ?? { x: 0, y: 0 };
+
+    const id = `dyn_${type}_${Date.now()}`;
+    const info = MODULE_LABELS[type];
+
+    const newNode: Node = {
+      id,
+      type: type === 'grammar' ? 'grammarNode' : 'moduleNode',
+      data: type === 'grammar'
+        ? { pragmaticEngine, onZoom: onZoomToGrammar, activeModule }
+        : {
+            node: {
+              id,
+              label: info.label,
+              icon: info.icon,
+              x: 0,
+              y: 0,
+              w: 260,
+              h: 140,
+              level: 'root',
+              status: 'empty' as const,
+              description: info.description,
+              ports: [{ id: 'in', label: 'In', side: 'left', color: 'cyan' }],
+            },
+            ...nodeCallbacks,
+          },
+      position,
+      sourcePosition: Position.Right,
+      targetPosition: Position.Left,
+      draggable: true,
+      selectable: true,
+    };
+
+    setNodes(nds => nds.concat(newNode));
     setDraggingPalette(null);
-  }, [createNodeFromPalette]);
+  }, [level, pragmaticEngine, onZoomToGrammar, activeModule, nodeCallbacks, setNodes]);
 
-  // ── Render node body ───────────────────────────────
-  const renderNodeBody = (node: GraphNode) => {
-    const isGrammarNode = node.id.startsWith('dyn_grammar_');
-
-    if (isGrammarNode) {
-      return (
-        <div className="relative w-full h-full">
-          <GrammarNode
-            rulesCount={pragmaticEngine?.rulesCount ?? 0}
-            typologyLabel={pragmaticEngine?.typologyLabel}
-            status={pragmaticEngine?.activeClauseType ? 'active' : 'inactive'}
-            onZoom={() => onZoomToGrammar?.()}
-            connected={false}
-          />
-        </div>
-      );
-    }
-
-    const hasChildren = ['grammar', 'lexicon', 'syntax'].includes(node.id);
-    return (
-      <>
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="text-lg">{node.icon}</span>
-          <span className="text-[10px] text-white/50">{node.description}</span>
-        </div>
-        {node.stats && (
-          <div className="bg-black/20 rounded-lg p-1.5 space-y-0.5 border border-white/5">
-            {node.stats.map((s, i) => (
-              <div key={i} className="flex justify-between text-[10px]">
-                <span className="text-white/40">{s.label}:</span>
-                <span className="text-accent font-mono font-semibold">{s.value}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        {hasChildren && (
-          <button onClick={(e) => { e.stopPropagation(); zoomIntoNode(node.id); }}
-            className="mt-2 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent transition-colors w-full justify-center">
-            <span>🔍</span><span>Zoom</span>
-          </button>
-        )}
-        {['lexicon', 'workbench', 'phonology', 'neography', 'semantics', 'translator'].includes(node.id) && level === 'root' && (
-          <button onClick={(e) => { e.stopPropagation(); onNavigate?.(node.id === 'lexicon' ? 'table' : node.id); }}
-            className="mt-1 flex items-center gap-1 text-[10px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors w-full justify-center">
-            <span>→</span><span>Ir a pantalla</span>
-          </button>
-        )}
-        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5">
-          <div className="flex items-center gap-1">
-            <span className={`relative flex h-1.5 w-1.5`}>
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${STATUS_DOT[node.status]}`} />
-              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${STATUS_DOT[node.status]}`} />
-            </span>
-            <span className="text-[8px] text-white/40 capitalize">{node.status === 'complete' ? 'Completo' : node.status === 'partial' ? 'Parcial' : 'Vacío'}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            {node.ports.filter(p => p.side === 'left').map(p => (<span key={p.id} className="w-1.5 h-1.5 rounded-full bg-accent border border-white/20 shadow-[0_0_4px_rgba(0,240,255,0.5)]" title={p.label} />))}
-            {node.ports.filter(p => p.side === 'right').map(p => (<span key={p.id} className="w-1.5 h-1.5 rounded-full bg-purple-400 border border-white/20 shadow-[0_0_4px_rgba(168,85,247,0.5)]" title={p.label} />))}
-          </div>
-        </div>
-      </>
-    );
-  };
-
-  // ── Node Drag ───────────────────────────────────────
-  const handleNodeMouseDown = useCallback((e: React.MouseEvent, node: GraphNode) => {
-    e.stopPropagation();
-    const pos = getNodePosition(node);
-    setDragging({ type: 'node', nodeId: node.id, startX: e.clientX, startY: e.clientY, origX: pos.x, origY: pos.y });
-  }, [getNodePosition]);
-
-  // ── Level Navigation ───────────────────────────────
-  const navigateToLevel = useCallback((targetLevel: LevelId) => {
-    setTransform({ x: 0, y: 0, zoom: 1 });
-    setLevel(targetLevel);
+  // ── Prevent connections from a node to itself ──
+  const isValidConnection = useCallback((connection: Connection) => {
+    return connection.source !== connection.target;
   }, []);
 
-  const zoomIntoNode = useCallback((nodeId: string) => {
-    const node = NODES.find(n => n.id === nodeId);
-    if (!node) return;
-    const pos = getNodePosition(node);
-    setTransform({
-      x: -(pos.x + node.w / 2) * 1.6 + (containerRef.current?.clientWidth ?? 800) / 2,
-      y: -(pos.y + node.h / 2) * 1.6 + (containerRef.current?.clientHeight ?? 600) / 2,
-      zoom: 1.6,
-    });
-    setTimeout(() => {
-      if (nodeId === 'grammar') setLevel('grammar');
-      else if (nodeId === 'lexicon') setLevel('lexicon');
-      else if (nodeId === 'syntax') setLevel('syntax');
-    }, 250);
-  }, [NODES, getNodePosition]);
-
-  // ── Port positions ──────────────────────────────────
-  const getPortPosition = useCallback((node: GraphNode, port: NodePort) => {
-    const pos = getNodePosition(node);
-    return port.side === 'right'
-      ? { x: pos.x + node.w, y: pos.y + node.h * 0.3 }
-      : { x: pos.x, y: pos.y + node.h * 0.3 };
-  }, [getNodePosition]);
-
-  // ── Syntax Preview ─────────────────────────────────
-  // ── Breadcrumb ─────────────────────────────────────
+  // ── Breadcrumb ──
   const breadcrumb = useMemo(() => {
     const items = [{ id: 'root', label: conlangName ?? 'Proyecto' }];
     if (level === 'grammar') items.push({ id: 'grammar', label: 'Gramática' });
@@ -366,9 +596,10 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     return items;
   }, [level, conlangName]);
 
+  // ── Render ──
   return (
-    <div className="relative w-full h-full min-h-[600px] overflow-hidden bg-background" ref={containerRef}>
-      {/* Top Bar */}
+    <div className="relative w-full h-full min-h-[600px] overflow-hidden bg-background">
+      {/* ── Top Bar ── */}
       <div className="absolute top-3 left-3 right-3 z-30 flex items-center justify-between pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto bg-surface/90 backdrop-blur-xl px-3 py-1.5 rounded-lg border border-white/10 shadow-xl">
           {breadcrumb.map((item, i) => (
@@ -376,7 +607,13 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
               {i > 0 && <span className="text-white/20 text-xs">›</span>}
               <button
                 onClick={() => item.id === 'root' ? navigateToLevel('root') : undefined}
-                className={`text-[10px] font-semibold uppercase tracking-wider ${i === breadcrumb.length - 1 ? 'text-accent' : 'text-white/50 hover:text-white/80'} transition-colors`}
+                className={`
+                  text-[10px] font-semibold uppercase tracking-wider
+                  ${i === breadcrumb.length - 1
+                    ? 'text-accent'
+                    : 'text-white/50 hover:text-white/80'}
+                  transition-colors
+                `}
               >
                 {item.label}
               </button>
@@ -385,145 +622,93 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </div>
         <div className="flex items-center gap-2 pointer-events-auto">
           <div className="flex items-center gap-1 bg-surface/90 backdrop-blur-xl px-2 py-1 rounded-lg border border-white/10">
-            <input type="range" min="20" max="300" value={transform.zoom * 100}
-              onChange={(e) => setTransform(t => ({ ...t, zoom: Number(e.target.value) / 100 }))}
-              className="w-16 accent-accent h-1 bg-white/20 rounded cursor-pointer" />
-            <span className="text-[10px] text-accent font-mono w-8 text-right">{Math.round(transform.zoom * 100)}%</span>
+            <input
+              type="range"
+              min="20"
+              max="300"
+              value={zoomValue}
+              onChange={handleZoomSliderChange}
+              className="w-16 accent-accent h-1 bg-white/20 rounded cursor-pointer"
+            />
+            <span className="text-[10px] text-accent font-mono w-8 text-right">{zoomValue}%</span>
           </div>
-          <button onClick={() => setTransform({ x: 0, y: 0, zoom: 1 })}
-            className="w-7 h-7 rounded bg-surface/90 backdrop-blur-xl border border-white/10 text-white/60 hover:text-accent flex items-center justify-center text-xs transition-colors" title="Reset">⊡</button>
+          <button
+            onClick={handleReset}
+            className="w-7 h-7 rounded bg-surface/90 backdrop-blur-xl border border-white/10 text-white/60 hover:text-accent flex items-center justify-center text-xs transition-colors"
+            title="Reset"
+          >
+            ⊡
+          </button>
         </div>
       </div>
 
-      {/* Module Palette (drag source) */}
-      <ModulePalette
-        onDragStart={(type) => setDraggingPalette(type)}
-        onDragEnd={() => setDraggingPalette(null)}
-      />
+      {/* ── Module Palette ── */}
+      {level === 'root' && (
+        <ModulePalette
+          onDragStart={(type) => setDraggingPalette(type)}
+          onDragEnd={() => setDraggingPalette(null)}
+        />
+      )}
 
-      {/* Canvas Viewport */}
-      <div className="absolute inset-0 cursor-grab active:cursor-grabbing"
-        onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}
-        onDragOver={handleDragOver} onDrop={handleDrop}>
-        {/* Grid */}
-        <div className="absolute inset-0 pointer-events-none opacity-20"
-          style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.15) 1px, transparent 0)', backgroundSize: `${32 * transform.zoom}px ${32 * transform.zoom}px`, backgroundPosition: `${transform.x}px ${transform.y}px` }} />
-
-        {/* Stage */}
-        <div className="absolute origin-top-left" style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`, transition: dragging ? 'none' : 'transform 0.3s ease-out' }}>
-          {/* Edges */}
-          <svg className="absolute inset-0 pointer-events-none" style={{ width: 2000, height: 1400, overflow: 'visible' }}>
-            <defs>
-              <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-              <filter id="glow-purple" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-            </defs>
-            {EDGES.map((edge, i) => {
-              const fromNode = NODES.find(n => n.id === edge.from.node);
-              const toNode = NODES.find(n => n.id === edge.to.node);
-              if (!fromNode || !toNode) return null;
-              const fromPort = fromNode.ports.find(p => p.id === edge.from.port);
-              const toPort = toNode.ports.find(p => p.id === edge.to.port);
-              if (!fromPort || !toPort) return null;
-              const from = getPortPosition(fromNode, fromPort);
-              const to = getPortPosition(toNode, toPort);
-              const color = edge.color === 'purple' ? '#a855f7' : '#00f0ff';
-              return (
-                <g key={i}>
-                  <path d={bezierPath(from.x, from.y, to.x, to.y)} fill="none" stroke={color} strokeWidth={2} filter={edge.color === 'purple' ? 'url(#glow-purple)' : 'url(#glow-cyan)'} opacity={0.8} />
-                  <path d={bezierPath(from.x, from.y, to.x, to.y)} fill="none" stroke="#ffffff" strokeWidth={1} strokeDasharray="6 8" opacity={0.5}>
-                    <animate attributeName="stroke-dashoffset" from="28" to="0" dur="1.2s" repeatCount="indefinite" />
-                  </path>
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Nodes */}
-          {NODES.map((node) => {
-            const pos = getNodePosition(node);
-            const colors = STATUS_COLORS[node.status];
-            const isActive = activeModule === node.id;
-            const isHovered = hoveredNode === node.id;
-            const hasChildren = ['grammar', 'lexicon', 'syntax'].includes(node.id);
-            const isGrammarNode = node.id.startsWith('dyn_grammar_');
-
-            const nodeClasses = isGrammarNode
-              ? `absolute rounded-xl border border-cyan-400/50 bg-surface-dark/95 backdrop-blur-xl shadow-[0_0_25px_rgba(0,240,255,0.1)] transition-all duration-300 pointer-events-auto cursor-pointer select-none ${isActive ? 'scale-[1.03] z-20' : isHovered ? 'scale-[1.02] z-10' : 'z-10'}`
-              : `absolute rounded-xl border backdrop-blur-xl transition-all duration-300 pointer-events-auto cursor-pointer select-none ${colors.border} ${colors.bg} ${isActive ? `${colors.glow} scale-[1.03] z-20` : isHovered ? 'scale-[1.02] z-10' : 'z-10'}`;
-
-            return (
-              <div key={node.id} data-node-id={node.id}
-                className={nodeClasses}
-                style={{ left: pos.x, top: pos.y, width: node.w, minHeight: node.h, zIndex: isActive ? 20 : isHovered ? 15 : 10 }}
-                onPointerEnter={() => setHoveredNode(node.id)} onPointerLeave={() => setHoveredNode(null)}
-                onMouseDown={(e) => handleNodeMouseDown(e, node)}>
-                {/* Header (grammar nodes have their own header) */}
-                {!isGrammarNode && (
-                  <div className="h-8 px-3 flex items-center justify-between border-b border-white/10 rounded-t-xl bg-white/5">
-                    <div className="flex items-center gap-2">
-                      <span className="w-1.5 h-2.5 rounded-full bg-accent animate-pulse" />
-                      <span className="text-[10px] font-bold text-accent uppercase tracking-wider">{node.label}</span>
-                    </div>
-                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent/10 text-accent font-mono border border-accent/20">{node.id.toUpperCase().slice(0, 3)}</span>
-                  </div>
-                )}
-                {/* Body */}
-                <div className={isGrammarNode ? 'flex-1' : 'flex-1 p-2.5'}>
-                  {renderNodeBody(node)}
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Center Node: Conlang Selector (root level only) */}
-          {level === 'root' && (
-            <div className="absolute" style={{ left: 420, top: 300, width: 240 }}>
-              <div className="rounded-xl border-2 border-accent/60 bg-accent/10 backdrop-blur-md px-4 py-4 shadow-[0_0_30px_rgba(13,185,242,0.2)] text-center">
-                <div className="text-3xl mb-2">🌐</div>
-                <div className="text-xs font-bold tracking-widest text-accent uppercase mb-2">
-                  {conlangName || 'Sin conlang'}
-                </div>
-                <div className="text-[10px] text-white/50 mb-3">Lengua central</div>
-                {conlangNames.length > 1 && (
-                  <select
-                    value={conlangName ?? ''}
-                    onChange={(e) => onSelectConlang?.(e.target.value)}
-                    className="w-full bg-black/30 border border-white/20 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent/50 cursor-pointer"
-                  >
-                    {conlangNames.map(name => (
-                      <option key={name} value={name} className="bg-background text-white">{name}</option>
-                    ))}
-                  </select>
-                )}
-                {conlangNames.length === 1 && (
-                  <div className="text-[10px] text-white/40">{conlangNames[0]}</div>
-                )}
-              </div>
+      {/* ── Canvas Viewport ── */}
+      <div className="absolute inset-0">
+        {level === 'syntax' ? (
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+            <div className="w-full max-w-3xl h-[90%] pointer-events-auto">
+              <SyntaxFlowline lexicon={lexicon} />
             </div>
-          )}
-
-          {/* Syntax Level: Flowline Constructor */}
-          {level === 'syntax' && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-              <div className="w-full max-w-3xl h-[90%] pointer-events-auto">
-                <SyntaxFlowline lexicon={lexicon} />
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={handleNodeClick}
+            onNodeMouseEnter={(_e, n) => setHoveredNode(n.id)}
+            onNodeMouseLeave={() => setHoveredNode(null)}
+            onPaneClick={() => setHoveredNode(null)}
+            onInit={onInit}
+            onMove={onMove}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+            nodeTypes={nodeTypes}
+            isValidConnection={isValidConnection}
+            nodesDraggable={true}
+            elementsSelectable={true}
+            connectionLineStyle={{
+              stroke: '#00f0ff',
+              strokeWidth: 2,
+              strokeDasharray: '6 8',
+            }}
+            defaultEdgeOptions={{
+              animated: true,
+              style: { stroke: '#00f0ff' },
+            }}
+            snapToGrid={true}
+            snapGrid={[15, 15]}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background variant={BackgroundVariant.Dots} gap={32} color="#0db9f2" style={{ opacity: 0.15 }} />
+          </ReactFlow>
+        )}
       </div>
 
-      {/* Back Button */}
+      {/* ── Back Button ── */}
       {level !== 'root' && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30">
-          <button onClick={() => navigateToLevel('root')}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface/95 backdrop-blur-xl border border-accent/40 text-accent hover:bg-accent/10 transition-colors shadow-xl">
-            <span>↩️</span><span className="text-xs font-semibold">Volver al árbol principal</span>
+          <button
+            onClick={() => navigateToLevel('root')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-surface/95 backdrop-blur-xl border border-accent/40 text-accent hover:bg-accent/10 transition-colors shadow-xl"
+          >
+            <span>↩️</span>
+            <span className="text-xs font-semibold">Volver al árbol principal</span>
           </button>
         </div>
       )}
 
-      {/* Empty state */}
+      {/* ── Empty state ── */}
       {!conlangName && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 1 }}>
           <div className="text-center text-white/40 text-sm">

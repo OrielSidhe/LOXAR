@@ -16,6 +16,8 @@ type Props = {
   diagram: { nodes: DiagramNode[]; edges: DiagramEdge[] };
   nodeIconUrl?: string;
   onInspect?: (nodeId: string) => void;
+  onRemove?: (nodeId: string) => void;
+  onAddChild?: (parentId: string) => void;
 };
 
 const defaultIcon = '/icons/node-default.svg';
@@ -24,6 +26,8 @@ export default function SyntaxCanvasAST({
   diagram,
   nodeIconUrl = defaultIcon,
   onInspect,
+  onRemove,
+  onAddChild,
 }: Props) {
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -84,6 +88,7 @@ export default function SyntaxCanvasAST({
 
       {diagram.nodes.map((n) => {
         const pos = positions[n.id] || { x: 0, y: 0 };
+        const isHovered = hovered === n.id;
         return (
           <div
             key={n.id}
@@ -98,7 +103,7 @@ export default function SyntaxCanvasAST({
               top: pos.y,
               padding: '4px 10px',
               borderRadius: 8,
-              background: hovered === n.id ? '#6366f1' : '#1f2937',
+              background: isHovered ? '#6366f1' : '#1f2937',
               color: '#fff',
               border: '1px solid #374151',
               fontSize: 12,
@@ -106,7 +111,22 @@ export default function SyntaxCanvasAST({
               whiteSpace: 'nowrap',
             }}
           >
-            {n.label}
+            <span>{n.label}</span>
+            {/* C3: edit/remove handlers wired for AST editing */}
+            {isHovered && onAddChild && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onAddChild(n.id); }}
+                className="ml-1 text-xs bg-white/10 hover:bg-white/20 rounded px-1"
+                title="Añadir hijo"
+              >+</button>
+            )}
+            {onRemove && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onRemove(n.id); }}
+                className="ml-1 text-xs opacity-30 hover:opacity-80 text-red-400"
+                title="Eliminar"
+              >✕</button>
+            )}
           </div>
         );
       })}
