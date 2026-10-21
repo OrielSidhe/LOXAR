@@ -13,17 +13,13 @@ import {
     testProviderConnection,
     completeWithProvider,
     DEFAULT_PROVIDERS,
-    PRESET_PROVIDERS,
     migrateLegacyToGeneric,
     getActiveProviderConfig,
     loadGenericAISettings,
     saveGenericAISettings,
     type AISettings as GenericAISettings,
     type AIProviderConfig,
-    type ChatMessage,
-    type ProviderRequestOptions,
     type TestConnectionResult,
-    type LegacyAiSettings,
 } from './aiProviderRegistry';
 
 export interface AiSettings {
@@ -52,55 +48,6 @@ async function writeSecret(secret: string): Promise<void> {
     } else {
         await invoke('delete_secret');
     }
-}
-
-function toGenericSettings(settings: AiSettings): GenericAISettings {
-    const providers: AIProviderConfig[] = [];
-
-    if (settings.provider === 'gemini') {
-        providers.push({
-            id: 'gemini',
-            name: 'Google Gemini',
-            baseURL: 'https://generativelanguage.googleapis.com/v1beta',
-            apiKey: settings.geminiApiKey,
-            authHeader: 'x-goog-api-key',
-            endpointStyle: 'gemini',
-            defaultModel: settings.geminiModel || DEFAULT_GEMINI_MODEL,
-            models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
-        });
-    }
-
-    if (settings.provider === 'ollama') {
-        providers.push({
-            id: 'ollama',
-            name: 'Ollama (Local)',
-            baseURL: settings.ollamaUrl || 'http://localhost:11434',
-            apiKey: '',
-            authHeader: 'Authorization',
-            endpointStyle: 'ollama',
-            defaultModel: settings.ollamaModel || DEFAULT_OLLAMA_MODEL,
-            models: ['llama3', 'llama3.1', 'llama3.2', 'llama2', 'mistral', 'mixtral', 'codellama', 'phi3', 'gemma2', 'qwen2', 'deepseek-coder-v2'],
-        });
-    }
-
-    return {
-        activeProviderId: settings.provider === 'gemini' ? 'gemini' : 'ollama',
-        providers: providers.length ? providers : DEFAULT_PROVIDERS,
-    };
-}
-
-function fromGenericSettings(generic: GenericAISettings): AiSettings {
-    const active = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
-    const gemini = generic.providers.find(p => p.id === 'gemini');
-    const ollama = generic.providers.find(p => p.id === 'ollama');
-
-    return {
-        provider: active?.endpointStyle === 'gemini' ? 'gemini' : active?.endpointStyle === 'ollama' ? 'ollama' : 'gemini',
-        geminiApiKey: gemini?.apiKey || '',
-        geminiModel: gemini?.defaultModel || DEFAULT_GEMINI_MODEL,
-        ollamaUrl: ollama?.baseURL || 'http://localhost:11434',
-        ollamaModel: ollama?.defaultModel || DEFAULT_OLLAMA_MODEL,
-    };
 }
 
 export const loadAiSettings = async (): Promise<AiSettings> => {
