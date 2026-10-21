@@ -2,8 +2,16 @@ import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions,
 import { createGeminiProvider, invalidateGeminiCache } from './aiProviders/geminiAdapter';
 import { createOllamaProvider } from './aiProviders/ollamaAdapter';
 import { createOpenAICompatibleProvider } from './aiProviders/openAIAdapter';
+import { sanitizeCredential } from './aiProviders/base';
 
-export type { AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult, ProviderEndpointStyle } from './aiProviders/base';
+export type {
+  AIProviderConfig,
+  ChatMessage,
+  ProviderRequestOptions,
+  TestConnectionResult,
+  ProviderEndpointStyle,
+} from './aiProviders/base';
+export { sanitizeCredential, getProviderKeyPrefix, looksLikeWrongProvider } from './aiProviders/base';
 
 export interface AISettings {
   activeProviderId: string;
@@ -84,6 +92,22 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
     endpointStyle: 'openai-chat',
     defaultModel: 'step-2-16k',
     models: ['step-2-16k', 'step-1-8k', 'step-1-32k', 'step-1-128k', 'step-1-256k'],
+  },
+  {
+    id: 'openrouter',
+    name: 'OpenRouter',
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'meta-llama-3.1-8b-instruct:free',
+    models: [
+      'meta-llama-3.1-8b-instruct:free',
+      'meta-llama-3.1-70b-instruct:free',
+      'nousresearch/hermes-3-llama-3.1-405b',
+      'google/gemini-2.5-flash',
+      'google/gemini-2.5-pro',
+    ],
   },
 ];
 
@@ -198,6 +222,18 @@ export async function completeWithProvider(
 
 const GENERIC_AI_SETTINGS_KEY = 'conlang_ai_settings_generic';
 
+/** Sanitize all string credential fields on every provider before persisting. */
+function sanitizeProviders(providers: AIProviderConfig[]): AIProviderConfig[] {
+  return providers.map(p => ({
+    ...p,
+    apiKey: sanitizeCredential(p.apiKey),
+    authHeader: sanitizeCredential(p.authHeader),
+    defaultModel: sanitizeCredential(p.defaultModel),
+    baseURL: sanitizeCredential(p.baseURL),
+    models: p.models?.map(m => sanitizeCredential(m)) || [],
+  }));
+}
+
 export async function loadGenericAISettings(): Promise<AISettings> {
   const defaults: AISettings = {
     activeProviderId: DEFAULT_PROVIDERS[0]?.id || 'gemini',
@@ -208,7 +244,12 @@ export async function loadGenericAISettings(): Promise<AISettings> {
     if (stored) {
       const parsed = JSON.parse(stored) as AISettings;
       if (parsed && Array.isArray(parsed.providers) && parsed.activeProviderId) {
-        return parsed;
+        // Sanitize on read too — guards against data written by older versions
+        // or hand-edited localStorage entries with stray quotes.
+        return {
+          activeProviderId: sanitizeCredential(parsed.activeProviderId),
+          providers: sanitizeProviders(parsed.providers),
+        };
       }
     }
   } catch (e) {
@@ -219,7 +260,11 @@ export async function loadGenericAISettings(): Promise<AISettings> {
 
 export async function saveGenericAISettings(settings: AISettings): Promise<void> {
   try {
-    localStorage.setItem(GENERIC_AI_SETTINGS_KEY, JSON.stringify(settings));
+    const sanitized: AISettings = {
+      activeProviderId: sanitizeCredential(settings.activeProviderId),
+      providers: sanitizeProviders(settings.providers),
+    };
+    localStorage.setItem(GENERIC_AI_SETTINGS_KEY, JSON.stringify(sanitized));
   } catch (e) {
     console.error('Error saving generic AI settings', e);
   }

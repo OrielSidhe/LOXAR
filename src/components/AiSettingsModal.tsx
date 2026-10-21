@@ -5,7 +5,7 @@ import AlertTriangleIcon from './icons/AlertTriangleIcon';
 import SparkleIcon from './icons/SparkleIcon';
 import InfoIcon from './icons/InfoIcon';
 import { testAiConnection, loadAIConfig, saveAIConfig, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
-import { PRESET_PROVIDERS, DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle } from '../services/aiProviderRegistry';
+import { PRESET_PROVIDERS, DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle, getProviderKeyPrefix } from '../services/aiProviderRegistry';
 import EyeIcon from './icons/EyeIcon';
 import EyeOffIcon from './icons/EyeOffIcon';
 
@@ -169,6 +169,28 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setProviders(prev => prev.map(p => p.id === activeProvider.id ? { ...p, ...patch } : p));
     };
 
+    // --- Live validation helpers for the active provider's API Key ---
+    const INVALID_KEY_CHARS = /["'`\s\r\n]/;
+
+    const getApiKeyWarnings = (apiKey: string): string[] => {
+        const warnings: string[] = [];
+        if (!apiKey) return warnings;
+
+        // 1. Invalid characters (quotes, spaces, newlines)
+        if (INVALID_KEY_CHARS.test(apiKey)) {
+            warnings.push('Se limpiarán caracteres inválidos al guardar');
+        }
+
+        // 2. Wrong provider prefix (non-blocking hint)
+        const expectedPrefix = getProviderKeyPrefix(activeProvider?.id || '');
+        if (expectedPrefix && apiKey && !apiKey.startsWith(expectedPrefix)) {
+            const providerLabel = activeProvider?.name || activeProvider?.id || 'este proveedor';
+            warnings.push(`Esta key parece de otro proveedor (se espera prefijo "${expectedPrefix}" para ${providerLabel})`);
+        }
+
+        return warnings;
+    };
+
     const updateEditingProvider = (patch: Partial<ProviderFormData>) => {
         if (!editingProvider) return;
         setEditingProvider({ ...editingProvider, ...patch });
@@ -287,7 +309,7 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                         value={activeProvider.apiKey}
                                         onChange={e => updateActiveProvider({ apiKey: e.target.value })}
                                         placeholder="sk-..."
-                                        className="w-full bg-background border border-subtle rounded-md px-3 py-2 pr-10 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                        className={`w-full bg-background border rounded-md px-3 py-2 pr-10 text-text-primary focus:outline-none focus:ring-2 ${getApiKeyWarnings(activeProvider.apiKey).length > 0 ? 'border-warning' : 'border-subtle focus:ring-accent'}`}
                                     />
                                     <button
                                         type="button"
@@ -298,6 +320,13 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                         {showApiKey ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
                                     </button>
                                 </div>
+                                {/* Live warnings for the API key */}
+                                {getApiKeyWarnings(activeProvider.apiKey).map((w, i) => (
+                                    <div key={i} className="flex items-center gap-1 text-xs text-warning bg-warning/10 p-2 rounded-md border border-warning/20">
+                                        <AlertTriangleIcon className="w-3 h-3 flex-shrink-0" />
+                                        <span>{w}</span>
+                                    </div>
+                                ))}
                             </div>
                             <div className="space-y-2">
                                 <label className="block text-sm font-medium text-text-secondary">Modelo</label>

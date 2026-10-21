@@ -1,4 +1,5 @@
 import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult } from './base';
+import { sanitizeCredential } from './base';
 
 const DEFAULT_TIMEOUT = 30_000;
 
@@ -17,17 +18,23 @@ function mapMessages(messages: ChatMessage[]) {
 }
 
 export function createOpenAICompatibleProvider(config: AIProviderConfig): AIProvider {
-  const normalizedBaseURL = config.baseURL.replace(/\/$/, '');
+  const sanitizedBaseURL = sanitizeCredential(config.baseURL);
+  const normalizedBaseURL = sanitizedBaseURL.replace(/\/$/, '');
+  const authHeader = sanitizeCredential(config.authHeader);
+  const apiKey = sanitizeCredential(config.apiKey);
+  const defaultModel = sanitizeCredential(config.defaultModel);
+  const extraBody = config.extraBody || {};
 
   const complete = async (messages: ChatMessage[], options?: ProviderRequestOptions): Promise<string> => {
     const url = `${normalizedBaseURL}/chat/completions`;
     const body = {
-      model: options?.model || config.defaultModel,
+      model: sanitizeCredential(options?.model || defaultModel),
       messages: mapMessages(messages),
       stream: false,
       ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
       ...(options?.maxTokens !== undefined ? { max_tokens: options.maxTokens } : {}),
       ...(options?.stop?.length ? { stop: options.stop } : {}),
+      ...extraBody,
     };
 
     const response = await requestWithTimeout(
@@ -36,7 +43,7 @@ export function createOpenAICompatibleProvider(config: AIProviderConfig): AIProv
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          [config.authHeader]: `Bearer ${config.apiKey}`,
+          ...(apiKey ? { [authHeader]: `Bearer ${apiKey}` } : {}),
         },
         body: JSON.stringify(body),
       },
@@ -73,7 +80,7 @@ export function createOpenAICompatibleProvider(config: AIProviderConfig): AIProv
   };
 
   return {
-    config,
+    config: { ...config, apiKey, authHeader, defaultModel, baseURL: sanitizedBaseURL },
     testConnection,
     complete,
   };

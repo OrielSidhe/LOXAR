@@ -1,4 +1,5 @@
 import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult } from './base';
+import { sanitizeCredential } from './base';
 
 const DEFAULT_TIMEOUT = 60_000;
 
@@ -20,18 +21,24 @@ function mapMessages(messages: ChatMessage[]) {
 }
 
 export function createOllamaProvider(config: AIProviderConfig): AIProvider {
-  const normalizedBaseURL = config.baseURL.replace(/\/$/, '');
+  const sanitizedBaseURL = sanitizeCredential(config.baseURL);
+  const normalizedBaseURL = sanitizedBaseURL.replace(/\/$/, '');
+  const authHeader = sanitizeCredential(config.authHeader);
+  const apiKey = sanitizeCredential(config.apiKey);
+  const defaultModel = sanitizeCredential(config.defaultModel);
+  const extraBody = config.extraBody || {};
 
   const complete = async (messages: ChatMessage[], options?: ProviderRequestOptions): Promise<string> => {
     const url = `${normalizedBaseURL}/api/generate`;
     const body = {
-      model: options?.model || config.defaultModel,
+      model: sanitizeCredential(options?.model || defaultModel),
       prompt: mapMessages(messages),
       stream: false,
       options: {
         ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
         ...(options?.maxTokens !== undefined ? { num_predict: options.maxTokens } : {}),
       },
+      ...extraBody,
     };
 
     const response = await requestWithTimeout(
@@ -40,7 +47,7 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(config.apiKey ? { [config.authHeader]: `Bearer ${config.apiKey}` } : {}),
+          ...(apiKey ? { [authHeader]: `Bearer ${apiKey}` } : {}),
         },
         body: JSON.stringify(body),
       },
@@ -64,7 +71,7 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
         {
           method: 'GET',
           headers: {
-            ...(config.apiKey ? { [config.authHeader]: `Bearer ${config.apiKey}` } : {}),
+            ...(apiKey ? { [authHeader]: `Bearer ${apiKey}` } : {}),
           },
         },
         DEFAULT_TIMEOUT
@@ -94,7 +101,7 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
   };
 
   return {
-    config,
+    config: { ...config, apiKey, authHeader, defaultModel, baseURL: sanitizedBaseURL },
     testConnection,
     complete,
   };

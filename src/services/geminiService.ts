@@ -17,6 +17,7 @@ import {
     getActiveProviderConfig,
     loadGenericAISettings,
     saveGenericAISettings,
+    sanitizeCredential,
     type AISettings as GenericAISettings,
     type AIProviderConfig,
     type TestConnectionResult,
@@ -67,7 +68,7 @@ export const loadAiSettings = async (): Promise<AiSettings> => {
         console.error('Error reading AI settings', e);
     }
 
-    const legacyKey = typeof fromStore.geminiApiKey === 'string' ? fromStore.geminiApiKey : '';
+    const legacyKey = typeof fromStore.geminiApiKey === 'string' ? sanitizeCredential(fromStore.geminiApiKey) : '';
     let secretKey = '';
     let keychainAvailable = true;
     try {
@@ -170,7 +171,8 @@ export const loadAIConfig = async (): Promise<GenericAISettings> => {
     try {
       const secret = await readSecret();
       if (secret) {
-        geminiProvider.apiKey = secret;
+        // Sanitize keychain value too — older data may contain stray quotes.
+        geminiProvider.apiKey = sanitizeCredential(secret);
       }
     } catch {
       // Not in Tauri or keychain unavailable — key stays empty
@@ -185,10 +187,22 @@ export const loadAIConfig = async (): Promise<GenericAISettings> => {
  * Also syncs the Gemini API key to the OS keychain when present.
  */
 export const saveAIConfig = async (config: GenericAISettings): Promise<void> => {
-  await saveGenericAISettings(config);
+  // Sanitize before persistence so no stray quotes/spaces/newlines are written.
+  const sanitized: GenericAISettings = {
+    activeProviderId: sanitizeCredential(config.activeProviderId),
+    providers: config.providers.map(p => ({
+      ...p,
+      apiKey: sanitizeCredential(p.apiKey),
+      authHeader: sanitizeCredential(p.authHeader),
+      defaultModel: sanitizeCredential(p.defaultModel),
+      baseURL: sanitizeCredential(p.baseURL),
+      models: p.models?.map(m => sanitizeCredential(m)) || [],
+    })),
+  };
+  await saveGenericAISettings(sanitized);
 
-  // Sync Gemini key to keychain (if present and active)
-  const geminiProvider = config.providers.find(p => p.id === 'gemini');
+  // Sync Gemini key to keychain (if present and active) — key is already sanitized above
+  const geminiProvider = sanitized.providers.find(p => p.id === 'gemini');
   if (geminiProvider?.apiKey) {
     try {
       await writeSecret(geminiProvider.apiKey);
@@ -200,7 +214,9 @@ export const saveAIConfig = async (config: GenericAISettings): Promise<void> => 
 };
 
 export const saveAiSettings = async (settings: AiSettings): Promise<void> => {
-    const { geminiApiKey, ...rest } = settings;
+    // Sanitize before persisting to keychain or fallback storage.
+    const geminiApiKey = sanitizeCredential(settings.geminiApiKey || '');
+    const { geminiApiKey: _omit, ...rest } = settings;
     try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(rest));
     } catch (e) {
@@ -231,24 +247,33 @@ export const testAiConnection = async (
     : undefined;
 
   if (providerConfig) {
-    // Test against the provided config (e.g. unsaved edits in AiSettingsModal)
+    // Sanitize credentials and ensure a fresh provider (no stale cached instance
+    // with an old API key) before testing an unsaved/inline config.
+    const sanitizedConfig: AIProviderConfig = {
+      ...providerConfig,
+      apiKey: sanitizeCredential(providerConfig.apiKey),
+      authHeader: sanitizeCredential(providerConfig.authHeader),
+      defaultModel: sanitizeCredential(providerConfig.defaultModel),
+      baseURL: sanitizeCredential(providerConfig.baseURL),
+    };
+    invalidateProviderCache();
     try {
-      if (!providerConfig.apiKey && providerConfig.endpointStyle !== 'ollama') {
+      if (!sanitizedConfig.apiKey && sanitizedConfig.endpointStyle !== 'ollama') {
         return {
           success: false,
           error: 'API Key faltante',
           details: 'No se ha configurado una API Key para este proveedor. Agrega tu clave en Configuración de IA.',
         };
       }
-      const result = await testProviderConnection(providerConfig);
+      const result = await testProviderConnection(sanitizedConfig);
       recordDebug({
         timestamp: new Date().toISOString(),
-        provider: providerConfig.name,
-        model: providerConfig.defaultModel,
-        endpoint: providerConfig.baseURL,
-        payloadPreview: providerConfig.endpointStyle === 'ollama'
+        provider: sanitizedConfig.name,
+        model: sanitizedConfig.defaultModel,
+        endpoint: sanitizedConfig.baseURL,
+        payloadPreview: sanitizedConfig.endpointStyle === 'ollama'
           ? 'GET /api/tags'
-          : `{ "model": "${providerConfig.defaultModel}" }`,
+          : `{ "model": "${sanitizedConfig.defaultModel}" }`,
         status: result.success ? 'ok' : 'error',
         error: result.error,
         responsePreview: result.details,
@@ -258,9 +283,9 @@ export const testAiConnection = async (
       const message = error instanceof Error ? error.message : 'Error desconocido';
       recordDebug({
         timestamp: new Date().toISOString(),
-        provider: providerConfig.name,
-        model: providerConfig.defaultModel,
-        endpoint: providerConfig.baseURL,
+        provider: sanitizedConfig.name,
+        model: sanitizedConfig.defaultModel,
+        endpoint: sanitizedConfig.baseURL,
         payloadPreview: '?',
         status: 'error',
         error: message,
