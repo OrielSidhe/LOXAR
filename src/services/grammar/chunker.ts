@@ -85,6 +85,14 @@ export function extractGrammarCore(text: string): string {
   return lines.slice(0, boundary.startLine).join('\n');
 }
 
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+/** Minimum net character count for a chunk to be considered substantive.
+ *  Sections with less content than this (typically header-only sections
+ *  like "II. MORFOLOGÍA Y EUFONÍA" between two delimiters) are merged into
+ *  the next content-bearing section and never emitted as standalone chunks. */
+export const MIN_SUBSTANTIVE_CHARS = 200;
+
 // ── Chunk splitting ───────────────────────────────────────────────────────────
 
 export interface ChunkInfo {
@@ -103,13 +111,40 @@ export interface ChunkInfo {
 }
 
 /**
+ * Determine whether a section is "header-only" — i.e., it contains no
+ * substantive body text, just a title/header line. These sections arise
+ * when a Roman-numeral header like "II. MORFOLOGÍA Y EUFONÍA" appears
+ * alone between two ==== delimiters.
+ *
+ * Heuristic:
+ *  - Net text (non-empty, trimmed lines joined) is < MIN_SUBSTANTIVE_CHARS
+ *  - No paragraph break (no blank line within the section)
+ *  - At most 3 non-empty lines (a header + maybe a sub-header)
+ */
+function isHeaderOnlySection(section: string[]): boolean {
+  const nonEmpty = section.map(l => l.trim()).filter(l => l.length > 0);
+  if (nonEmpty.length === 0) return true;
+  if (nonEmpty.length > 3) return false;
+  const text = nonEmpty.join(' ');
+  if (text.length >= MIN_SUBSTANTIVE_CHARS) return false;
+  // No paragraph break → no substantive body text
+  const joined = section.join('\n');
+  return !joined.includes('\n\n') && !joined.includes('\n  \n');
+}
+
+/**
  * Split text into section-aware chunks.
  *
  * Algorithm:
  *  1. Find "====" section delimiters (tolerating \r\n and \r).
  *  2. Collect lines into sections bounded by delimiters.
- *  3. If a section exceeds MAX_CHUNK_SIZE, sub-split it at paragraph boundaries.
- *  4. Each chunk is at most MAX_CHUNK_SIZE chars.
+ *  3. Attach header-only sections (short title-only sections) to the
+ *     following content-bearing section so the header never travels alone.
+ *  4. Merge consecutive small sections up to MAX_CHUNK_SIZE to reduce the
+ *     number of LLM calls and avoid header-only chunks.
+ *  5. Sub-split sections that exceed MAX_CHUNK_SIZE at paragraph boundaries.
+ *  6. Discard any resulting chunk with < MIN_SUBSTANTIVE_CHARS of net content.
+ *  7. Each chunk is at most MAX_CHUNK_SIZE chars.
  */
 export function splitIntoChunks(text: string): ChunkInfo[] {
   const lines = text.split(/\r?\n/);
@@ -136,12 +171,71 @@ export function splitIntoChunks(text: string): ChunkInfo[] {
     sections.push(lines);
   }
 
-  // Now split sections into chunks of ≤ MAX_CHUNK_SIZE
+  // ── Pass 1: Attach header-only sections to following content ──
+  // A header-only section (e.g. "II. MORFOLOGÍA Y EUFONÍA" alone between
+  // two ==== delimiters) is buffered and prepended to the next content-
+  // bearing section. This ensures headers never travel as standalone chunks.
+  const attached: string[][] = [];
+  let headerBuffer: string[] = [];
+
+  for (const section of sections) {
+    if (isHeaderOnlySection(section)) {
+      headerBuffer.push(...section);
+      headerBuffer.push(''); // separator before following content
+    } else {
+      if (headerBuffer.length > 0) {
+        attached.push([...headerBuffer, ...section]);
+        headerBuffer = [];
+      } else {
+        attached.push([...section]);
+      }
+    }
+  }
+  // Remaining headers (no following content): attach to last content section
+  if (headerBuffer.length > 0) {
+    if (attached.length > 0) {
+      attached[attached.length - 1].push(...headerBuffer);
+    } else {
+      // All sections were header-only — use original sections as-is
+      attached.push(...sections);
+    }
+  }
+
+  // ── Pass 2: Merge small consecutive sections up to MAX_CHUNK_SIZE ──
+  // Small sections (< MAX_CHUNK_SIZE) that follow each other are combined
+  // to approach the target chunk size, minimizing LLM round-trips.
+  const merged: string[][] = [];
+  let current: string[] = [];
+
+  for (const section of attached) {
+    if (current.length === 0) {
+      current = [...section];
+    } else {
+      const combined = [...current, '', ...section];
+      if (combined.join('\n').length <= MAX_CHUNK_SIZE) {
+        current = combined;
+      } else {
+        merged.push(current);
+        current = [...section];
+      }
+    }
+  }
+  if (current.length > 0) {
+    merged.push(current);
+  }
+
+  // ── Pass 3: Build chunks (sub-split large sections, discard tiny ones) ──
   const chunks: ChunkInfo[] = [];
   let lineCursor = 0;
 
-  for (const section of sections) {
+  for (const section of merged) {
     let sectionText = section.join('\n');
+
+    // Discard sections with no substantive content (< MIN_SUBSTANTIVE_CHARS net)
+    if (sectionText.trim().length < MIN_SUBSTANTIVE_CHARS) {
+      lineCursor += section.length;
+      continue;
+    }
 
     if (sectionText.length <= MAX_CHUNK_SIZE) {
       chunks.push({
@@ -155,26 +249,28 @@ export function splitIntoChunks(text: string): ChunkInfo[] {
       lineCursor += section.length;
     } else {
       // Sub-split the section at paragraph boundaries
-      const paragraphs = sectionText.split(/\n\s*\n/); // split on blank-line-separated paragraphs
-      let current: string[] = [];
+      const paragraphs = sectionText.split(/\n\s*\n/);
+      let currentPara: string[] = [];
       let currentLen = 0;
 
       for (const para of paragraphs) {
         const paraWithNewline = para + '\n\n';
         if (paraWithNewline.length > MAX_CHUNK_SIZE) {
           // Single paragraph too large — hard-split it
-          if (current.length > 0) {
-            const chunkText = current.join('\n\n');
-            chunks.push({
-              index: chunks.length,
-              displayIndex: chunks.length + 1,
-              total: 0,
-              text: chunkText,
-              startLine: lineCursor,
-              charCount: chunkText.length,
-            });
-            lineCursor += current.join('\n').split('\n').length;
-            current = [];
+          if (currentPara.length > 0) {
+            const chunkText = currentPara.join('\n\n');
+            if (chunkText.trim().length >= MIN_SUBSTANTIVE_CHARS) {
+              chunks.push({
+                index: chunks.length,
+                displayIndex: chunks.length + 1,
+                total: 0,
+                text: chunkText,
+                startLine: lineCursor,
+                charCount: chunkText.length,
+              });
+            }
+            lineCursor += currentPara.join('\n').split('\n').length;
+            currentPara = [];
             currentLen = 0;
           }
           for (let i = 0; i < para.length; i += MAX_CHUNK_SIZE) {
@@ -189,8 +285,29 @@ export function splitIntoChunks(text: string): ChunkInfo[] {
             });
             lineCursor += chunkText.split('\n').length;
           }
-        } else if (currentLen + paraWithNewline.length > MAX_CHUNK_SIZE && current.length > 0) {
-          const chunkText = current.join('\n\n');
+        } else if (currentLen + paraWithNewline.length > MAX_CHUNK_SIZE && currentPara.length > 0) {
+          const chunkText = currentPara.join('\n\n');
+          if (chunkText.trim().length >= MIN_SUBSTANTIVE_CHARS) {
+            chunks.push({
+              index: chunks.length,
+              displayIndex: chunks.length + 1,
+              total: 0,
+              text: chunkText,
+              startLine: lineCursor,
+              charCount: chunkText.length,
+            });
+          }
+          lineCursor += currentPara.join('\n').split('\n').length;
+          currentPara = [para];
+          currentLen = para.length;
+        } else {
+          currentPara.push(para);
+          currentLen += paraWithNewline.length;
+        }
+      }
+      if (currentPara.length > 0) {
+        const chunkText = currentPara.join('\n\n');
+        if (chunkText.trim().length >= MIN_SUBSTANTIVE_CHARS) {
           chunks.push({
             index: chunks.length,
             displayIndex: chunks.length + 1,
@@ -199,25 +316,8 @@ export function splitIntoChunks(text: string): ChunkInfo[] {
             startLine: lineCursor,
             charCount: chunkText.length,
           });
-          lineCursor += current.join('\n').split('\n').length;
-          current = [para];
-          currentLen = para.length;
-        } else {
-          current.push(para);
-          currentLen += paraWithNewline.length;
         }
-      }
-      if (current.length > 0) {
-        const chunkText = current.join('\n\n');
-        chunks.push({
-          index: chunks.length,
-          displayIndex: chunks.length + 1,
-          total: 0,
-          text: chunkText,
-          startLine: lineCursor,
-          charCount: chunkText.length,
-        });
-        lineCursor += current.join('\n').split('\n').length;
+        lineCursor += currentPara.join('\n').split('\n').length;
       }
     }
   }
