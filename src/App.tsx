@@ -495,7 +495,11 @@ const App = () => {
           />
           {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
           </Suspense>
-          <AppSettingsModalLayer showSettings={showSettings} onCloseSettings={() => setShowSettings(false)} />
+          <AppSettingsModalLayer
+            showSettings={showSettings}
+            onCloseSettings={() => setShowSettings(false)}
+            onOpenAiSettings={() => { setShowSettings(false); handleOpenModal('ai_settings'); }}
+          />
 
           <Header
             wordsAddedCount={lexiconHook.wordsAddedSinceSave}

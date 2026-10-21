@@ -4,6 +4,8 @@ import SettingsIcon from './icons/SettingsIcon';
 import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
 import { applyTheme, themes, type ThemeId } from '../services/themeService';
 import { audioService } from '../services/audioService';
+import { type AIProviderConfig } from '../services/aiProviderRegistry';
+import { loadAIConfig } from '../services/geminiService';
 
 type Settings = {
   themeId: ThemeId;
@@ -11,8 +13,6 @@ type Settings = {
   soundsEnabled: boolean;
   interfaceLanguage: string;
   nativeConlangLanguage: string;
-  aiProvider: 'gemini' | 'ollama' | 'offline';
-  aiModel: string;
   aiTemperature: number;
   aiAutoComplete: boolean;
   aiResponseLanguage: string;
@@ -51,8 +51,6 @@ const DEFAULTS: Settings = {
   soundsEnabled: true,
   interfaceLanguage: 'es',
   nativeConlangLanguage: '',
-  aiProvider: 'gemini',
-  aiModel: 'gemini-2.5-flash',
   aiTemperature: 0.4,
   aiAutoComplete: true,
   aiResponseLanguage: 'same',
@@ -73,14 +71,20 @@ const DEFAULTS: Settings = {
   showWelcomeOnStart: true,
 };
 
-const SettingsModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+const SettingsModal: React.FC<{ open: boolean; onClose: () => void; onOpenAiSettings?: () => void }> = ({ open, onClose, onOpenAiSettings }) => {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [section, setSection] = useState<SectionId>('appearance');
   const [saved, setSaved] = useState(false);
+  const [activeProvider, setActiveProvider] = useState<AIProviderConfig | null>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
+    loadAIConfig().then((config) => {
+      if (cancelled) return;
+      const provider = config.providers.find(p => p.id === config.activeProviderId) || config.providers[0];
+      if (provider && !cancelled) setActiveProvider(provider);
+    });
     loadSessionCache().then((cache) => {
       if (cancelled) return;
       setSettings((prev) => ({
@@ -215,30 +219,55 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void }> = ({ open,
             {section === 'ai' && (
               <>
                 <SectionTitle>Proveedor de IA</SectionTitle>
-                <SelectRow
-                  label="Proveedor"
-                  value={settings.aiProvider}
-                  onChange={(v) => update({ aiProvider: v as Settings['aiProvider'] })}
-                  options={[
-                    { value: 'gemini', label: 'Gemini' },
-                    { value: 'ollama', label: 'Ollama' },
-                    { value: 'offline', label: 'Solo offline' },
-                  ]}
-                />
-                <InputRow label="Modelo" value={settings.aiModel} onChange={(v) => update({ aiModel: v })} />
-                <NumberRow label="Temperatura" value={settings.aiTemperature} onChange={(v) => update({ aiTemperature: Number(v) })} min={0} max={1} step={0.05} />
-                <ToggleRow label="Autocompletado inteligente" value={settings.aiAutoComplete} onChange={(v) => update({ aiAutoComplete: v })} />
-                <ToggleRow label="Indicador de IA en UI" value={settings.aiCacheEnabled} onChange={(v) => update({ aiCacheEnabled: v })} />
-                <SelectRow
-                  label="Idioma de respuesta"
-                  value={settings.aiResponseLanguage}
-                  onChange={(v) => update({ aiResponseLanguage: v })}
-                  options={[
-                    { value: 'same', label: 'Mismo que la entrada' },
-                    { value: 'es', label: 'Español' },
-                    { value: 'en', label: 'Inglés' },
-                  ]}
-                />
+
+                {activeProvider ? (
+                  <div className="space-y-3 mb-4">
+                    <div className="p-3 bg-background border border-subtle rounded-md">
+                      <span className="text-xs text-text-secondary block mb-1">Proveedor activo</span>
+                      <span className="font-medium text-text-primary">{activeProvider.name}</span>
+                    </div>
+                    <div className="p-3 bg-background border border-subtle rounded-md">
+                      <span className="text-xs text-text-secondary block mb-1">Modelo</span>
+                      <span className="font-medium text-text-primary">{activeProvider.defaultModel}</span>
+                    </div>
+                    <div className="p-3 bg-background border border-subtle rounded-md">
+                      <span className="text-xs text-text-secondary block mb-1">Base URL</span>
+                      <span className="font-mono text-sm text-text-secondary break-all">{activeProvider.baseURL}</span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-text-secondary italic mb-4">No hay proveedores configurados.</p>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (settings.soundsEnabled) audioService.playClick();
+                    onOpenAiSettings?.();
+                  }}
+                  className="px-4 py-2 bg-accent text-white rounded-md font-medium hover:bg-accent-hover transition-colors flex items-center gap-2"
+                >
+                  Configurar proveedores de IA
+                </button>
+                <p className="text-xs text-text-secondary">
+                  Administra proveedores, claves API, modelos y pruebas de conexión en la ventana de Configuración de IA.
+                </p>
+
+                <div className="border-t border-border-dark pt-4 mt-4 space-y-3">
+                  <SectionTitle>Preferencias de IA</SectionTitle>
+                  <NumberRow label="Temperatura" value={settings.aiTemperature} onChange={(v) => update({ aiTemperature: Number(v) })} min={0} max={1} step={0.05} />
+                  <ToggleRow label="Autocompletado inteligente" value={settings.aiAutoComplete} onChange={(v) => update({ aiAutoComplete: v })} />
+                  <ToggleRow label="Indicador de IA en UI" value={settings.aiCacheEnabled} onChange={(v) => update({ aiCacheEnabled: v })} />
+                  <SelectRow
+                    label="Idioma de respuesta"
+                    value={settings.aiResponseLanguage}
+                    onChange={(v) => update({ aiResponseLanguage: v })}
+                    options={[
+                      { value: 'same', label: 'Mismo que la entrada' },
+                      { value: 'es', label: 'Español' },
+                      { value: 'en', label: 'Inglés' },
+                    ]}
+                  />
+                </div>
               </>
             )}
 
