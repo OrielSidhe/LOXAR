@@ -180,17 +180,29 @@ const SECTION_PATTERNS: { header: string; aliases: RegExp[] }[] = [
 ];
 
 function detectSections(text: string): RawSection[] {
-  const lines = text.split(/\n+/);
+  // Split on individual lines tolerando finales de línea Windows (\r\n → \r)
+  const lines = text.split(/\r?\n/);
   const sections: RawSection[] = [];
   let current: RawSection | null = null;
+
+  // Roman numeral headers: I., II., III., IV.2., IV SUSTANTIVOS, etc.
+  // Accepts optional sub-number (IV.2.) and optional trailing dot (IV. or IV)
+  const ROMAN_HEADER_RE = /^(I|II|III|IV|V|VI|VII|VIII|IX|X)(?:\.\d+)?\.?\s+(.+)$/;
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    const sectionMatch = trimmed.match(/^§\s*(.+)$/);
+    // Skip ==== delimiter lines (section decoration, tolerando \r)
+    if (/^={3,}\s*$/.test(trimmed)) continue;
+
     let header: string | null = null;
     let initialContent = '';
+
+    // Check for § prefix
+    const sectionMatch = trimmed.match(/^§\s*(.+)$/);
+    // Check for roman numeral header (I., II., IV.2., etc.)
+    const romanMatch = trimmed.match(ROMAN_HEADER_RE);
 
     if (sectionMatch) {
       const raw = sectionMatch[1].trim();
@@ -204,6 +216,10 @@ function detectSections(text: string): RawSection[] {
         header = raw.toLowerCase();
         initialContent = '';
       }
+    } else if (romanMatch) {
+      // Roman numeral header — use text after the numeral + dot as section header
+      header = romanMatch[2].trim().toLowerCase();
+      initialContent = '';
     } else {
       const freeMatch = trimmed.match(/^([\p{L}\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF][\p{L}\p{N}\u4E00-\u9FFF\u3040-\u309F\u30A0-\u30FF\s\/\-]*?):\s*(.*)?$/u);
       if (freeMatch && freeMatch[1].length < 60 && freeMatch[1].length > 1) {

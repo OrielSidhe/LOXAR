@@ -4,26 +4,61 @@
  * Flujo:
  *  1. parseLocal(text) → DeclarativeManifest + ParseReport
  *  2. Calcular score del parser local
- *  3. Si score >= 60 → devolver resultado local (method: 'local')
- *  4. Si score < 60 y LLM disponible → llamar LLM con prompt de DeclarativeManifest
- *     - Validar output contra DeclarativeManifest con Zod estricto
- *     - Mergear con resultado local (local para lo que parseó bien, LLM para el resto)
- *     - method: 'hybrid'
- *  5. Si LLM no disponible → devolver resultado local con confidence = score
- *  6. Nunca usar cleanseJson ni segunda llamada a IA como fallback
- *  7. Siempre producir ImportValidationReport
+ *  3. Determinar si se necesita IA:
+ *     - AI disponible Y (score local < 60 O hay secciones no interpretadas)
+ *     → usar IA. Un documento rico que el parser local puntúe >= 60 pero con
+ *       secciones caídas en sectionsUnparsed TAMBIÉN debe pasar por IA.
+ *  4. Si IA es necesaria:
+ *     a. Si llmCall provisto → usarlo (ruta producción, con chunking si > 12KB)
+ *     b. Si llmOutput provisto → usarlo directamente (ruta test, sin chunking)
+ *  5. Mergear resultado LLM con el local (local para lo que parseó bien, LLM
+ *     para el resto / enriquecimiento)
+ *  6. Si LLM no disponible o falla → resultado local con confidence = score
+ *  7. Nunca usar cleanseJson ni segunda llamada a IA como fallback
+ *  8. Siempre producir ImportValidationReport
  *
  * Módulo PURO: sin dependencias de React ni Tauri.
- * El wrapper async para IA real vive en geminiService.ts.
+ * El wrapper async para IA real vive en geminiService.ts (callAi / completeWithProvider).
+ *
+ * PARA TESTING: pasa `llmOutput` (respuesta mock directa) en lugar de `llmCall`.
+ * PARA PRODUCCIÓN: pasa `llmCall` (función async que llama completeWithProvider).
+ *   - La función llmCall recibe el prompt COMPLETO (instructions + documento)
+ *     y debe devolver { manifest: DeclarativeManifest, confidence: number }.
+ *   - La función llmCall es responsable de: enviar prompt → recibir texto →
+ *     extraer JSON → validar con Zod → devolver manifest validado.
+ *   - inductFromText maneja el CHUNKING: divide el texto en chunks, genera el
+ *     prompt para cada chunk con getLlmPrompt(), llama llmCall por chunk,
+ *     y hace el merge (map-reduce). No la función llmCall necesita saber de chunking.
  */
 
 import type { DeclarativeManifest, ParseReport, ImportValidationReport } from './declarativeFormat';
+import type { ChunkInfo } from './chunker';
 import { parseLocal } from './textParser';
 import { normalize } from './normalizer';
+import { validateLlmManifest } from './llmSchema';
+import {
+  splitIntoChunks,
+  mergeManifests,
+  mergeLocalAndLlm,
+  extractGrammarCore,
+  detectLexiconBoundary,
+  withRetry,
+  MAX_CHUNK_SIZE,
+  MAX_RETRIES,
+} from './chunker';
 
 // ---------------------------------------------------------------------------
 // Tipos de entrada/salida
 // ---------------------------------------------------------------------------
+
+export interface InductProgress {
+  /** Current chunk being processed (1-based). */
+  chunk: number;
+  /** Total chunks. */
+  total: number;
+  /** Human-readable status message. */
+  message: string;
+}
 
 export interface InductOptions {
   /** Score del parser local (0-100). Si no se provee, se calcula automáticamente. */
@@ -32,8 +67,10 @@ export interface InductOptions {
   llmAvailable?: boolean;
   /** Output del LLM (para testing). Si no se provee, se simula. */
   llmOutput?: { manifest: DeclarativeManifest; confidence: number } | null;
-  /** Callback para llamar al LLM (para testing). Si no se provee, se simula. */
+  /** Callback para llamar al LLM con un prompt. Usa esta función para la ruta de producción. */
   llmCall?: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>;
+  /** Progreso del procesamiento (disparado durante chunking). */
+  onProgress?: (progress: InductProgress) => void;
 }
 
 export interface InductResult {
@@ -47,7 +84,12 @@ export interface InductResult {
   parseReport: ParseReport;
   /** Reporte de validación post-import */
   report: ImportValidationReport;
+  /** Notas adicionales, incluyendo errores de IA o notas de chunking */
+  notes?: string[];
 }
+
+// Re-export for convenience
+export { MAX_CHUNK_SIZE };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -58,7 +100,7 @@ function applyNormalization(manifest: DeclarativeManifest): DeclarativeManifest 
   return normalized.manifest;
 }
 
-function computeScore(manifest: DeclarativeManifest, report: ParseReport): number {
+export function computeScore(manifest: DeclarativeManifest, report: ParseReport): number {
   let points = 0;
 
   // Tipología: 20 pts
@@ -102,10 +144,159 @@ function computeScore(manifest: DeclarativeManifest, report: ParseReport): numbe
 }
 
 // ---------------------------------------------------------------------------
+// LLM invocation with chunking, retry, and Zod validation
+// ---------------------------------------------------------------------------
+
+/**
+ * Call the LLM for a single chunk (or full text) using the provided llmCall.
+ * Handles JSON extraction, Zod validation, and single retry on malformed JSON.
+ *
+ * @returns { manifest, confidence, notes } where notes captures any issues.
+ */
+async function callLlmForChunk(
+  chunkText: string,
+  llmCall: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>,
+  notes: string[],
+): Promise<{ manifest: DeclarativeManifest; confidence: number } | null> {
+  const prompt = getLlmPrompt(chunkText);
+  let attempt = 0;
+  const maxAttempts = 2; // 1 initial + 1 retry on malformed JSON / Zod failure
+
+  while (attempt < maxAttempts) {
+    try {
+      const result = await llmCall(prompt);
+      // Defensive re-validation: llmCall should already validate, but tests
+      // may pass a mock that doesn't. This also handles the case where llmCall
+      // returns without throwing but the manifest is structurally invalid.
+      const validation = validateLlmManifest(result.manifest);
+      if (validation.ok) {
+        return { manifest: validation.manifest, confidence: result.confidence };
+      }
+      // Validation failed (non-ok) — retry once (A4: malformed JSON → one retry)
+      if (attempt < maxAttempts - 1) {
+        notes.push(`Chunk: JSON inválido (Zod: ${validation.error}). Reintentando...`);
+      } else {
+        notes.push(`Chunk: JSON inválido después de reintentar. Detalles: ${validation.error}`);
+        return null;
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const isTransient = msg.toLowerCase().includes('429') ||
+        msg.toLowerCase().includes('rate limit') ||
+        msg.toLowerCase().includes('timeout') ||
+        msg.toLowerCase().includes('econnreset');
+
+      if (isTransient) {
+        // 429/timeout — throw immediately so withRetry can apply backoff
+        throw e;
+      }
+
+      // Non-transient error (malformed JSON, Zod failure, network) — retry once
+      if (attempt < maxAttempts - 1) {
+        notes.push(`Chunk: error (${msg}). Reintentando...`);
+      } else {
+        notes.push(`Chunk: error después de reintentar. ${msg}`);
+        return null;
+      }
+    }
+    attempt++;
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  return null;
+}
+
+/**
+ * Process text through the LLM with automatic chunking for large documents.
+ * Returns an array of partial manifests from successful chunks, plus notes.
+ */
+async function callLlmChunked(
+  rawText: string,
+  llmCall: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>,
+  onProgress?: (progress: InductProgress) => void,
+): Promise<{ manifests: DeclarativeManifest[]; confidence: number; notes: string[] }> {
+  const notes: string[] = [];
+
+  // Extract grammar core (exclude lexicon section if present)
+  const { boundary, note: lexNote } = detectLexiconBoundary(rawText);
+  if (boundary) {
+    notes.push(lexNote);
+  }
+  const coreText = boundary ? extractGrammarCore(rawText) : rawText;
+
+  // Split into chunks
+  const chunks = splitIntoChunks(coreText);
+  const totalChunks = chunks.length;
+
+  if (totalChunks === 1) {
+    // Single chunk — no chunking overhead
+    onProgress?.({ chunk: 1, total: 1, message: 'Analizando con IA...' });
+    const result = await withRetry(
+      () => callLlmForChunk(coreText, llmCall, notes),
+      MAX_RETRIES,
+      undefined,
+      (attempt, err) => {
+        notes.push(`Reintento ${attempt + 1}/${MAX_RETRIES}: ${err.message}`);
+      },
+    );
+    if (result) {
+      return { manifests: [result.manifest], confidence: result.confidence, notes };
+    }
+    return { manifests: [], confidence: 0, notes };
+  }
+
+  // Multiple chunks — sequential with progress
+  const successfulManifests: DeclarativeManifest[] = [];
+  let maxConfidence = 0;
+  let failedChunks = 0;
+
+  for (const chunk of chunks) {
+    onProgress?.({
+      chunk: chunk.displayIndex,
+      total: totalChunks,
+      message: `Analizando con IA — parte ${chunk.displayIndex}/${totalChunks} (${chunk.charCount} chars)`,
+    });
+
+    const result = await withRetry(
+      () => callLlmForChunk(chunk.text, llmCall, notes),
+      MAX_RETRIES,
+      undefined,
+      (attempt, err) => {
+        const is429 = err.message.toLowerCase().includes('429') || err.message.toLowerCase().includes('rate');
+        if (is429) {
+          notes.push(`Chunk ${chunk.displayIndex}: rate limit (429). Reintento ${attempt + 1}/${MAX_RETRIES}.`);
+        }
+      },
+    );
+
+    if (result) {
+      successfulManifests.push(result.manifest);
+      maxConfidence = Math.max(maxConfidence, result.confidence);
+    } else {
+      failedChunks++;
+      // Fall back: parse this chunk locally so nothing is lost
+      const localFallback = parseLocal(chunk.text);
+      successfulManifests.push(localFallback.manifest);
+      notes.push(`Chunk ${chunk.displayIndex}: IA falló, usando parser local como fallback.`);
+    }
+
+    // Yield to event loop to prevent UI freeze
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  if (failedChunks > 0) {
+    notes.push(`${failedChunks} chunk(s) fallaron con IA y se usaron resultados locales.`);
+  }
+
+  return { manifests: successfulManifests, confidence: maxConfidence, notes };
+}
+
+// ---------------------------------------------------------------------------
 // Prompt para el LLM (formato declarativo)
 // ---------------------------------------------------------------------------
 
-const LLM_PROMPT_TEMPLATE = (rawText: string): string => `Eres un lingüista computacional. Convierte la siguiente descripción de gramática al formato declarativo JSON.
+export const LLM_PROMPT_TEMPLATE = (rawText: string): string => `Eres un lingüista computacional. Convierte la siguiente descripción de gramática al formato declarativo JSON.
 
 SOLO devuelve JSON. No devuelvas markdown, no devuelvas texto narrativo, no devuelvas explicaciones.
 Si una sección no está en el texto, devuélvela como array vacío o null.
@@ -146,7 +337,7 @@ FORMATO DECLARATIVO (respeta nombres exactos):
     {
       "id": "s1",
       "name": "Sufijo plural",
-      "type": "affix|clitic|particle|tone|mutation|suppletion|position|auxiliary",
+      "type": "affix|clitic|particle|tone|mutation|position|auxiliary|suppletion",
       "affixRule": { "position": "suffix", "form": "-k" },
       "particleRule": { "marker": "ka", "relativePosition": "before" }
     }
@@ -186,106 +377,139 @@ export async function inductFromText(
   rawText: string,
   options: InductOptions = {}
 ): Promise<InductResult> {
-  const { llmAvailable = false, llmOutput, llmCall, parserLocalScore: providedScore } = options;
+  const { llmAvailable = false, llmOutput, llmCall, parserLocalScore: providedScore, onProgress } = options;
 
   // Paso 1: Parser local siempre
   const localResult = parseLocal(rawText);
   const localScore = providedScore ?? computeScore(localResult.manifest, localResult.report);
 
+  // Determine if AI should be used:
+  // AI is needed when available AND (score < 60 OR there are unparsed sections)
+  const hasUnparsed = localResult.report.sectionsUnparsed.length > 0;
+  const shouldUseAI = llmAvailable && (localScore < 60 || hasUnparsed) && (llmCall || llmOutput);
+
   // -----------------------------------------------------------------------
-  // Caso A: Parser local score >= 60 → usar solo local
+  // Caso A: No AI needed or not available → usar solo local
   // -----------------------------------------------------------------------
-  if (localScore >= 60) {
+  if (!shouldUseAI) {
+    const manifest = applyNormalization(localResult.manifest);
     return {
-      manifest: applyNormalization(localResult.manifest),
+      manifest,
       confidence: localScore,
       method: 'local',
       parseReport: localResult.report,
-      report: buildValidationReport(localResult.manifest, localResult.report),
+      report: buildValidationReport(manifest, localResult.report),
     };
   }
 
   // -----------------------------------------------------------------------
   // Caso B: LLM disponible → intentar LLM
   // -----------------------------------------------------------------------
-  if (llmAvailable && llmOutput) {
+  const notes: string[] = [];
+
+  // Test path: llmOutput provided directly (no chunking, no real API call)
+  if (llmOutput) {
     try {
       const llmResult = llmOutput;
 
       // Mergear: local para lo que parseó bien, LLM para el resto
-      const mergedManifest: DeclarativeManifest = {
-        name: llmResult.manifest.name || localResult.manifest.name,
-        typology: {
-          wordOrder: localResult.manifest.typology.wordOrder !== 'SVO' || !llmResult.manifest.typology.wordOrder
-            ? localResult.manifest.typology.wordOrder
-            : llmResult.manifest.typology.wordOrder,
-          morphology: localResult.manifest.typology.morphology !== 'isolating' || !llmResult.manifest.typology.morphology
-            ? localResult.manifest.typology.morphology
-            : llmResult.manifest.typology.morphology,
-          headDirection: localResult.manifest.typology.headDirection !== 'head-initial' || !llmResult.manifest.typology.headDirection
-            ? localResult.manifest.typology.headDirection
-            : llmResult.manifest.typology.headDirection,
-          alignment: llmResult.manifest.typology.alignment || localResult.manifest.typology.alignment,
-        },
-        phonology: {
-          consonants: llmResult.manifest.phonology.consonants.length > 0
-            ? llmResult.manifest.phonology.consonants
-            : localResult.manifest.phonology.consonants,
-          vowels: llmResult.manifest.phonology.vowels.length > 0
-            ? llmResult.manifest.phonology.vowels
-            : localResult.manifest.phonology.vowels,
-          syllableStructures: llmResult.manifest.phonology.syllableStructures.length > 0
-            ? llmResult.manifest.phonology.syllableStructures
-            : localResult.manifest.phonology.syllableStructures,
-        },
-        paradigms: llmResult.manifest.paradigms.length > 0
-          ? llmResult.manifest.paradigms
-          : localResult.manifest.paradigms,
-        strategies: llmResult.manifest.strategies.length > 0
-          ? llmResult.manifest.strategies
-          : localResult.manifest.strategies,
-        mutationRules: llmResult.manifest.mutationRules.length > 0
-          ? llmResult.manifest.mutationRules
-          : localResult.manifest.mutationRules,
-        exceptions: llmResult.manifest.exceptions.length > 0
-          ? llmResult.manifest.exceptions
-          : localResult.manifest.exceptions,
-        roles: llmResult.manifest.roles.length > 0
-          ? llmResult.manifest.roles
-          : localResult.manifest.roles,
-      };
-
+      const mergedManifest: DeclarativeManifest = mergeLocalAndLlm(localResult.manifest, llmResult.manifest);
+      const normalized = applyNormalization(mergedManifest);
       const mergedScore = Math.max(localScore, llmResult.confidence);
 
       return {
-        manifest: mergedManifest,
+        manifest: normalized,
         confidence: mergedScore,
         method: 'hybrid',
         parseReport: localResult.report,
-        report: buildValidationReport(mergedManifest, localResult.report),
+        report: buildValidationReport(normalized, localResult.report),
+        notes,
       };
     } catch (error) {
       // LLM falló → fallback a local (NO segunda llamada a IA)
       console.warn('[inductFromText] LLM falló, usando resultado local:', error);
+      const manifest = applyNormalization(localResult.manifest);
       return {
-        manifest: applyNormalization(localResult.manifest),
+        manifest,
         confidence: localScore,
         method: 'local',
         parseReport: localResult.report,
-        report: buildValidationReport(localResult.manifest, localResult.report),
+        report: buildValidationReport(manifest, localResult.report),
+        notes: [`LLM falló: ${error instanceof Error ? error.message : 'unknown'}. Usando parser local.`],
       };
     }
   }
 
-  // -----------------------------------------------------------------------
-  // Caso C: Sin LLM → usar solo local
-  // -----------------------------------------------------------------------
+  // Production path: llmCall provided — use chunking + retry + Zod validation
+  if (llmCall) {
+    try {
+      const llmResult = await callLlmChunked(rawText, llmCall, onProgress);
+
+      // Merge LLM notes (chunking, lexicon exclusion, retry, fallback, etc.)
+      notes.push(...llmResult.notes);
+
+      if (llmResult.manifests.length === 0) {
+        // All chunks failed → fallback to local with clear error message
+        notes.push('IA falló en todos los chunks. Usando parser local como fallback.');
+        const manifest = applyNormalization(localResult.manifest);
+        return {
+          manifest,
+          confidence: localScore,
+          method: 'local',
+          parseReport: localResult.report,
+          report: buildValidationReport(manifest, localResult.report),
+          notes,
+        };
+      }
+
+      // Merge all chunk manifests (map-reduce)
+      const llmManifest = llmResult.manifests.length === 1
+        ? llmResult.manifests[0]
+        : mergeManifests(llmResult.manifests);
+
+      // Merge with local: LLM enriches, local fills gaps
+      const mergedManifest = mergeLocalAndLlm(localResult.manifest, llmManifest);
+      const normalized = applyNormalization(mergedManifest);
+
+      // Add unparsed sections that neither LLM nor local could interpret
+      const uninterpretedFromLocal = localResult.report.sectionsUnparsed;
+      if (uninterpretedFromLocal.length > 0) {
+        notes.push(`Secciones no interpretadas por el parser local: ${uninterpretedFromLocal.join(', ')}`);
+      }
+
+      const mergedScore = Math.max(localScore, llmResult.confidence);
+
+      return {
+        manifest: normalized,
+        confidence: mergedScore,
+        method: 'hybrid',
+        parseReport: localResult.report,
+        report: buildValidationReport(normalized, localResult.report),
+        notes,
+      };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'unknown';
+      console.warn('[inductFromText] LLM chunked call falló, usando resultado local:', msg);
+      const manifest = applyNormalization(localResult.manifest);
+      return {
+        manifest,
+        confidence: localScore,
+        method: 'local',
+        parseReport: localResult.report,
+        report: buildValidationReport(manifest, localResult.report),
+        notes: [`IA falló: ${msg}. Usando parser local.`],
+      };
+    }
+  }
+
+  // Should not reach here, but as a safety net
+  const manifest = applyNormalization(localResult.manifest);
   return {
-    manifest: localResult.manifest,
+    manifest,
     confidence: localScore,
     method: 'local',
     parseReport: localResult.report,
-    report: buildValidationReport(localResult.manifest, localResult.report),
+    report: buildValidationReport(manifest, localResult.report),
   };
 }
 
@@ -375,7 +599,7 @@ function buildValidationReport(
   if (manifest.phonology.consonants.length > 0 || manifest.phonology.vowels.length > 0) score += 15;
   if (manifest.paradigms.length > 0) {
     score += 20;
-    if (manifest.paradigms.some(p => p.slots.some(s => s.realization.form))) score += 20;
+    if (manifest.paradigms.some(p => p.slots.some(s => s.realization))) score += 20;
   }
   if (manifest.strategies.length > 0) score += 10;
   if (manifest.exceptions.length > 0) score += 5;
@@ -401,9 +625,12 @@ function buildValidationReport(
 }
 
 // ---------------------------------------------------------------------------
-// Prompt getter (para testing)
+// Prompt getter (para testing y producción)
 // ---------------------------------------------------------------------------
 
+/**
+ * Generate the LLM prompt from raw text. Extracted for testability.
+ */
 export function getLlmPrompt(rawText: string): string {
   return LLM_PROMPT_TEMPLATE(rawText);
 }

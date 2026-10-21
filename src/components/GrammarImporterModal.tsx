@@ -4,13 +4,15 @@ import { FlexibleGrammar } from '../types/grammar-flexible';
 import SparkleIcon from './icons/SparkleIcon';
 import XCircleIcon from './icons/XCircleIcon';
 import WrenchIcon from './icons/WrenchIcon';
-import { isAiAvailable } from '../services/geminiService';
+import { isAiAvailable, callAi, extractJson } from '../services/geminiService';
 import { inductFromText } from '../services/grammar/inductFromText';
+import type { InductProgress } from '../services/grammar/inductFromText';
 import { validatePostImport } from '../services/grammar/postImportValidator';
 import { convertToLegacy } from '../services/grammarParser';
+import { validateLlmManifest } from '../services/grammar/llmSchema';
 import ImportReport from './ImportReport';
 import type { DeclarativeManifest } from '../services/grammar/declarativeFormat';
-import type { ImportValidationReport, Problem } from '../services/grammar/declarativeFormat';
+import type { ImportValidationReport } from '../services/grammar/declarativeFormat';
 
 const MiniIcon = ({ children, className = '' }: { children: string; className?: string }) => (
     <span className={`inline-flex h-4 w-4 items-center justify-center text-xs leading-none ${className}`}>{children}</span>
@@ -35,6 +37,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
     const [validation, setValidation] = useState<ImportValidationReport | null>(null);
     const [activeTab, setActiveTab] = useState<'raw' | 'preview'>('raw');
     const [ai, setAi] = useState(true);
+    const [progressMessage, setProgressMessage] = useState<string | null>(null);
 
     const DEMO_GRAMMAR = `§ Tipología: SOV, aglutinante, head-final\n\n§ Fonología: /p t k m n s l r/, /a e i o u/\n\n§ Sustantivos: plural por -k sufijo\n\n§ Verbos: pasado por -t sufijo, futuro por -lu sufijo\n\n§ Estrategias: Sufijo de plural: posición suffix, forma -k`;
 
@@ -47,6 +50,81 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
             setRawText(DEMO_GRAMMAR);
         }
     }, [existingNotes, rawText]);
+
+    /**
+     * Create a real llmCall function for production use.
+     * Pipeline: callAi (→ completeWithProvider) → extractJson → JSON.parse → Zod validate → { manifest, confidence }
+     */
+    const createLlmCall = async () => {
+        return async (prompt: string): Promise<{ manifest: DeclarativeManifest; confidence: number }> => {
+            const responseText = await callAi(prompt);
+            const jsonStr = extractJson(responseText);
+            if (!jsonStr) {
+                throw new Error('No se encontró JSON válido en la respuesta de la IA');
+            }
+            const parsed = JSON.parse(jsonStr);
+            const validation = validateLlmManifest(parsed);
+            if (!validation.ok) {
+                throw new Error(`Validación Zod fallida: ${validation.error}`);
+            }
+            return {
+                manifest: validation.manifest,
+                confidence: Math.min(95, 60 + validation.manifest.paradigms.length * 5 + validation.manifest.strategies.length * 3),
+            };
+        };
+    };
+
+    /**
+     * Shared induction logic for both text paste and file upload paths.
+     * Passes real llmCall + onProgress to inductFromText.
+     */
+    const runInduction = async (text: string, fileName?: string) => {
+        const llmCall = ai ? await createLlmCall() : undefined;
+        const result = await inductFromText(text, {
+            llmAvailable: ai,
+            llmCall,
+            onProgress: (progress: InductProgress) => {
+                setProgressMessage(`${progress.message} (${progress.chunk}/${progress.total})`);
+            },
+        });
+        setProgressMessage(null);
+
+        const validationReport = validatePostImport(result.manifest);
+        setValidation(validationReport);
+
+        const fullGrammar: FlexibleGrammar = {
+            ...convertDeclarativeToFlexible(result.manifest, result.report),
+            id: crypto.randomUUID(),
+            name: fileName || "Gramática Importada",
+            storageMode: 'hybrid',
+            rawText: text,
+            lastModified: Date.now(),
+        };
+
+        // Surface AI notes (chunking, lexicon exclusion, retry, fallback, etc.)
+        if (result.notes && result.notes.length > 0) {
+            fullGrammar.structured = {
+                ...(fullGrammar.structured || { confidence: 0.5, uninterpretedSections: [], manifest: undefined as any }),
+                manifest: fullGrammar.structured?.manifest || result.manifest as any,
+                confidence: fullGrammar.structured?.confidence || (result.confidence / 100),
+                uninterpretedSections: [
+                    ...(fullGrammar.structured?.uninterpretedSections || []),
+                    ...(result.notes || []),
+                ],
+            } as any;
+        }
+
+        setAnalysisResult(fullGrammar);
+        setActiveTab('preview');
+
+        if (result.method === 'local' && ai) {
+            showNotification("La IA no pudo extraer estructura; se usó el parser local. Revisa las secciones no interpretadas.", "success");
+        } else {
+            showNotification(`Análisis completado (${result.method === 'hybrid' ? 'IA + local' : result.method === 'llm' ? 'IA' : 'local'}). Revisa la estructura detectada.`, "success");
+        }
+
+        return result;
+    };
 
     function convertDeclarativeToFlexible(
       manifest: DeclarativeManifest,
@@ -117,20 +195,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         if (!rawText.trim()) return;
         setIsProcessing(true);
         try {
-            const result = await inductFromText(rawText, { llmAvailable: ai });
-            const validationReport = validatePostImport(result.manifest);
-            setValidation(validationReport);
-            const fullGrammar: FlexibleGrammar = {
-                ...convertDeclarativeToFlexible(result.manifest, validationReport),
-                id: crypto.randomUUID(),
-                name: "Gramática Importada",
-                storageMode: 'hybrid',
-                rawText: rawText,
-                lastModified: Date.now()
-            };
-            setAnalysisResult(fullGrammar);
-            setActiveTab('preview');
-            showNotification("Análisis completado. Revisa la estructura detectada.", "success");
+            await runInduction(rawText);
         } catch (e) {
             showNotification(e instanceof Error ? e.message : "Error al procesar la gramática.", "error");
         } finally {
@@ -219,18 +284,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                                                         // Auto-analyze after loading
                                                         setIsProcessing(true);
                                                         try {
-                                                            const result = await inductFromText(content, { llmAvailable: ai });
-                                                            const fullGrammar: FlexibleGrammar = {
-                                                                ...convertDeclarativeToFlexible(result.manifest, result.report),
-                                                                id: crypto.randomUUID(),
-                                                                name: file.name.replace(/\.[^/.]+$/, ""), // Remove extension
-                                                                storageMode: 'hybrid',
-                                                                rawText: content,
-                                                                lastModified: Date.now()
-                                                            };
-                                                            setAnalysisResult(fullGrammar);
-                                                            setActiveTab('preview');
-                                                            showNotification("Análisis completado. Revisa la estructura detectada.", "success");
+                                                            await runInduction(content, file.name.replace(/\.[^/.]+$/, ""));
                                                         } catch (err) {
                                                             showNotification(err instanceof Error ? err.message : "Error al procesar la gramática.", "error");
                                                         } finally {
@@ -368,17 +422,20 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                         <button onClick={onClose} className="px-4 py-2 bg-subtle text-text-primary font-semibold rounded-md hover:bg-gray-600 transition-colors">
                             Cancelar
                         </button>
-                        <button
-                            onClick={handleAnalyze}
-                            disabled={isProcessing || !rawText.trim() || !ai}
-                            className="px-4 py-2 bg-surface border border-accent text-accent font-semibold rounded-md hover:bg-accent/10 disabled:opacity-50 transition-colors flex items-center gap-2"
-                        >
-                            <SparkleIcon className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
-                            {isProcessing ? 'Analizando...' : 'Analizar'}
-                        </button>
-                        {!ai && (
-                            <p className="text-xs text-text-secondary">Modo offline: la inducción de reglas desde texto requiere IA. Edita las ranuras manualmente.</p>
-                        )}
+                            <button
+                                onClick={handleAnalyze}
+                                disabled={isProcessing || !rawText.trim()}
+                                className="px-4 py-2 bg-surface border border-accent text-accent font-semibold rounded-md hover:bg-accent/10 disabled:opacity-50 transition-colors flex items-center gap-2"
+                            >
+                                <SparkleIcon className={`h-4 w-4 ${isProcessing ? 'animate-spin' : ''}`} />
+                                {isProcessing ? (progressMessage || 'Analizando...') : (ai ? 'Analizar con IA' : 'Analizar (offline)')}
+                            </button>
+                            {progressMessage && (
+                                <span className="text-xs text-text-secondary animate-pulse">{progressMessage}</span>
+                            )}
+                            {!ai && (
+                                <p className="text-xs text-text-secondary">Modo offline: se usará el parser local. La inducción con IA requiere configuración de proveedor.</p>
+                            )}
                         <button
                             onClick={handleSave}
                             className="px-6 py-2 bg-accent text-white font-semibold rounded-md shadow-lg hover:bg-accent-hover transition-colors flex items-center gap-2"
