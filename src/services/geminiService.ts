@@ -13,11 +13,17 @@ import {
     testProviderConnection,
     completeWithProvider,
     DEFAULT_PROVIDERS,
+    PRESET_PROVIDERS,
+    migrateLegacyToGeneric,
+    getActiveProviderConfig,
+    loadGenericAISettings,
+    saveGenericAISettings,
     type AISettings as GenericAISettings,
     type AIProviderConfig,
     type ChatMessage,
     type ProviderRequestOptions,
     type TestConnectionResult,
+    type LegacyAiSettings,
 } from './aiProviderRegistry';
 
 export interface AiSettings {
@@ -155,12 +161,95 @@ export const loadAiSettings = async (): Promise<AiSettings> => {
 
 export const isAiAvailable = async (): Promise<boolean> => {
   try {
-    const settings = await loadAiSettings();
-    if (settings.provider === 'ollama') return Boolean(settings.ollamaUrl);
-    return Boolean(settings.geminiApiKey);
+    const config = await loadAIConfig();
+    const active = getActiveProviderConfig(config);
+    if (!active) return false;
+    if (active.endpointStyle === 'ollama') return Boolean(active.baseURL);
+    return Boolean(active.apiKey);
   } catch {
     return false;
   }
+};
+
+/**
+ * Ensures the generic config exists. If `conlang_ai_settings_generic` is not
+ * present in localStorage, migrates from the legacy format (keychain + localStorage).
+ * This runs at most once; subsequent calls are a cheap localStorage read.
+ */
+let migrationDone = false;
+export const ensureMigrated = async (): Promise<void> => {
+  if (migrationDone) return;
+  migrationDone = true;
+  try {
+    // Check if generic config already has real providers
+    const existing = await loadGenericAISettings();
+    const hasRealProviders = existing.providers.some(
+      p => p.apiKey || (p.endpointStyle === 'ollama' && p.baseURL !== DEFAULT_PROVIDERS[1].baseURL)
+    );
+    if (hasRealProviders) return;
+
+    // Try migrating from legacy AiSettings
+    const legacy = await loadAiSettings();
+    // Only migrate if there's actual data (not just defaults)
+    const hasLegacyData = Boolean(legacy.geminiApiKey) || Boolean(legacy.ollamaUrl) || legacy.geminiModel !== DEFAULT_GEMINI_MODEL;
+    if (hasLegacyData) {
+      const migrated = migrateLegacyToGeneric(legacy);
+      await saveGenericAISettings(migrated);
+      // Clear legacy keys to avoid confusion
+      try {
+        localStorage.removeItem(SETTINGS_KEY);
+        localStorage.removeItem(KEYCHAIN_FALLBACK_KEY);
+      } catch { /* ignore */ }
+      invalidateProviderCache();
+    }
+  } catch (e) {
+    console.warn('[ensureMigrated] Migration check failed:', e);
+  }
+};
+
+/**
+ * Load the unified AI configuration (generic format).
+ * Automatically migrates from legacy AiSettings on first call.
+ * Also fills in the Gemini API key from the OS keychain if it's missing
+ * (preserves the keychain security model for existing users).
+ */
+export const loadAIConfig = async (): Promise<GenericAISettings> => {
+  await ensureMigrated();
+  let config = await loadGenericAISettings();
+
+  // Fill Gemini key from keychain if empty (backward compat with keychain-only storage)
+  const geminiProvider = config.providers.find(p => p.id === 'gemini');
+  if (geminiProvider && !geminiProvider.apiKey) {
+    try {
+      const secret = await readSecret();
+      if (secret) {
+        geminiProvider.apiKey = secret;
+      }
+    } catch {
+      // Not in Tauri or keychain unavailable — key stays empty
+    }
+  }
+
+  return config;
+};
+
+/**
+ * Save the unified AI configuration (generic format).
+ * Also syncs the Gemini API key to the OS keychain when present.
+ */
+export const saveAIConfig = async (config: GenericAISettings): Promise<void> => {
+  await saveGenericAISettings(config);
+
+  // Sync Gemini key to keychain (if present and active)
+  const geminiProvider = config.providers.find(p => p.id === 'gemini');
+  if (geminiProvider?.apiKey) {
+    try {
+      await writeSecret(geminiProvider.apiKey);
+    } catch (e) {
+      console.warn('[saveAIConfig] Keychain write failed; key stored in localStorage only.', e);
+    }
+  }
+  invalidateProviderCache();
 };
 
 export const saveAiSettings = async (settings: AiSettings): Promise<void> => {
@@ -181,56 +270,82 @@ export const saveAiSettings = async (settings: AiSettings): Promise<void> => {
     invalidateProviderCache();
 };
 
-export const testAiConnection = async (): Promise<TestConnectionResult> => {
-    const settings = await loadAiSettings();
+export type { TestAiConnectionOptions };
+interface TestAiConnectionOptions {
+  /** Provider config to test (e.g. from AiSettingsModal local state). If omitted, loads from persisted config. */
+  providerConfig?: AIProviderConfig;
+}
+
+export const testAiConnection = async (
+  options?: TestAiConnectionOptions | AIProviderConfig
+): Promise<TestConnectionResult> => {
+  const providerConfig = options
+    ? (options instanceof Object && 'endpointStyle' in options ? options as AIProviderConfig : (options as TestAiConnectionOptions).providerConfig)
+    : undefined;
+
+  if (providerConfig) {
+    // Test against the provided config (e.g. unsaved edits in AiSettingsModal)
     try {
-        const generic = toGenericSettings(settings);
-        const providerConfig = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
-        if (!providerConfig) {
-            return {
-                success: false,
-                error: 'No hay ningún proveedor configurado.',
-                details: 'Agrega un proveedor desde la configuración de IA.',
-            };
-        }
-
-        if (!providerConfig.apiKey && providerConfig.endpointStyle !== 'ollama') {
-            return {
-                success: false,
-                error: 'API Key faltante',
-                details: 'No se ha configurado una API Key para este proveedor. Ve a Configuración de IA y agrega tu clave.',
-            };
-        }
-
-        const result = await testProviderConnection(providerConfig);
-        recordDebug({
-            timestamp: new Date().toISOString(),
-            provider: providerConfig.name,
-            model: providerConfig.defaultModel,
-            endpoint: providerConfig.baseURL,
-            payloadPreview: providerConfig.endpointStyle === 'ollama' ? 'GET /api/tags' : `{ "model": "${providerConfig.defaultModel}", "contents": [{ "role": "user", "parts": [{ "text": "Hola" }] }] }`,
-            status: result.success ? 'ok' : 'error',
-            error: result.error,
-            responsePreview: result.details,
-        });
-        return result;
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Error desconocido';
-        recordDebug({
-            timestamp: new Date().toISOString(),
-            provider: settings.provider === 'gemini' ? 'Gemini' : 'Ollama',
-            model: settings.provider === 'gemini' ? settings.geminiModel : settings.ollamaModel,
-            endpoint: settings.provider === 'gemini' ? 'generativelanguage.googleapis.com' : settings.ollamaUrl,
-            payloadPreview: '?',
-            status: 'error',
-            error: message,
-        });
+      if (!providerConfig.apiKey && providerConfig.endpointStyle !== 'ollama') {
         return {
-            success: false,
-            error: message,
-            details: message,
+          success: false,
+          error: 'API Key faltante',
+          details: 'No se ha configurado una API Key para este proveedor. Agrega tu clave en Configuración de IA.',
         };
+      }
+      const result = await testProviderConnection(providerConfig);
+      recordDebug({
+        timestamp: new Date().toISOString(),
+        provider: providerConfig.name,
+        model: providerConfig.defaultModel,
+        endpoint: providerConfig.baseURL,
+        payloadPreview: providerConfig.endpointStyle === 'ollama'
+          ? 'GET /api/tags'
+          : `{ "model": "${providerConfig.defaultModel}" }`,
+        status: result.success ? 'ok' : 'error',
+        error: result.error,
+        responsePreview: result.details,
+      });
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido';
+      recordDebug({
+        timestamp: new Date().toISOString(),
+        provider: providerConfig.name,
+        model: providerConfig.defaultModel,
+        endpoint: providerConfig.baseURL,
+        payloadPreview: '?',
+        status: 'error',
+        error: message,
+      });
+      return {
+        success: false,
+        error: message,
+        details: message,
+      };
     }
+  }
+
+  // Fallback: load from persisted config
+  try {
+    const config = await loadAIConfig();
+    const active = getActiveProviderConfig(config);
+    if (!active) {
+      return {
+        success: false,
+        error: 'No hay ningún proveedor configurado.',
+        details: 'Agrega un proveedor desde la configuración de IA.',
+      };
+    }
+    return testAiConnection({ providerConfig: active });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Error desconocido';
+    return {
+      success: false,
+      error: message,
+      details: message,
+    };
+  }
 };
 
 // --- App identification ---
@@ -265,9 +380,8 @@ export const normalizeText = (text: string): string => {
 };
 
 export const callAi = async (prompt: string, fallbackResult: any = null): Promise<string> => {
-    const settings = await loadAiSettings();
-    const generic = toGenericSettings(settings);
-    const providerConfig = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
+    const config = await loadAIConfig();
+    const providerConfig = getActiveProviderConfig(config);
     if (!providerConfig) throw new Error('No hay ningún proveedor configurado.');
 
     if (!providerConfig.apiKey && providerConfig.endpointStyle !== 'ollama') {
@@ -453,31 +567,16 @@ export const correctSignificado = async (significado: string): Promise<string> =
 export const cleanseJson = async (text: string): Promise<string> => {
     const prompt = `Extrae únicamente el JSON válido de este bloque de texto, que puede venir dañado o entre texto suelto: ${text}`;
     try {
-        const settings = await loadAiSettings();
-        const generic = toGenericSettings(settings);
-        const providerConfig = generic.providers.find(p => p.id === generic.activeProviderId) || generic.providers[0];
+        const config = await loadAIConfig();
+        const providerConfig = getActiveProviderConfig(config);
         if (!providerConfig) return text;
 
-        if (providerConfig.endpointStyle === 'gemini') {
-            const { GoogleGenAI } = require('@google/genai') as { GoogleGenAI: new (opts: { apiKey: string }) => unknown };
-            const ai = new GoogleGenAI({ apiKey: providerConfig.apiKey });
-            const response = await (ai as any).models.generateContent({
-                model: providerConfig.defaultModel,
-                contents: [{ role: "user", parts: [{ text: prompt }] }]
-            });
-            const respText = (response as { text?: string }).text || text;
-            return respText.replace(/```json|```/g, '').trim();
-        } else {
-             const url = providerConfig.baseURL.replace(/\/$/, '') + '/api/generate';
-             const response = await fetch(url, {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ model: providerConfig.defaultModel, prompt: prompt, stream: false })
-             });
-             if (!response.ok) throw new Error("Network error");
-             const data = await response.json();
-             return (data.response || text).replace(/```json|```/g, '').trim();
-        }
+        const result = await completeWithProvider(
+            providerConfig,
+            [{ role: 'user', content: prompt }],
+            { model: providerConfig.defaultModel }
+        );
+        return result.replace(/```json|```/g, '').trim();
     } catch (error) {
         console.error("Error cleansing JSON:", error);
         return text;

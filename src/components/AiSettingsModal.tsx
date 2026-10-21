@@ -4,8 +4,8 @@ import CheckCircleIcon from './icons/CheckCircleIcon';
 import AlertTriangleIcon from './icons/AlertTriangleIcon';
 import SparkleIcon from './icons/SparkleIcon';
 import InfoIcon from './icons/InfoIcon';
-import { testAiConnection, loadAiSettings, saveAiSettings, AiSettings, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
-import { DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle } from '../services/aiProviderRegistry';
+import { testAiConnection, loadAIConfig, saveAIConfig, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
+import { PRESET_PROVIDERS, DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle } from '../services/aiProviderRegistry';
 import EyeIcon from './icons/EyeIcon';
 import EyeOffIcon from './icons/EyeOffIcon';
 
@@ -18,48 +18,6 @@ const ENDPOINT_STYLES: { value: ProviderEndpointStyle; label: string }[] = [
   { value: 'custom', label: 'Custom (request/response mappers)' },
 ];
 
-const PRESET_PROVIDERS: AIProviderConfig[] = [
-  {
-    id: 'stepfun',
-    name: 'StepFun',
-    baseURL: 'https://api.stepfun.com/v1',
-    apiKey: '',
-    authHeader: 'Authorization',
-    endpointStyle: 'openai-chat',
-    defaultModel: 'step-2-16k',
-    models: ['step-2-16k', 'step-1-8k', 'step-1-32k', 'step-1-128k', 'step-1-256k'],
-  },
-  {
-    id: 'nous',
-    name: 'NousResearch',
-    baseURL: 'https://api.nousresearch.com/v1',
-    apiKey: '',
-    authHeader: 'Authorization',
-    endpointStyle: 'openai-chat',
-    defaultModel: 'hermes-3-llama-3.1-405b',
-    models: ['hermes-3-llama-3.1-405b', 'hermes-3-llama-3.1-70b', 'hermes-2-mixtral-8x7b'],
-  },
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    baseURL: 'https://api.openai.com/v1',
-    apiKey: '',
-    authHeader: 'Authorization',
-    endpointStyle: 'openai-chat',
-    defaultModel: 'gpt-4o',
-    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
-  },
-  {
-    id: 'groq',
-    name: 'Groq',
-    baseURL: 'https://api.groq.com/openai/v1',
-    apiKey: '',
-    authHeader: 'Authorization',
-    endpointStyle: 'openai-chat',
-    defaultModel: 'llama-3.1-70b-versatile',
-    models: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
-  },
-];
 
 type TestResultState = {
     status: 'idle' | 'success' | 'error';
@@ -90,7 +48,6 @@ const emptyProvider = (): ProviderFormData => ({
 });
 
 const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const [legacySettings, setLegacySettings] = useState<AiSettings | null>(null);
     const [providers, setProviders] = useState<AIProviderConfig[]>([]);
     const [activeProviderId, setActiveProviderId] = useState<string>('');
     const [editingProvider, setEditingProvider] = useState<ProviderFormData | null>(null);
@@ -103,43 +60,12 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     const refreshDebug = () => setDebugEntries([...getDebugLog()]);
 
-    const normalizeProviders = (legacy: AiSettings | null): AIProviderConfig[] => {
-        const list: AIProviderConfig[] = [];
-        if (legacy?.provider === 'gemini' || legacy?.geminiModel) {
-            list.push({
-                id: 'gemini',
-                name: 'Google Gemini',
-                baseURL: 'https://generativelanguage.googleapis.com/v1beta',
-                apiKey: legacy?.geminiApiKey || '',
-                authHeader: 'x-goog-api-key',
-                endpointStyle: 'gemini',
-                defaultModel: legacy?.geminiModel || DEFAULT_GEMINI_MODEL,
-                models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
-            });
-        }
-        if (legacy?.provider === 'ollama' || legacy?.ollamaUrl) {
-            list.push({
-                id: 'ollama',
-                name: 'Ollama (Local)',
-                baseURL: legacy?.ollamaUrl || 'http://localhost:11434',
-                apiKey: '',
-                authHeader: 'Authorization',
-                endpointStyle: 'ollama',
-                defaultModel: legacy?.ollamaModel || DEFAULT_OLLAMA_MODEL,
-                models: ['llama3', 'llama3.1', 'llama3.2', 'llama2', 'mistral', 'mixtral', 'codellama', 'phi3', 'gemma2', 'qwen2', 'deepseek-coder-v2'],
-            });
-        }
-        return list.length ? list : DEFAULT_PROVIDERS;
-    };
-
     useEffect(() => {
         let active = true;
-        loadAiSettings().then(s => {
+        loadAIConfig().then(config => {
             if (!active) return;
-            setLegacySettings(s);
-            const normalized = normalizeProviders(s);
-            setProviders(normalized);
-            setActiveProviderId(normalized[0]?.id || '');
+            setProviders(config.providers);
+            setActiveProviderId(config.activeProviderId || config.providers[0]?.id || '');
         });
         return () => { active = false; };
     }, []);
@@ -147,10 +73,10 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const activeProvider = providers.find(p => p.id === activeProviderId) || null;
 
     const handleSave = async () => {
-        // TODO: migrate to new generic storage format instead of legacy AiSettings
-        if (legacySettings) {
-            await saveAiSettings(legacySettings);
-        }
+        await saveAIConfig({
+            activeProviderId,
+            providers,
+        });
         onClose();
     };
 
@@ -159,7 +85,7 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setIsTesting(true);
         setTestResult({ status: 'idle', message: '' });
         try {
-            const result = await testAiConnection();
+            const result = await testAiConnection({ providerConfig: activeProvider });
             if (result.success) {
                 setTestResult({ status: 'success', message: 'Conexion exitosa.' });
                 refreshDebug();
