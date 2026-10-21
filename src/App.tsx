@@ -14,6 +14,7 @@ import { searchLexicon } from './services/ftsSearch';
 import { loadSessionCache, saveSessionCache } from './services/sessionCache';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode } from './types';
+import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -372,6 +373,29 @@ const App = () => {
     totalIncomplete: incompleteEntries.length,
   }), [activeLexicon.length, incompleteEntries]);
 
+  /**
+   * B2: Derive the live PragmaticEngine summary from activeGrammar.
+   * typologyLabel comes from morphologyToTypologyProfile (single source of
+   * truth — never hardcoded). rulesCount is computed the same way as the
+   * stats block below. activeClauseType propagates from the saved manifest.
+   */
+  const pragmaticEngine = useMemo(() => {
+    if (!activeGrammar?.typology) return undefined;
+    const g = activeGrammar as any;
+    const label = morphologyToTypologyProfile(g.typology.morphology);
+    const rulesCount =
+      (g.morphology?.rules?.length || 0)
+      + (g.syntax?.rules?.length || 0)
+      + (g.phonology?.rules?.length || 0);
+    return {
+      typologyLabel: label,
+      rulesCount,
+      alignment: g.typology.alignment || 'nominative',
+      wordOrder: g.typology.wordOrder || '',
+      activeClauseType: g.pragmaticEngine?.activeClauseType ?? null,
+    };
+  }, [activeGrammar]);
+
   const entryBeingEdited = useMemo(() => (editorMode === 'complete' ? entryToComplete : null), [editorMode, entryToComplete]);
 
   const widgetBridge = useWidgetBridge({
@@ -618,6 +642,7 @@ const App = () => {
                           setActiveTab(moduleId as any);
                         }
                       }}
+                      pragmaticEngine={pragmaticEngine}
                       onZoomToNode={(moduleId) => {
                         // Zoom desde un nodo del grafo → abrir el panel correspondiente
                         const grammarSubModules = ['overview', 'phonology', 'typology', 'morphology', 'syntax', 'semantics', 'roles', 'strategies', 'pragmatic', 'notes'];

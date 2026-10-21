@@ -21,6 +21,10 @@ export interface GrammarNodeProps {
   rulesCount?: number;
   /** Estado del motor */
   status?: 'active' | 'inactive' | 'compiling';
+  /** Alignment type from typology (e.g. 'ergative', 'nominative', 'accusative') */
+  alignment?: string;
+  /** Word order from typology (e.g. 'SOV', 'SVO', 'VSO') */
+  wordOrder?: string;
   /** Callback para zoom — abre el GrammarPragmaticPanel */
   onZoom?: () => void;
   /** Callback para swap engine */
@@ -33,6 +37,8 @@ const GrammarNode: React.FC<GrammarNodeProps> = ({
   typologyLabel,
   rulesCount = 0,
   status = 'inactive',
+  alignment,
+  wordOrder,
   onZoom,
   onSwap,
   connected = false,
@@ -72,15 +78,17 @@ const GrammarNode: React.FC<GrammarNodeProps> = ({
           {/* E - Ergative Case */}
           <div className="bg-white/5 border border-cyan-400/40 hover:border-cyan-400 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,240,255,0.15)] group">
             <span className="text-2xl font-black font-mono text-cyan-400 group-hover:scale-110 transition-transform">E</span>
-            <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.5">Ergative Case</span>
+            <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.1">
+              {(alignment ? alignment.charAt(0).toUpperCase() + alignment.slice(1) : 'Ergative')} Case
+            </span>
             <span className="text-[8px] font-mono text-cyan-300/60">{typologyLabel ? typologyLabel.charAt(0).toUpperCase() + typologyLabel.slice(1) : '—'}</span>
           </div>
 
           {/* X - X-Bar Syntax */}
           <div className="bg-white/5 border border-cyan-400/40 hover:border-cyan-400 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,240,255,0.15)] group">
             <span className="text-2xl font-black font-mono text-cyan-400 group-hover:scale-110 transition-transform">X</span>
-            <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.5">X-Bar Syntax</span>
-            <span className="text-[8px] font-mono text-white/30">SOV Specifier</span>
+            <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.1">X-Bar Syntax</span>
+            <span className="text-[8px] font-mono text-white/30">{wordOrder ? `${wordOrder} Specifier` : 'SOV Specifier'}</span>
           </div>
         </div>
       </div>

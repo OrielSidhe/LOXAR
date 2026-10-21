@@ -28,6 +28,14 @@ type LanguageHomeCanvasProps = {
   lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
   /** Callback al hacer Zoom en un nodo del grafo — abre el panel correspondiente */
   onZoomToNode?: (moduleId: string) => void;
+  /** B2: Live pragmatic engine state derived from activeGrammar */
+  pragmaticEngine?: {
+    typologyLabel?: string;
+    rulesCount?: number;
+    alignment?: string;
+    wordOrder?: string;
+    activeClauseType?: string | null;
+  };
 };
 
 const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
@@ -39,6 +47,7 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
   onSelectConlang,
   lexicon = [],
   onZoomToNode,
+  pragmaticEngine,
 }) => {
   const handleNavigate = useCallback((tab: string) => {
     const tabMap: Record<string, string> = {
@@ -65,6 +74,7 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
       conlangNames={conlangNames}
       onSelectConlang={onSelectConlang}
       lexicon={lexicon}
+      pragmaticEngine={pragmaticEngine}
       onZoomToGrammar={() => onZoomToNode?.('pragmatic')}
     />
   );

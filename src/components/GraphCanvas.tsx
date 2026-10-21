@@ -99,6 +99,8 @@ type GraphCanvasProps = {
   pragmaticEngine?: {
     typologyLabel?: string;
     rulesCount?: number;
+    alignment?: string;
+    wordOrder?: string;
     activeClauseType?: string | null;
   };
   /** Callback al hacer clic en "Zoom" del nodo Gramática — abre el panel pragmático */
@@ -213,6 +215,20 @@ const toRfNodes = (src: GraphNode[], callbacks: NodeCallbacks): Node[] =>
     selectable: true,
     connectable: true,
   }));
+
+/**
+ * B3-B4: Override hardcoded node `stats` with real values from the stats prop.
+ * Each node keeps its static layout (x, y, w, h, ports, etc.) but gets
+ * live counts computed in App.tsx from grammarDb / lexiconDb.
+ */
+function withStats(nodes: GraphNode[], statMap: Record<string, { label: string; value: string | number }[]>): GraphNode[] {
+  return nodes.map(n => {
+    if (statMap[n.id]) {
+      return { ...n, stats: statMap[n.id], status: statMap[n.id].some(s => Number(s.value) > 0) ? 'partial' : n.status };
+    }
+    return n;
+  });
+}
 
 const toRfEdges = (src: GraphEdge[]): Edge[] =>
   src.map((e, i) => ({
@@ -368,6 +384,8 @@ const GrammarEngineNodeComponent: React.FC<NodeProps> = ({ data, selected }) => 
       <GrammarNode
         rulesCount={d.pragmaticEngine?.rulesCount ?? 0}
         typologyLabel={d.pragmaticEngine?.typologyLabel}
+        alignment={d.pragmaticEngine?.alignment}
+        wordOrder={d.pragmaticEngine?.wordOrder}
         status={d.pragmaticEngine?.activeClauseType ? 'active' : 'inactive'}
         onZoom={() => d.onZoom?.()}
         connected={false}
@@ -451,6 +469,12 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     onNavigate?.(tab === 'lexicon' ? 'table' : tab);
   }, [onNavigate]);
 
+  // ── B5: Ref to preserve palette-dropped nodes across level changes ──
+  // When the user drags a module from the palette onto the root canvas and
+  // then navigates to the grammar/lexicon level, those dynamic nodes must
+  // survive the round-trip back to root.
+  const rootDynNodesRef = useRef<Node[]>([]);
+
   // ── Node callbacks bundle ──
   const nodeCallbacks: NodeCallbacks = useMemo(() => ({
     activeModule,
@@ -462,6 +486,47 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     onZoomToGrammar,
   }), [activeModule, onModuleClick, handleNavigate, zoomIntoNode, level, pragmaticEngine, onZoomToGrammar]);
 
+  // ── B3-B4: Dynamic node arrays with live stats ──────────────────────
+  // Each node keeps its static layout but gets real counts from the stats
+  // prop (computed in App.tsx from grammarDb / lexiconDb). If stats is
+  // unavailable, fall back to the static arrays.
+  const rootNodesWithStats = useMemo(() => {
+    if (!stats) return ROOT_NODES;
+    return withStats(ROOT_NODES, {
+      grammar: [
+        { label: 'Reglas', value: (stats.grammar?.rules ?? 0)
+          + (stats.grammar?.categories ?? 0)
+          + (stats.grammar?.strategies ?? 0)
+          + (stats.grammar?.roles ?? 0) },
+      ],
+      lexicon: [
+        { label: 'Entradas', value: stats.lexicon?.entries ?? 0 },
+      ],
+      phonology: [
+        { label: 'Sonidos', value: stats.phonology?.sounds ?? 0 },
+      ],
+    });
+  }, [stats]);
+
+  const grammarNodesWithStats = useMemo(() => {
+    if (!stats) return GRAMMAR_NODES;
+    return withStats(GRAMMAR_NODES, {
+      typology:  [{ label: 'Morph', value: stats.grammar?.rules ?? 0 }],
+      morphology:[{ label: 'Rules', value: stats.grammar?.rules ?? 0 }],
+      syntax:    [{ label: 'Trees', value: stats.syntax?.trees ?? 0 }],
+      roles:     [{ label: 'Roles', value: stats.grammar?.roles ?? 0 }],
+      strategies:[{ label: 'Strats', value: stats.grammar?.strategies ?? 0 }],
+    });
+  }, [stats]);
+
+  const lexiconNodesWithStats = useMemo(() => {
+    if (!stats) return LEXICON_NODES;
+    return withStats(LEXICON_NODES, {
+      entries:   [{ label: 'Entradas', value: stats.lexicon?.entries ?? 0 }],
+      wordtypes: [{ label: 'Tipos', value: stats.lexicon?.categories ?? 0 }],
+    });
+  }, [stats]);
+
   // ── Update nodes/edges when level changes ─────────────────────────
   useEffect(() => {
     if (level === 'root') {
@@ -471,28 +536,32 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         data: { conlangName, conlangNames, onSelectConlang, onZoomToGrammar },
         position: { x: 400, y: 300 },
       };
-      // PURGE: se eliminó la generación automática de ROOT_NODES
-      // (Fonología, Gramática, Sintaxis, Léxico, Workbench, Neografía,
-      //  Semántica, Traductor). El lienzo inicial show ÚNICAMENTE el
-      // nodo raíz del conlang más nodos dinámicos agregados desde la paleta.
-      setNodes(nds => {
-        const dyn = nds.filter(
-          n => n.id !== ROOT_NODE_ID && !ROOT_NODES.some(rn => rn.id === n.id)
-        );
-        return [rootNode, ...dyn];
-      });
-      setEdges([]);
+      // B5: restore root node + ROOT_NODES (with live stats B3-B4) +
+      // preserved dynamic palette nodes
+      setNodes([rootNode, ...toRfNodes(rootNodesWithStats, { ...nodeCallbacks, level: 'root' }), ...rootDynNodesRef.current]);
+      setEdges(toRfEdges(ROOT_EDGES));
     } else if (level === 'grammar') {
-      setNodes(toRfNodes(GRAMMAR_NODES, { ...nodeCallbacks, level }));
+      // B5: save root-level dynamic nodes before swapping to grammar view
+      setNodes(nds => {
+        rootDynNodesRef.current = nds.filter(
+          n => n.id.startsWith('dyn_') && n.id !== ROOT_NODE_ID
+        );
+        return toRfNodes(grammarNodesWithStats, { ...nodeCallbacks, level });
+      });
       setEdges(toRfEdges(GRAMMAR_EDGES));
     } else if (level === 'lexicon') {
-      setNodes(toRfNodes(LEXICON_NODES, { ...nodeCallbacks, level }));
+      setNodes(nds => {
+        rootDynNodesRef.current = nds.filter(
+          n => n.id.startsWith('dyn_') && n.id !== ROOT_NODE_ID
+        );
+        return toRfNodes(lexiconNodesWithStats, { ...nodeCallbacks, level });
+      });
       setEdges(toRfEdges(LEXICON_EDGES));
     } else if (level === 'syntax') {
       setNodes([]);
       setEdges([]);
     }
-  }, [level, conlangName, conlangNames, onSelectConlang, nodeCallbacks, onZoomToGrammar, setNodes, setEdges]);
+  }, [level, conlangName, conlangNames, onSelectConlang, nodeCallbacks, onZoomToGrammar, rootNodesWithStats, grammarNodesWithStats, lexiconNodesWithStats, setNodes, setEdges]);
 
   // ── Fit view on level change ──
   useEffect(() => {
