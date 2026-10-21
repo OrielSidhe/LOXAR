@@ -226,14 +226,31 @@ async function callLlmChunked(
   const coreText = boundary ? extractGrammarCore(rawText) : rawText;
 
   // Split into chunks
-  const chunks = splitIntoChunks(coreText);
-  const totalChunks = chunks.length;
+  let chunks = splitIntoChunks(coreText);
+  let totalChunks = chunks.length;
+
+  // Fallback: if the chunker produced zero chunks (e.g. short text below
+  // MIN_SUBSTANTIVE_CHARS with no section delimiters), fall back to the full
+  // core text as a single chunk so the LLM is still invoked rather than
+  // silently dropped.
+  if (totalChunks === 0 && coreText.trim().length > 0) {
+    chunks = [{
+      index: 0,
+      displayIndex: 1,
+      total: 1,
+      text: coreText,
+      startLine: 0,
+      charCount: coreText.length,
+    }];
+    totalChunks = 1;
+  }
 
   if (totalChunks === 1) {
     // Single chunk — no chunking overhead
+    const chunkText = chunks[0].text;
     onProgress?.({ chunk: 1, total: 1, message: 'Analizando con IA...' });
     const result = await withRetry(
-      () => callLlmForChunk(coreText, llmCall, notes),
+      () => callLlmForChunk(chunkText, llmCall, notes),
       MAX_RETRIES,
       undefined,
       (attempt, err) => {
