@@ -1,6 +1,6 @@
 # 📋 LOXAR — Diagnostic Report & Technical Roadmap
 
-*Generated for: `C:\CONLANG PROJECT\LOXAR`*
+*Generated for: `LOXAR`*
 *Stack: Tauri 2 + React 18 + TypeScript 5.5 + Vite 5 + Tailwind 3.4 + SQLite*
 *Date: 2026-10-17*
 

@@ -20,6 +20,11 @@ docs/AUDIT_REPORT.md
 # IDE / OS
 .idea/
 .vscode/
+# IDE tooling scaffolding (graft auto-generated) — local only, never committed
+.cursor/
+.windsurf/
+.gemini/
+.mcp.json
 *.swp
 *.swo
 *~
