@@ -119,6 +119,26 @@ export const isAiAvailable = async (): Promise<boolean> => {
   }
 };
 
+interface AiProviderInfo {
+  name: string;
+  model: string;
+}
+
+/**
+ * Returns the active provider's display name and model for UI onboarding.
+ * Used by the GrammarImporterModal to show "AI-powered onboarding via Gemini 2.5-flash".
+ */
+export const getActiveProviderInfo = async (): Promise<AiProviderInfo | null> => {
+  try {
+    const config = await loadAIConfig();
+    const active = getActiveProviderConfig(config);
+    if (!active) return null;
+    return { name: active.name, model: active.defaultModel };
+  } catch {
+    return null;
+  }
+};
+
 /**
  * Ensures the generic config exists. If `conlang_ai_settings_generic` is not
  * present in localStorage, migrates from the legacy format (keychain + localStorage).

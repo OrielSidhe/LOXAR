@@ -19,7 +19,7 @@ import { FlexibleGrammar } from '../types/grammar-flexible';
 import SparkleIcon from './icons/SparkleIcon';
 import XCircleIcon from './icons/XCircleIcon';
 import WrenchIcon from './icons/WrenchIcon';
-import { isAiAvailable, callAi, extractJson } from '../services/geminiService';
+import { isAiAvailable, callAi, extractJson, getActiveProviderInfo } from '../services/geminiService';
 import { inductFromText } from '../services/grammar/inductFromText';
 import type { InductProgress, InductResult } from '../services/grammar/inductFromText';
 import type { InductJob, StoredChunk } from '../stores/importStore';
@@ -65,6 +65,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
     const [validation, setValidation] = useState<ImportValidationReport | null>(null);
     const [activeTab, setActiveTab] = useState<'raw' | 'preview'>('raw');
     const [ai, setAi] = useState(true);
+    const [aiProviderInfo, setAiProviderInfo] = useState<{ name: string; model: string } | null>(null);
     const [fileError, setFileError] = useState<string | null>(null);
 
     // Sync rawText from job when it's seeded externally
@@ -75,9 +76,14 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [job?.id]);
 
-    // Load AI availability
+    // Load AI availability + provider info (I1: AI-first onboarding awareness)
     useEffect(() => {
-        isAiAvailable().then(setAi);
+        isAiAvailable().then(available => {
+            setAi(available);
+            if (available) {
+                getActiveProviderInfo().then(info => setAiProviderInfo(info));
+            }
+        });
     }, []);
 
     // Seed demo grammar if empty
@@ -86,6 +92,19 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
             setRawText(DEMO_GRAMMAR);
         }
     }, [existingNotes, rawText, job]);
+
+    // I2: Guided example prompts for AI-first onboarding — user clicks one
+    // to populate the textarea, then clicks "Analizar con IA".
+    const EXAMPLE_PROMPTS = [
+        '§ Tipología: SOV, aglutinante, head-final\n§ Fonología: /p t k m n s l r/, /a e i o u/\n§ Sustantivos: plural por -k sufijo\n§ Verbos: pasado por -t sufijo\n§ Estrategias: Sufijo de plural: posición suffix, forma -k',
+        'Orden de palabras: SVO. El plural se marca con -s. El pasado con -ed. Vocabulario: casa, perro, correr, agua.',
+        '§ Tipología: VSO, fusional\n§ Fonología: /b d g f v z/, /a e i o u/\n§ Verbos: conjuncación por -a (1ª persona), -s (2ª), -t (3ª)\n§ Casos: nominativo, acusativo, dativo',
+    ];
+
+    const handleUseExample = (prompt: string) => {
+        setRawText(prompt);
+        setFileError(null);
+    };
 
     // When job result arrives in the store, hydrate the preview UI
     useEffect(() => {
@@ -381,11 +400,46 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                     <div className="flex-grow p-4 overflow-hidden relative">
                         {activeTab === 'raw' ? (
                             <div className="h-full flex flex-col gap-4">
-                                <div className="bg-accent/10 border border-accent/20 p-3 rounded-md text-sm text-text-secondary">
-                                    <p className="flex items-center gap-2"><SparkleIcon className="h-4 w-4 text-accent" /> <strong>Tip:</strong> Describe tu gramática naturalmente. Ej: "El orden es SOV. El plural se forma añadiendo -k al final."</p>
-                                </div>
+                                {/* I2: AI-first onboarding banner */}
+                                {ai && aiProviderInfo && !job?.result && !analysisResult && (
+                                    <div className="bg-gradient-to-r from-accent/15 via-accent/5 to-accent/15 border border-accent/30 rounded-lg p-4 space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <SparkleIcon className="h-5 w-5 text-accent flex-shrink-0" />
+                                            <div>
+                                                <h3 className="font-bold text-accent">Onboarding con IA — Proveedor activo</h3>
+                                                <p className="text-xs text-text-secondary">
+                                                    {aiProviderInfo.name} · modelo: {aiProviderInfo.model}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-text-primary">
+                                            La IA analizará tu texto y extraerá automáticamente tipología, fonología,
+                                            paradigmas y estrategias. Pega tu gramática, carga un archivo, o usa un
+                                            ejemplo de abajo para comenzar.
+                                        </p>
+                                        {/* Quick-start example prompts */}
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider">Ejemplos rápidos:</span>
+                                            {EXAMPLE_PROMPTS.map((prompt, idx) => (
+                                                <button
+                                                    key={idx}
+                                                    onClick={() => handleUseExample(prompt)}
+                                                    className="text-left p-2 bg-background/50 hover:bg-background rounded border border-subtle text-xs font-mono text-text-primary transition-colors"
+                                                >
+                                                    {prompt.slice(0, 80)}...
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                                {/* File Upload Button */}
+                                <div className={`p-3 rounded-md text-sm ${ai ? 'bg-accent/10 border border-accent/20 text-text-secondary' : 'bg-warning/10 border border-warning/20 text-warning'}`}>
+                                    {ai ? (
+                                        <p className="flex items-center gap-2"><SparkleIcon className="h-4 w-4 text-accent" /> <strong>Tip:</strong> Describe tu gramática naturalmente. Ej: "El orden es SOV. El plural se forma añadiendo -k al final."</p>
+                                    ) : (
+                                        <p className="flex items-center gap-2">⚠️ <strong>IA no configurada:</strong> Activa "Analizar con IA" en Ajustes para usar el onboarding asistido.</p>
+                                    )}
+                                </div>
                                 <div className="flex gap-3">
                                     <label className="flex items-center gap-2 px-4 py-2 bg-accent/20 hover:bg-accent/30 text-accent font-semibold rounded-md border-2 border-accent/50 cursor-pointer transition-all hover:shadow-lg">
                                         <FileIcon className="h-5 w-5" />
@@ -521,14 +575,30 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                 </main>
 
                 <footer className="p-4 flex justify-between items-center border-t border-subtle flex-shrink-0 bg-surface/95 backdrop-blur">
-                    <div className="text-xs text-text-secondary">
-                        {rawText.length} caracteres
+                    <div className="flex items-center gap-4">
+                        <div className="text-xs text-text-secondary">
+                            {rawText.length} caracteres
+                        </div>
+                        {/* I3: AI mode toggle with provider info */}
+                        <button
+                            onClick={() => setAi(!ai)}
+                            disabled={job?.status === 'running'}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                                ai
+                                    ? 'bg-accent/20 text-accent border border-accent/50'
+                                    : 'bg-subtle text-text-secondary border border-subtle hover:bg-background'
+                            }`}
+                            aria-label={ai ? 'Desactivar análisis con IA' : 'Activar análisis con IA'}
+                        >
+                            <SparkleIcon className={`h-3 w-3 ${ai ? 'text-accent' : 'text-text-secondary'}`} />
+                            {ai ? (aiProviderInfo ? `${aiProviderInfo.name} (${aiProviderInfo.model})` : 'IA activada') : 'Modo local'}
+                        </button>
                     </div>
                     <div className="flex gap-3 items-center">
                         <button onClick={onClose} className="px-4 py-2 bg-subtle text-text-primary font-semibold rounded-md hover:bg-gray-600 transition-colors">
                             Cancelar
                         </button>
-                        {!ai && (
+                        {!ai && !isProcessing && (
                             <p className="text-xs text-text-secondary">
                                 Modo offline: se usará el parser local. La inducción con IA requiere configuración de proveedor.
                             </p>
