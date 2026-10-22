@@ -58,6 +58,8 @@ export interface InductProgress {
   total: number;
   /** Human-readable status message. */
   message: string;
+  /** Character count of the current chunk (optional — for UI detail). */
+  charCount?: number;
 }
 
 export interface InductOptions {
@@ -71,6 +73,8 @@ export interface InductOptions {
   llmCall?: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>;
   /** Progreso del procesamiento (disparado durante chunking). */
   onProgress?: (progress: InductProgress) => void;
+  /** Per-chunk result callback (E4: incremental manifests). Fired after each chunk completes. */
+  onChunkResult?: (chunkIndex: number, result: { manifest: DeclarativeManifest; confidence: number } | null, note: string) => void;
 }
 
 export interface InductResult {
@@ -215,6 +219,7 @@ async function callLlmChunked(
   rawText: string,
   llmCall: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>,
   onProgress?: (progress: InductProgress) => void,
+  onChunkResult?: (chunkIndex: number, result: { manifest: DeclarativeManifest; confidence: number } | null, note: string) => void,
 ): Promise<{ manifests: DeclarativeManifest[]; confidence: number; notes: string[] }> {
   const notes: string[] = [];
 
@@ -248,7 +253,7 @@ async function callLlmChunked(
   if (totalChunks === 1) {
     // Single chunk — no chunking overhead
     const chunkText = chunks[0].text;
-    onProgress?.({ chunk: 1, total: 1, message: 'Analizando con IA...' });
+    onProgress?.({ chunk: 1, total: 1, message: 'Analizando con IA...', charCount: chunks[0].charCount });
     const result = await withRetry(
       () => callLlmForChunk(chunkText, llmCall, notes),
       MAX_RETRIES,
@@ -258,8 +263,10 @@ async function callLlmChunked(
       },
     );
     if (result) {
+      onChunkResult?.(0, { manifest: result.manifest, confidence: result.confidence }, 'single-chunk success');
       return { manifests: [result.manifest], confidence: result.confidence, notes };
     }
+    onChunkResult?.(0, null, 'single-chunk failed');
     return { manifests: [], confidence: 0, notes };
   }
 
@@ -272,7 +279,8 @@ async function callLlmChunked(
     onProgress?.({
       chunk: chunk.displayIndex,
       total: totalChunks,
-      message: `Analizando con IA — parte ${chunk.displayIndex}/${totalChunks} (${chunk.charCount} chars)`,
+      message: `Analizando con IA — parte ${chunk.displayIndex}/${totalChunks}`,
+      charCount: chunk.charCount,
     });
 
     const result = await withRetry(
@@ -290,12 +298,14 @@ async function callLlmChunked(
     if (result) {
       successfulManifests.push(result.manifest);
       maxConfidence = Math.max(maxConfidence, result.confidence);
+      onChunkResult?.(chunk.index, { manifest: result.manifest, confidence: result.confidence }, 'success');
     } else {
       failedChunks++;
       // Fall back: parse this chunk locally so nothing is lost
       const localFallback = parseLocal(chunk.text);
       successfulManifests.push(localFallback.manifest);
       notes.push(`Chunk ${chunk.displayIndex}: IA falló, usando parser local como fallback.`);
+      onChunkResult?.(chunk.index, { manifest: localFallback.manifest, confidence: 0 }, 'local fallback');
     }
 
     // Yield to event loop to prevent UI freeze
@@ -460,7 +470,8 @@ export async function inductFromText(
   // Production path: llmCall provided — use chunking + retry + Zod validation
   if (llmCall) {
     try {
-      const llmResult = await callLlmChunked(rawText, llmCall, onProgress);
+      const { onChunkResult } = options;
+      const llmResult = await callLlmChunked(rawText, llmCall, onProgress, onChunkResult);
 
       // Merge LLM notes (chunking, lexicon exclusion, retry, fallback, etc.)
       notes.push(...llmResult.notes);
