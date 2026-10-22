@@ -6,6 +6,7 @@
  */
 
 import React, { useCallback } from 'react';
+import type { GrammarManifest, LexiconEntry } from '../types';
 import GraphCanvas from './GraphCanvas';
 
 type LanguageHomeCanvasProps = {
@@ -25,7 +26,9 @@ type LanguageHomeCanvasProps = {
   onModuleClick?: (moduleId: string) => void;
   conlangNames?: string[];
   onSelectConlang?: (name: string) => void;
-  lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
+  lexicon?: LexiconEntry[];
+  /** G1: Grammar manifest for manifest-driven syntax blocks */
+  grammar?: GrammarManifest;
   /** Callback al hacer Zoom en un nodo del grafo — abre el panel correspondiente */
   onZoomToNode?: (moduleId: string) => void;
   /** B2: Live pragmatic engine state derived from activeGrammar */
@@ -46,6 +49,7 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
   conlangNames = [],
   onSelectConlang,
   lexicon = [],
+  grammar,
   onZoomToNode,
   pragmaticEngine,
 }) => {
@@ -74,6 +78,7 @@ const LanguageHomeCanvas: React.FC<LanguageHomeCanvasProps> = ({
       conlangNames={conlangNames}
       onSelectConlang={onSelectConlang}
       lexicon={lexicon}
+      grammar={grammar}
       pragmaticEngine={pragmaticEngine}
       onZoomToGrammar={() => onZoomToNode?.('pragmatic')}
     />

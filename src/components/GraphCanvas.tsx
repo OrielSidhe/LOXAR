@@ -48,6 +48,7 @@ import 'reactflow/dist/style.css';
 import SyntaxFlowline from './SyntaxFlowline';
 import ModulePalette, { type ModuleNodeType } from './ModulePalette';
 import GrammarNode from './GrammarNode';
+import type { GrammarManifest, LexiconEntry } from '../types';
 
 // ── Types ──────────────────────────────────────────────
 type LevelId = 'root' | 'grammar' | 'lexicon' | 'syntax';
@@ -105,7 +106,11 @@ type GraphCanvasProps = {
   onNavigate?: (tab: string) => void;
   conlangNames?: string[];
   onSelectConlang?: (name: string) => void;
-  lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
+  lexicon?: LexiconEntry[];
+  /** G1: Grammar manifest for manifest-driven syntax blocks */
+  grammar?: GrammarManifest;
+  /** G4: Callback for syntax preview changes */
+  onSyntaxPreviewChange?: (text: string, errors: string[]) => void;
   /** Estado del motor pragmático (para mostrar datos reales en GrammarNode). B2 pasado desde App.tsx. */
   pragmaticEngine?: {
     typologyLabel?: string;
@@ -568,8 +573,10 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   conlangNames = [],
   onSelectConlang,
   lexicon = [],
+  grammar,
   pragmaticEngine,
   onZoomToGrammar,
+  onSyntaxPreviewChange,
 }) => {
   const [level, setLevel] = useState<LevelId>('root');
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
@@ -890,7 +897,11 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         {level === 'syntax' ? (
           <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
             <div className="w-full max-w-3xl h-[90%] pointer-events-auto">
-              <SyntaxFlowline lexicon={lexicon} />
+              <SyntaxFlowline
+                lexicon={lexicon}
+                grammar={grammar}
+                onPreviewChange={onSyntaxPreviewChange}
+              />
             </div>
           </div>
         ) : (

@@ -603,6 +603,7 @@ const App = () => {
                       conlangNames={lexiconHook.lexiconNames}
                       onSelectConlang={lexiconHook.setActiveLexicon}
                       lexicon={activeLexicon}
+                      grammar={activeGrammar}
                       stats={{
                         grammar: activeGrammar ? {
                           rules: (activeGrammar as any)?.morphology?.rules?.length + (activeGrammar as any)?.syntax?.rules?.length + (activeGrammar as any)?.phonology?.rules?.length,

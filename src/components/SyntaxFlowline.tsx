@@ -1,28 +1,36 @@
 /**
- * SyntaxFlowline.tsx
- * ────────────────
+ * SyntaxFlowline.tsx — Sintaxis Lego
+ * ─────────────────────────────────────
  * Constructor visual de oraciones para LOXAR.
  *
- * Flowline de bloques expandibles donde cada bloque = slot gramatical.
+ * Flowline de bloques (Lego) expandibles donde cada bloque = slot gramatical.
  * Cada bloque tiene pines internos (determinante, género, raíz, caso...).
  * Se pueden arrastrar lexemas del léxico a los pines.
- * El preview se genera en tiempo real usando el motor de gramática.
+ * El preview se genera en tiempo real usando el motor de gramática (realizeClause).
  *
- * Flexible: funciona con cualquier conlang (Quavanol, etc.).
+ * Phase G — Sintaxis Lego:
+ *   G1: Bloques generados desde manifest.roles + manifest.typology.wordOrder
+ *   G2: Preview usa realizeClause (grammar engine) en lugar de [root] simple
+ *   G3: Gestión de bloques — añadir/quitar/reordenar (movimiento Lego)
+ *   G4: Persistencia en localStorage + onPreviewChange a GraphCanvas
  */
 
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import type { GrammarManifest, LexiconEntry, SyntacticRole } from '../types';
+import { realizeClause } from '../services/grammar/syntax';
 
 // ── Types ──────────────────────────────────────────────
-type PinValue = { root: string; function: string; meaning: string } | null;
+
+/** Valor de un pin: null = vacío, o un lexema/palabra con metadata */
+type PinValue = { root: string; function: string; meaning: string; lexeme?: LexiconEntry } | null;
 
 type PinDef = {
   id: string;
   label: string;
-  expectedFunction: string;     // key canónica de taxonomy
+  expectedFunction: string;     // taxonomy function key
   required: boolean;
   value: PinValue;
-  options?: string[];           // opciones predefinadas (género, caso, etc.)
+  options?: string[];           // opciones predefinidas (género, caso, etc.)
 };
 
 type FlowlineBlock = {
@@ -30,18 +38,155 @@ type FlowlineBlock = {
   label: string;
   icon: string;
   color: string;
+  roleId: string;               // G1: maps to manifest.roles entry
   pins: PinDef[];
   expanded: boolean;
 };
 
 type SyntaxFlowlineProps = {
-  lexicon: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
+  lexicon: LexiconEntry[];
+  grammar?: GrammarManifest;    // G1: grammar manifest for role/word-order driven blocks
+  conlangName?: string;
+  /** Callback al cambiar el preview (G4) */
   onPreviewChange?: (text: string, errors: string[]) => void;
 };
 
-// ── Helpers ────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────
+
+const STORAGE_KEY = 'loxar_syntax_flowline_v1';
+
 const PLACEHOLDER_LEXEME = '— arrastrá un lexema —';
 const PLACEHOLDER_SELECT = '— seleccioná —';
+
+const BLOCK_ICONS: Record<string, string> = {
+  subject: '🏷️',
+  verb: '⚡',
+  object: '🎯',
+  modifier: '✨',
+  adjunct: '➕',
+  predicate: '📍',
+};
+
+const BLOCK_COLORS: Record<string, string> = {
+  subject: 'cyan',
+  verb: 'purple',
+  object: 'amber',
+  modifier: 'emerald',
+  adjunct: 'pink',
+  predicate: 'indigo',
+};
+
+const ROLE_TO_LABEL: Record<string, string> = {
+  subject: 'SUJETO',
+  verb: 'VERBO',
+  object: 'OBJETO',
+  modifier: 'MODIFICADOR',
+  adjunct: 'ADJUNTO',
+  predicate: 'PREDICADO',
+};
+
+const ROLE_TO_FUNCTION: Record<string, string> = {
+  subject: 'sustantivo',
+  verb: 'verbo',
+  object: 'sustantivo',
+  modifier: 'adjetivo',
+  adjunct: 'adverbio',
+  predicate: 'verbo',
+};
+
+// G1: Default blocks when no grammar manifest is available (fallback)
+const DEFAULT_BLOCK_DEFS: { id: string; label: string; icon: string; color: string; roleId: string; pinFunction: string; pinLabel: string; required: boolean; options?: string[] }[] = [
+  { id: 'subject', label: 'SUJETO', icon: '🏷️', color: 'cyan', roleId: 'subject', pinFunction: 'sustantivo', pinLabel: 'Raíz', required: true },
+  { id: 'verb', label: 'VERBO', icon: '⚡', color: 'purple', roleId: 'verb', pinFunction: 'verbo', pinLabel: 'Raíz verbal', required: true },
+  { id: 'object', label: 'OBJETO', icon: '🎯', color: 'amber', roleId: 'object', pinFunction: 'sustantivo', pinLabel: 'Raíz', required: false },
+  { id: 'modifier', label: 'MODIFICADOR', icon: '✨', color: 'emerald', roleId: 'modifier', pinFunction: 'adjetivo', pinLabel: 'Raíz', required: false },
+];
+
+// G1: Word order → canonical block sequence
+const ORDER_BLOCK_MAP: Record<string, string[]> = {
+  SVO: ['subject', 'verb', 'object'],
+  SOV: ['subject', 'object', 'verb'],
+  VSO: ['verb', 'subject', 'object'],
+  VOS: ['verb', 'object', 'subject'],
+  OVS: ['object', 'verb', 'subject'],
+  OSV: ['object', 'subject', 'verb'],
+};
+
+/** Build default flowline blocks from grammar manifest (G1) */
+function buildBlocksFromManifest(manifest: GrammarManifest | undefined): FlowlineBlock[] {
+  if (!manifest) {
+    // Fallback: hardcoded defaults from original component
+    return DEFAULT_BLOCK_DEFS.map(def => ({
+      id: def.id,
+      label: def.label,
+      icon: def.icon,
+      color: def.color,
+      roleId: def.roleId,
+      expanded: false,
+      pins: [
+        { id: 'root', label: def.pinLabel, expectedFunction: def.pinFunction, required: def.required, value: null },
+      ],
+    }));
+  }
+
+  const wordOrder = manifest.typology?.wordOrder || 'SVO';
+  const orderKeys = (ORDER_BLOCK_MAP[wordOrder.toUpperCase()] || ORDER_BLOCK_MAP.SVO);
+
+  // G1: Use manifest.roles to determine which blocks to show
+  // Map word order position to syntactic role
+  const roleForBlock = (position: string): string => {
+    const roleMap: Record<string, string> = {
+      subject: 'subject',
+      verb: 'verb',
+      object: 'object',
+    };
+    return roleMap[position] || 'subject';
+  };
+
+  const blocks: FlowlineBlock[] = orderKeys.map((pos, idx) => {
+    const roleKey = roleForBlock(pos);
+    const role = manifest.roles?.find(r => r.id === roleKey) || manifest.roles?.[idx];
+    const label = (role?.name || ROLE_TO_LABEL[roleKey] || pos.toUpperCase()).toUpperCase();
+    const icon = BLOCK_ICONS[roleKey] || '🧩';
+    const color = BLOCK_COLORS[roleKey] || 'gray';
+
+    // G1: Generate pins based on the role
+    const functionKey = ROLE_TO_FUNCTION[roleKey] || 'sustantivo';
+    const pins: PinDef[] = [
+      { id: 'root', label: 'Raíz', expectedFunction: functionKey, required: true, value: null },
+    ];
+
+    // Add case options for noun roles (subject/object)
+    if (roleKey === 'subject' || roleKey === 'object') {
+      pins.push({
+        id: 'case', label: 'Caso', expectedFunction: 'caso', required: false, value: null,
+        options: ['nominativo', 'acusativo', 'dativo', 'genitivo', 'vocativo', 'instrumental', 'locativo'],
+      });
+    }
+
+    // Add conjugation options for verb role
+    if (roleKey === 'verb') {
+      pins.push({
+        id: 'conj', label: 'Conjugación', expectedFunction: 'conjugacion', required: false, value: null,
+        options: ['-é (presente)', '-as (pasado)', '-ila (futuro)', '-en (compuesto)'],
+      });
+    }
+
+    return {
+      id: `block_${idx}_${pos}`,
+      label,
+      icon,
+      color,
+      roleId: role?.id || roleKey,
+      expanded: false,
+      pins,
+    };
+  });
+
+  return blocks;
+}
+
+// ── Helpers ───────────────────────────────────────────
 
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr];
@@ -49,69 +194,176 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a;
 };
 
-// ── Component ──────────────────────────────────────────
-const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChange }) => {
-  const [blocks, setBlocks] = useState<FlowlineBlock[]>([
-    {
-      id: 'entidad', label: 'ENTIDAD', icon: '🏷️', color: 'cyan', expanded: false,
-      pins: [
-        { id: 'det', label: 'Determinante', expectedFunction: 'determinante', required: false, value: null },
-        { id: 'root', label: 'Raíz', expectedFunction: 'sustantivo', required: true, value: null },
-        { id: 'case', label: 'Caso', expectedFunction: 'caso', required: false, value: null, options: ['nominativo', 'acusativo', 'dativo', 'genitivo', 'vocativo', 'instrumental', 'locativo'] },
-      ],
-    },
-    {
-      id: 'accion', label: 'ACCIÓN', icon: '⚡', color: 'purple', expanded: false,
-      pins: [
-        { id: 'particle', label: 'Partícula', expectedFunction: 'particula', required: false, value: null, options: ['ó (neg)', 'vo (perf)', 'mæ (subj)', 'kwa (int)'] },
-        { id: 'root', label: 'Raíz verbal', expectedFunction: 'verbo', required: true, value: null },
-        { id: 'conj', label: 'Conjugación', expectedFunction: 'conjugacion', required: false, value: null, options: ['-é (presente)', '-as (pasado)', '-ila (futuro)', '-en (compuesto)'] },
-      ],
-    },
-    {
-      id: 'objeto', label: 'OBJETO', icon: '🎯', color: 'amber', expanded: false,
-      pins: [
-        { id: 'det', label: 'Determinante', expectedFunction: 'determinante', required: false, value: null },
-        { id: 'root', label: 'Raíz', expectedFunction: 'sustantivo', required: true, value: null },
-        { id: 'case', label: 'Caso', expectedFunction: 'caso', required: false, value: null, options: ['nominativo', 'acusativo', 'dativo', 'genitivo'] },
-      ],
-    },
-    {
-      id: 'modificador', label: 'MODIFICADOR', icon: '✨', color: 'emerald', expanded: false,
-      pins: [
-        { id: 'root', label: 'Raíz', expectedFunction: 'adjetivo', required: true, value: null },
-        { id: 'degree', label: 'Grado', expectedFunction: 'grado', required: false, value: null, options: ['positivo', 'comparativo', 'superlativo'] },
-      ],
-    },
-  ]);
+/** G4: Persist flowline state to localStorage */
+function saveState(blocks: FlowlineBlock[]): void {
+  try {
+    const state = blocks.map(b => ({
+      id: b.id,
+      label: b.label,
+      expanded: b.expanded,
+      pins: b.pins.map(p => ({
+        id: p.id,
+        value: p.value ? { root: p.value.root, function: p.value.function, meaning: p.value.meaning } : null,
+      })),
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch { /* ignore */ }
+}
 
-  const [draggedLexeme, setDraggedLexeme] = useState<typeof lexicon[0] | null>(null);
+/** G4: Restore flowline state from localStorage */
+function loadState(blocks: FlowlineBlock[]): FlowlineBlock[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return blocks;
+    const saved = JSON.parse(raw);
+    if (!Array.isArray(saved)) return blocks;
+
+    return blocks.map(b => {
+      const savedBlock = saved.find((s: any) => s.id === b.id);
+      if (!savedBlock) return b;
+      return {
+        ...b,
+        expanded: savedBlock.expanded ?? b.expanded,
+        pins: b.pins.map(p => {
+          const savedPin = savedBlock.pins?.find((s: any) => s.id === p.id);
+          return { ...p, value: savedPin?.value ?? null };
+        }),
+      };
+    });
+  } catch {
+    return blocks;
+  }
+}
+
+// ── Component ──────────────────────────────────────────
+
+const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
+  lexicon = [],
+  grammar,
+  conlangName: _conlangName,
+  onPreviewChange,
+}) => {
+  // G1: Build blocks from grammar manifest
+  const initialBlocks = useMemo(() => buildBlocksFromManifest(grammar), [grammar]);
+  const [blocks, setBlocks] = useState<FlowlineBlock[]>(() => loadState(initialBlocks));
+
+  // G4: Sync when grammar changes (manifest update)
+  useEffect(() => {
+    const fresh = buildBlocksFromManifest(grammar);
+    const restored = loadState(fresh);
+    setBlocks(restored);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grammar]);
+
+  const [draggedLexeme, setDraggedLexeme] = useState<LexiconEntry | null>(null);
   const [importText, setImportText] = useState('');
   const [importTarget, setImportTarget] = useState<string | null>(null);
-  const [randomSeed, setRandomSeed] = useState(0);
 
-  // ── Fill pin with lexeme ────────────────────────────
-  const fillPin = useCallback((blockId: string, pinId: string, lexeme: typeof lexicon[0] | null) => {
+  // ── G1: Add a new block (from palette / + button) ──
+  const availableBlocks = useMemo(() => {
+    const usedRoleIds = new Set(blocks.map(b => b.roleId));
+    const available = (grammar?.roles ?? []).filter(r => {
+      const roleKey = r.id;
+      const isUsed = usedRoleIds.has(roleKey);
+      // Allow adding modifier/adjunct multiple times, but not subject/verb/object
+      const singleton = ['subject', 'verb', 'object', 'predicate'].includes(roleKey);
+      return !singleton || !isUsed;
+    });
+    return available.map(r => ({
+      id: `new_${r.id}`,
+      label: (r.name || r.id).toUpperCase(),
+      icon: BLOCK_ICONS[r.id] || '🧩',
+      color: BLOCK_COLORS[r.id] || 'gray',
+      roleId: r.id,
+    }));
+  }, [blocks, grammar?.roles]);
+
+  const addBlock = useCallback((blockTemplate: { id: string; label: string; icon: string; color: string; roleId: string }) => {
+    const functionKey = ROLE_TO_FUNCTION[blockTemplate.roleId] || 'sustantivo';
+    const pins: PinDef[] = [
+      { id: uid('root'), label: 'Raíz', expectedFunction: functionKey, required: true, value: null },
+    ];
+    if (blockTemplate.roleId === 'subject' || blockTemplate.roleId === 'object') {
+      pins.push({
+        id: uid('case'), label: 'Caso', expectedFunction: 'caso', required: false, value: null,
+        options: ['nominativo', 'acusativo', 'dativo', 'genitivo', 'vocativo', 'instrumental', 'locativo'],
+      });
+    }
+    if (blockTemplate.roleId === 'verb' || blockTemplate.roleId === 'predicate') {
+      pins.push({
+        id: uid('conj'), label: 'Conjugación', expectedFunction: 'conjugacion', required: false, value: null,
+        options: ['-é (presente)', '-as (pasado)', '-ila (futuro)', '-en (compuesto)'],
+      });
+    }
+
+    const newBlock: FlowlineBlock = {
+      id: `block_${Date.now()}`,
+      label: blockTemplate.label,
+      icon: blockTemplate.icon,
+      color: blockTemplate.color,
+      roleId: blockTemplate.roleId,
+      expanded: true,
+      pins,
+    };
+    setBlocks(prev => {
+      const updated = [...prev, newBlock];
+      saveState(updated);
+      return updated;
+    });
+  }, []);
+
+  // G3: Remove a block
+  const removeBlock = useCallback((blockId: string) => {
+    setBlocks(prev => {
+      const updated = prev.filter(b => b.id !== blockId);
+      saveState(updated);
+      return updated;
+    });
+  }, []);
+
+  // G3: Reorder blocks (Lego movement)
+  const moveBlock = useCallback((fromIdx: number, toIdx: number) => {
+    setBlocks(prev => {
+      const arr = [...prev];
+      const [moved] = arr.splice(fromIdx, 1);
+      arr.splice(toIdx, 0, moved);
+      saveState(arr);
+      return arr;
+    });
+  }, []);
+
+  // ── Fill pin with lexeme ──
+  const fillPin = useCallback((blockId: string, pinId: string, lexeme: LexiconEntry | null) => {
     setBlocks(prev => prev.map(b => {
       if (b.id !== blockId) return b;
-      return { ...b, pins: b.pins.map(p => p.id === pinId ? { ...p, value: lexeme ? { root: lexeme.Raíz, function: lexeme.Categoría, meaning: lexeme.Significado[0] ?? '' } : null } : p) };
+      return {
+        ...b,
+        pins: b.pins.map(p => p.id === pinId
+          ? { ...p, value: lexeme ? { root: lexeme.Raíz, function: lexeme.Categoría, meaning: lexeme.Significado[0] ?? '', lexeme } : null }
+          : p),
+      };
     }));
   }, []);
 
-  // ── Fill pin with option ────────────────────────────
+  // ── Fill pin with option ──
   const fillPinOption = useCallback((blockId: string, pinId: string, option: string) => {
     setBlocks(prev => prev.map(b => {
       if (b.id !== blockId) return b;
-      return { ...b, pins: b.pins.map(p => p.id === pinId ? { ...p, value: { root: option.split(' ')[0], function: p.expectedFunction, meaning: option } } : p) };
+      return {
+        ...b,
+        pins: b.pins.map(p => p.id === pinId
+          ? { ...p, value: { root: option.split(' ')[0], function: p.expectedFunction, meaning: option } }
+          : p),
+      };
     }));
   }, []);
 
-  // ── Toggle expand ───────────────────────────────────
+  // ── Toggle expand ──
   const toggleExpand = useCallback((blockId: string) => {
     setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, expanded: !b.expanded } : b));
   }, []);
 
-  // ── Random fill ─────────────────────────────────────
+  // ── G3: Random fill ──
   const randomFill = useCallback(() => {
     if (lexicon.length === 0) return;
     const shuffled = shuffle(lexicon);
@@ -119,15 +371,15 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
     setBlocks(prev => prev.map(b => ({
       ...b,
       pins: b.pins.map(p => {
-        if (p.expectedFunction === 'sustantivo' || p.expectedFunction === 'verbo' || p.expectedFunction === 'adjetivo') {
-          const match = shuffled.find((l, i) => i >= idx && l.Categoría.toLowerCase().includes(p.expectedFunction.slice(0, 3)));
-          if (match) { idx++; return { ...p, value: { root: match.Raíz, function: match.Categoría, meaning: match.Significado[0] ?? '' } }; }
-          // Fallback: any lexeme
+        const funcLower = p.expectedFunction.toLowerCase();
+        if (funcLower === 'sustantivo' || funcLower === 'verbo' || funcLower === 'adjetivo') {
+          const prefix = funcLower.slice(0, 3);
+          const match = shuffled.find((l, i) => i >= idx && l.Categoría.toLowerCase().includes(prefix));
+          if (match) { idx++; return { ...p, value: { root: match.Raíz, function: match.Categoría, meaning: match.Significado[0] ?? '', lexeme: match } }; }
           const any = shuffled[idx % shuffled.length];
           idx++;
-          return { ...p, value: { root: any.Raíz, function: any.Categoría, meaning: any.Significado[0] ?? '' } };
+          return { ...p, value: { root: any.Raíz, function: any.Categoría, meaning: any.Significado[0] ?? '', lexeme: any } };
         }
-        // For non-root pins, randomly fill from options
         if (p.options && Math.random() > 0.3) {
           const opt = p.options[Math.floor(Math.random() * p.options.length)];
           return { ...p, value: { root: opt.split(' ')[0], function: p.expectedFunction, meaning: opt } };
@@ -135,19 +387,17 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
         return { ...p, value: null };
       }),
     })));
-    setRandomSeed(s => s + 1);
   }, [lexicon]);
 
-  // ── Clear all ───────────────────────────────────────
+  // ── Clear all ──
   const clearAll = useCallback(() => {
     setBlocks(prev => prev.map(b => ({ ...b, expanded: false, pins: b.pins.map(p => ({ ...p, value: null })) })));
   }, []);
 
-  // ── Parse import ────────────────────────────────────
+  // ── Parse import ──
   const handleImport = useCallback(() => {
     if (!importText.trim() || !importTarget) return;
     const lines = importText.trim().split('\n').filter(l => l.trim());
-    // Simple parse: tab/comma separated → options
     const options = lines.slice(1).map(line => {
       const parts = line.split(/[\t,|]+/).map(s => s.trim());
       return parts.join(' | ');
@@ -162,10 +412,11 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
     setImportTarget(null);
   }, [importText, importTarget]);
 
-  // ── Generate preview ────────────────────────────────
+  // ── G2: Generate real preview using grammar engine ──
   const { previewText, errors } = useMemo(() => {
     const errors: string[] = [];
-    const parts: string[] = [];
+    const participants: { role: string; lexeme: LexiconEntry; features: Record<string, string> }[] = [];
+    const freeMorphemes: { role: string; form: string }[] = [];
 
     blocks.forEach(block => {
       const filledPins = block.pins.filter(p => p.value);
@@ -175,43 +426,116 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
         errors.push(`${block.label}: falta "${missingRequired[0].label}"`);
       }
 
-      filledPins.forEach(pin => {
-        if (pin.value) parts.push(`[${pin.value.root}]`);
+      // Collect root lexeme as a participant
+      const rootPin = block.pins.find(p => p.expectedFunction === ROLE_TO_FUNCTION[block.roleId] && p.value);
+      if (rootPin && rootPin.value?.lexeme) {
+        const features: Record<string, string> = {};
+        // Collect feature pins (case, conjugation, etc.)
+        block.pins.forEach(p => {
+          if (p.id !== rootPin.id && p.value && p.value.function === p.expectedFunction) {
+            features[p.id] = p.value.root;
+          }
+        });
+        participants.push({
+          role: block.roleId,
+          lexeme: rootPin.value.lexeme,
+          features,
+        });
+      }
+
+      // Collect option-value pins as free morphemes
+      block.pins.forEach(p => {
+        if (p.value && p.options) {
+          freeMorphemes.push({ role: p.id, form: p.value.root });
+        }
       });
     });
 
-    if (parts.length === 0 && lexicon.length === 0) {
+    if (participants.length === 0 && lexicon.length === 0) {
       errors.push('No hay lexemas. Añadí palabras al léxico primero.');
+      return { previewText: '', errors };
     }
 
-    return { previewText: parts.join(' '), errors };
-  }, [blocks, lexicon.length, randomSeed]);
+    // G2: Use realizeClause from the grammar engine
+    if (grammar && participants.length > 0) {
+      try {
+        const clauseFeatures = { participants, freeMorphemes: freeMorphemes.length > 0 ? freeMorphemes : undefined };
+        const result = realizeClause(clauseFeatures, grammar);
+        return { previewText: result.sentence, errors };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        errors.push(`Error del motor: ${msg}`);
+        // Fallback to simple preview
+        const parts = participants.map(p => p.lexeme.Raíz);
+        return { previewText: parts.join(' '), errors };
+      }
+    }
 
+    // Fallback: simple preview (original behavior)
+    const parts: string[] = [];
+    blocks.forEach(block => {
+      block.pins.filter(p => p.value).forEach(pin => {
+        if (pin.value) parts.push(`[${pin.value.root}]`);
+      });
+    });
+    return { previewText: parts.join(' '), errors };
+  }, [blocks, lexicon.length, grammar]);
+
+  // G4: Emit preview change
   React.useEffect(() => {
     onPreviewChange?.(previewText, errors);
   }, [previewText, errors, onPreviewChange]);
 
-  // ── Render ──────────────────────────────────────────
+  // G4: Persist on change
+  useEffect(() => {
+    saveState(blocks);
+  }, [blocks]);
+
+  // ── Render ──
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <button onClick={randomFill} disabled={lexicon.length === 0}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+        <button
+          onClick={randomFill}
+          disabled={lexicon.length === 0}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/20 hover:bg-accent/30 text-accent text-xs font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
           <span>🎲</span><span>Random</span>
         </button>
-        <button onClick={clearAll}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors">
+        <button
+          onClick={clearAll}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors"
+        >
           <span>🗑️</span><span>Limpiar</span>
         </button>
+
+        {/* G3: Block palette (add blocks) */}
+        {availableBlocks.length > 0 && (
+          <div className="flex items-center gap-1 ml-2">
+            <span className="text-[10px] text-white/40">Añadir:</span>
+            {availableBlocks.map(b => (
+              <button
+                key={b.id}
+                onClick={() => addBlock(b)}
+                title={`Añadir ${b.label}`}
+                className="flex items-center gap-0.5 px-2 py-1 rounded-lg bg-white/5 border border-white/10 hover:bg-accent/10 hover:border-accent/30 text-xs transition-colors"
+              >
+                <span>{b.icon}</span>
+                <span className="text-[10px] text-white">{b.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="ml-auto text-[10px] text-white/40">
           {lexicon.length} lexemas disponibles
         </div>
       </div>
 
-      {/* Flowline */}
+      {/* Flowline — G3: draggable with reorder handle */}
       <div className="flex-1 overflow-y-auto space-y-3 mb-3">
-        {blocks.map((block) => {
+        {blocks.map((block, idx) => {
           const filledCount = block.pins.filter(p => p.value).length;
           const totalCount = block.pins.length;
           const colorMap: Record<string, string> = {
@@ -219,22 +543,47 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
             purple: 'border-purple-400/50 bg-purple-500/5',
             amber: 'border-amber-400/50 bg-amber-500/5',
             emerald: 'border-emerald-400/50 bg-emerald-500/5',
+            pink: 'border-pink-400/50 bg-pink-500/5',
+            indigo: 'border-indigo-400/50 bg-indigo-500/5',
           };
 
           return (
-            <div key={block.id} className={`rounded-xl border-2 transition-all ${colorMap[block.color] ?? 'border-white/10 bg-white/5'} ${block.expanded ? 'p-3' : 'p-2'}`}>
+            <div
+              key={block.id}
+              className={`rounded-xl border-2 transition-all group ${colorMap[block.color] ?? 'border-white/10 bg-white/5'} ${block.expanded ? 'p-3' : 'p-2'}`}
+              draggable
+              onDragOver={e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+              onDrop={e => {
+                e.preventDefault();
+                const fromIdx = Number(e.dataTransfer.getData('application/loxar-block'));
+                if (!isNaN(fromIdx) && fromIdx !== idx) moveBlock(fromIdx, idx);
+              }}
+            >
               {/* Block Header */}
-              <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleExpand(block.id)}>
+              <div
+                className="flex items-center gap-2 cursor-pointer"
+                onClick={() => toggleExpand(block.id)}
+                draggable
+                onDragStart={e => { e.dataTransfer.setData('application/loxar-block', String(idx)); }}
+                onDragEnd={e => { e.dataTransfer.setData('application/loxar-block', ''); }}
+              >
+                {/* G3: Reorder handle (visible on hover) */}
+                <span className="cursor-move opacity-0 group-hover:opacity-60 text-white/30 text-xs transition-opacity touch-none">⠿</span>
+
                 <span className="text-lg">{block.icon}</span>
                 <span className="text-xs font-bold text-white tracking-wide">{block.label}</span>
                 <span className="text-[10px] text-white/40 ml-1">{filledCount}/{totalCount}</span>
-                <div className="ml-auto flex items-center gap-1">
-                  {/* Status dots */}
-                  {block.pins.map(p => (
-                    <span key={p.id} className={`w-2 h-2 rounded-full ${p.value ? 'bg-emerald-400' : p.required ? 'bg-amber-400/60' : 'bg-white/20'}`} />
-                  ))}
-                  <span className={`text-[10px] text-white/40 transition-transform ${block.expanded ? 'rotate-180' : ''}`}>▼</span>
-                </div>
+
+                {/* G3: Remove button */}
+                <button
+                  onClick={e => { e.stopPropagation(); removeBlock(block.id); }}
+                  title={`Quitar ${block.label}`}
+                  className="ml-auto opacity-0 group-hover:opacity-100 text-red-400/60 hover:text-red-400 text-xs p-0.5 rounded transition-all"
+                >
+                  ✕
+                </button>
+
+                <span className={`text-[10px] text-white/40 transition-transform ${block.expanded ? 'rotate-180' : ''}`}>▼</span>
               </div>
 
               {/* Expanded: Pins */}
@@ -246,19 +595,29 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
                       <span className={`text-[10px] font-mono w-20 truncate ${pin.required ? 'text-amber-400' : 'text-white/50'}`}>
                         {pin.label}{pin.required && '*'}
                       </span>
+
                       {/* Pin value / drop zone */}
                       {!pin.options ? (
                         <div
                           onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('bg-accent/20'); }}
                           onDragLeave={e => e.currentTarget.classList.remove('bg-accent/20')}
-                          onDrop={e => { e.preventDefault(); e.currentTarget.classList.remove('bg-accent/20'); if (draggedLexeme) fillPin(block.id, pin.id, draggedLexeme); }}
+                          onDrop={e => {
+                            e.preventDefault();
+                            e.currentTarget.classList.remove('bg-accent/20');
+                            if (draggedLexeme) fillPin(block.id, pin.id, draggedLexeme);
+                          }}
                           onClick={() => pin.value && fillPin(block.id, pin.id, null)}
                           className={`flex-1 rounded-lg border border-dashed px-3 py-1.5 text-xs cursor-pointer transition-colors min-h-[28px] flex items-center ${
-                            pin.value ? 'border-accent/40 bg-accent/10 text-white' : 'border-white/20 bg-white/5 text-white/30 hover:border-accent/30'
+                            pin.value
+                              ? 'border-accent/40 bg-accent/10 text-white'
+                              : 'border-white/20 bg-white/5 text-white/30 hover:border-accent/30'
                           }`}
                         >
                           {pin.value ? (
-                            <span><span className="text-accent font-mono font-bold">{pin.value.root}</span> <span className="text-white/40">({pin.value.meaning})</span></span>
+                            <span>
+                              <span className="text-accent font-mono font-bold">{pin.value.root}</span>
+                              <span className="text-white/40"> ({pin.value.meaning})</span>
+                            </span>
                           ) : (
                             <span>{PLACEHOLDER_LEXEME}</span>
                           )}
@@ -277,6 +636,7 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
                       )}
                     </div>
                   ))}
+
                   {/* Import button for this block */}
                   <button
                     onClick={() => setImportTarget(block.id)}
@@ -295,11 +655,18 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
       {importTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-surface border border-border-dark rounded-xl p-4 w-full max-w-md mx-4">
-            <h3 className="text-sm font-bold text-white mb-2">Importar tabla para: {blocks.find(b => b.id === importTarget)?.label}</h3>
-            <p className="text-[10px] text-white/50 mb-2">Pegá una tabla (tab/comma/pipe separado). Primera fila = headers.</p>
-            <textarea value={importText} onChange={e => setImportText(e.target.value)}
+            <h3 className="text-sm font-bold text-white mb-2">
+              Importar tabla para: {blocks.find(b => b.id === importTarget)?.label}
+            </h3>
+            <p className="text-[10px] text-white/50 mb-2">
+              Pegá una tabla (tab/comma/pipe separado). Primera fila = headers.
+            </p>
+            <textarea
+              value={importText}
+              onChange={e => setImportText(e.target.value)}
               placeholder="caso&#9;sg-vocal&#9;sg-consonante&#9;plural&#10;nominativo&#9;-&#9;-u&#9;a→u&#10;acusativo&#9;-ar&#9;-ar&#9;-aur&#10;dativo&#9;-ala&#9;-ala&#9;-alu"
-              className="w-full h-32 bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-xs text-white font-mono resize-none focus:outline-none focus:border-accent/50 mb-3" />
+              className="w-full h-32 bg-black/30 border border-white/20 rounded-lg px-3 py-2 text-xs text-white font-mono resize-none focus:outline-none focus:border-accent/50 mb-3"
+            />
             <div className="flex gap-2 justify-end">
               <button onClick={() => setImportTarget(null)} className="px-3 py-1.5 rounded-lg bg-white/10 text-white text-xs hover:bg-white/20">Cancelar</button>
               <button onClick={handleImport} className="px-3 py-1.5 rounded-lg bg-accent/20 text-accent text-xs font-semibold hover:bg-accent/30">Importar</button>
@@ -308,10 +675,10 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
         </div>
       )}
 
-      {/* Preview */}
+      {/* Preview — G2: uses grammar engine */}
       <div className="rounded-xl border border-accent/30 bg-black/30 p-3">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] uppercase tracking-wider text-accent font-semibold">Preview</span>
+          <span className="text-[10px] uppercase tracking-wider text-accent font-semibold">Preview de oración</span>
           {errors.length > 0 && <span className="text-[9px] text-amber-400">⚠ {errors.length} aviso(s)</span>}
         </div>
         <div className="text-sm font-mono text-white min-h-[24px]">
@@ -328,13 +695,16 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
 
       {/* Lexeme Palette */}
       <div className="mt-3">
-        <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1.5 font-semibold">Léxico disponible (arrastrá a los pines)</div>
+        <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1.5 font-semibold">
+          Léxico disponible (arrastrá a los pines)
+        </div>
         <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
           {lexicon.length === 0 ? (
             <span className="text-[10px] text-white/30 italic">No hay lexemas. Andá al Léxico para añadir palabras.</span>
           ) : (
             lexicon.slice(0, 50).map(entry => (
-              <span key={entry.ID}
+              <span
+                key={entry.ID}
                 draggable
                 onDragStart={() => setDraggedLexeme(entry)}
                 onDragEnd={() => setDraggedLexeme(null)}
@@ -350,5 +720,10 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({ lexicon, onPreviewChang
     </div>
   );
 };
+
+/** Generate a uid for pin/block ids */
+function uid(prefix: string): string {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+}
 
 export default SyntaxFlowline;
