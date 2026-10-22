@@ -6,7 +6,7 @@
  * Diseño Cyber/Neon tipo tarjeta:
  *   - Encabezado: "GRAMMAR ENGINE" + indicador de estado
  *   - Sección central: "RULE SUB-ENGINES"
- *   - Sub-tarjetas: [E] Ergative Case y [X] X-Bar Syntax
+ *   - Sub-tarjetas: [E] Alignment (case) y [X] Syntactic Strategy (head direction)
  *   - Footer: "Status: X Rules Compiled" + botón Zoom
  *
  * Se renderiza dentro del sistema de nodos custom de GraphCanvas.
@@ -25,6 +25,12 @@ export interface GrammarNodeProps {
   alignment?: string;
   /** Word order from typology (e.g. 'SOV', 'SVO', 'VSO') */
   wordOrder?: string;
+  /**
+   * Estrategia sintáctica real del conlang: la directionality de cabeza derivada
+   * de la tipología (e.g. 'head_initial', 'head_final'). Data-driven: la etiqueta
+   * de la sub-tarjeta X sale de este valor con un fallback razonable ('X-Bar').
+   */
+  headDirection?: string;
   /** Callback para zoom — abre el GrammarPragmaticPanel */
   onZoom?: () => void;
   /** Callback para swap engine */
@@ -39,6 +45,7 @@ const GrammarNode: React.FC<GrammarNodeProps> = ({
   status = 'inactive',
   alignment,
   wordOrder,
+  headDirection,
   onZoom,
   onSwap,
   connected = false,
@@ -46,6 +53,12 @@ const GrammarNode: React.FC<GrammarNodeProps> = ({
   const statusColor =
     status === 'active' ? 'bg-emerald-400' : status === 'compiling' ? 'bg-amber-400' : 'bg-white/30';
   const statusLabel = status === 'active' ? 'Active AST' : status === 'compiling' ? 'Compiling...' : 'Idle';
+
+  // H1: la etiqueta de la sub-tarjeta X es data-driven — sale de la directionality
+  // de cabeza real del conlang. Fallback razonable 'X-Bar' cuando no hay datos.
+  const syntaxLabel = headDirection
+    ? headDirection.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : 'X-Bar';
 
   return (
     <div className="flex flex-col h-full">
@@ -75,7 +88,7 @@ const GrammarNode: React.FC<GrammarNodeProps> = ({
 
         {/* Sub-tarjetas E y X */}
         <div className="grid grid-cols-2 gap-2">
-          {/* E - Ergative Case */}
+          {/* E - Alignment / case */}
           <div className="bg-white/5 border border-cyan-400/40 hover:border-cyan-400 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,240,255,0.15)] group">
             <span className="text-2xl font-black font-mono text-cyan-400 group-hover:scale-110 transition-transform">E</span>
             <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.1">
@@ -84,10 +97,10 @@ const GrammarNode: React.FC<GrammarNodeProps> = ({
             <span className="text-[8px] font-mono text-cyan-300/60">{typologyLabel ? typologyLabel.charAt(0).toUpperCase() + typologyLabel.slice(1) : '—'}</span>
           </div>
 
-          {/* X - X-Bar Syntax */}
+          {/* X - Syntactic Strategy (data-driven from head directionality) */}
           <div className="bg-white/5 border border-cyan-400/40 hover:border-cyan-400 rounded-lg p-2 flex flex-col items-center justify-center cursor-pointer transition-all hover:shadow-[0_0_15px_rgba(0,240,255,0.15)] group">
             <span className="text-2xl font-black font-mono text-cyan-400 group-hover:scale-110 transition-transform">X</span>
-            <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.1">X-Bar Syntax</span>
+            <span className="text-[9px] font-mono text-white/60 font-semibold uppercase mt-0.1">{syntaxLabel} Syntax</span>
             <span className="text-[8px] font-mono text-white/30">{wordOrder ? `${wordOrder} Specifier` : 'SOV Specifier'}</span>
           </div>
         </div>

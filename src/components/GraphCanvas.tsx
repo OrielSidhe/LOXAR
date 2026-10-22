@@ -101,6 +101,7 @@ type GraphCanvasProps = {
     rulesCount?: number;
     alignment?: string;
     wordOrder?: string;
+    headDirection?: string;
     activeClauseType?: string | null;
   };
   /** Callback al hacer clic en "Zoom" del nodo Gramática — abre el panel pragmático */
@@ -386,6 +387,7 @@ const GrammarEngineNodeComponent: React.FC<NodeProps> = ({ data, selected }) => 
         typologyLabel={d.pragmaticEngine?.typologyLabel}
         alignment={d.pragmaticEngine?.alignment}
         wordOrder={d.pragmaticEngine?.wordOrder}
+        headDirection={d.pragmaticEngine?.headDirection}
         status={d.pragmaticEngine?.activeClauseType ? 'active' : 'inactive'}
         onZoom={() => d.onZoom?.()}
         connected={false}

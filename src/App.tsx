@@ -392,6 +392,7 @@ const App = () => {
       rulesCount,
       alignment: g.typology.alignment || 'nominative',
       wordOrder: g.typology.wordOrder || '',
+      headDirection: g.typology.headDirection || '',
       activeClauseType: g.pragmaticEngine?.activeClauseType ?? null,
     };
   }, [activeGrammar]);
