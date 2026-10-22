@@ -3,33 +3,23 @@
 > **Documento CANÓNICO de contratos de datos para cada tipo de nodo en `GraphCanvas.tsx`.**
 >
 > Define para cada tipo de nodo: fuente de datos, métricas mostradas, hijos conceptuales,
-> acción de clic, y objetivo de zoom. Sirve como especificación antes de la implementación
-> de BLOQUE B (nodos data-driven, canvas state preservation).
->
-> Cada sección incluye:
-> - **Estado actual** — cómo funciona hoy (muchos nodos usan datos hardcodeados).
-> - **Estado objetivo** — cómo debe funcionar tras BLOQUE B.
-> - **Referencias de código** — `file:line` exactos para cada pieza.
-
----
+> acción de clic, y objetivo de zoom. Se mantiene en sync con el código tras BLOQUE B y
+> GAUNTLET D.
 
 ## Arquitectura de niveles
 
 `GraphCanvas` navega entre 4 niveles (`LevelId`):
 
 | Nivel | Componente de nodo principal | Fuente de nodos |
-|-------|---------------------------|-----------------|
-| `root` | `RootNodeComponent` (conlang-root) + nodos dinámicos del `ModulePalette` | `ROOT_NODE_ID` + `setNodes` con nodo raíz; nodos palette via `handleDrop` |
-| `grammar` | 9 `ModuleNodeComponent` | `GRAMMAR_NODES` (línea 128) + `GRAMMAR_EDGES` |
-| `lexicon` | 4 `ModuleNodeComponent` | `LEXICON_NODES` (línea 151) + `LEXICON_EDGES` |
+|-------|------------------------------|-----------------|
+| `root` | `RootNodeComponent` (conlang-root, **raíz del árbol estrella**) + nodos dinámicos del `ModulePalette` | `ROOT_NODE_ID` + `ROOT_NODES` (árbol estrella) + dinámicos vía `handleDrop` |
+| `grammar` | 9 `ModuleNodeComponent` | `GRAMMAR_NODES` (GraphCanvas.tsx:153) + `GRAMMAR_EDGES` |
+| `lexicon` | 4 `ModuleNodeComponent` | `LEXICON_NODES` (GraphCanvas.tsx:176) + `LEXICON_EDGES` |
 | `syntax` | `SyntaxFlowline` (overlay, no ReactFlow) | N/A — canvas AST completo |
 
-Los niveles `grammar` y `lexicon` se activan via `zoomIntoNode` (línea 444), que llama
-`setLevel`. El botón "Volver" llama `navigateToLevel('root')` (línea 710).
-
-> **Bug B5**: El `useEffect` en `GraphCanvas.tsx:466-495` purga todos los nodos
-> `ROOT_NODES` al volver a `root`, dejando solo `rootNode` + dinámicos.
-> Estado del canvas se pierde al navegar. Ver [Canvas State Preservation](#canvas-state-preservation-b5).
+Los niveles `grammar` y `lexicon` se activan vía `zoomIntoNode` (GraphCanvas.tsx:621). El botón
+"Volver" llama `navigateToLevel('root')`. Los nodos dinámicos y sus **conexiones** se preservan
+al navegar (D5, GraphCanvas.tsx:620-621, 683-696).
 
 ---
 
@@ -37,268 +27,213 @@ Los niveles `grammar` y `lexicon` se activan via `zoomIntoNode` (línea 444), qu
 
 | Prop | Origen | Tipo | Nodos que lo usan |
 |------|--------|------|-------------------|
-| `conlangName` | `App.tsx:575` → `activeMetadata?.conlangName` | `string \| null` | RootNode (selector de conlang) |
-| `conlangNames` | `App.tsx:577` → `lexiconHook.lexiconNames` | `string[]` | RootNode (select múltiple) |
-| `onSelectConlang` | `App.tsx:578` → `lexiconHook.setActiveLexicon` | `(name: string) => void` | RootNode |
-| `stats` | `App.tsx:580-601` (computado desde `activeGrammar` + `activeLexicon`) | objeto estructurado (abajo) | Todos los ModuleNode que muestran stats |
-| `lexicon` | `App.tsx:579` → `activeLexicon` | `Array<{ID, Raíz, Léxema, Categoría, Significado}>` | SyntaxFlowline (nivel syntax) |
-| `activeModule` | `App.tsx:576` → `activeTab` | `string` | ModuleNode (highlight activo) |
-| `onModuleClick` | `App.tsx:602` | `(moduleId: string) => void` | ModuleNode (navega a pantalla) |
-| `onZoom` | `GraphCanvas.tsx:444` (`zoomIntoNode`) | `(nodeId: string) => void` | ModuleNode (cambio de nivel) |
-| `pragmaticEngine` | `LanguageHomeCanvas.tsx:68` → `onZoomToNode?.('pragmatic')` | `{typologyLabel?, rulesCount?, activeClauseType?}` | **NO se pasa aún** (línea 68 pasa `onZoomToGrammar` pero `LanguageHomeCanvas` no pasa `pragmaticEngine` a `GraphCanvas`) |
-| `onZoomToGrammar` | `LanguageHomeCanvas.tsx:68` → `onZoomToNode?.('pragmatic')` | `() => void` | GrammarEngineNode (abre panel pragmático) |
+| `conlangName` | `App.tsx` → `activeMetadata?.conlangName` | `string \| null` | RootNode |
+| `conlangNames` | `App.tsx` → `lexiconHook.lexiconNames` | `string[]` | RootNode |
+| `onSelectConlang` | `App.tsx` → `lexiconHook.setActiveLexicon` | `(name: string) => void` | RootNode |
+| `stats` | `App.tsx` (computado desde `activeGrammar` + `activeLexicon`) | objeto estructurado | ModuleNode que muestra stats |
+| `lexicon` | `App.tsx` → `activeLexicon` | array | SyntaxFlowline (nivel syntax) |
+| `activeModule` | `App.tsx` → `activeTab` | `string` | ModuleNode (highlight activo) |
+| `onModuleClick` | `App.tsx` (GraphCanvas.tsx:101) | `(moduleId: string) => void` | ModuleNode (navega a pantalla) |
+| `onNavigate` | `LanguageHomeCanvas.tsx:52` → `onModuleClick` (mapa tab) | `(tab: string) => void` | ModuleNode / GrammarEngineNode (botones) |
+| `pragmaticEngine` | `App.tsx:382` (deriva de `activeGrammar`) | `{typologyLabel, rulesCount, alignment, wordOrder, headDirection, activeClauseType}` | GrammarEngineNode |
+| `onZoomToGrammar` | `LanguageHomeCanvas.tsx:78` → `onZoomToNode?.('pragmatic')` | `() => void` | GrammarEngineNode (Zoom → panel pragmático) |
 
-### Stats prop — estructura (App.tsx:580-601)
+### Stats prop — estructura (App.tsx:605-626)
 
 ```typescript
 stats = {
-  grammar:  { rules, categories, strategies, roles }     // desde activeGrammar
-  phonology:{ sounds, rules }                            // desde activeGrammar
-  syntax:   { rules, trees }                             // desde activeGrammar
-  lexicon:  { entries, categories }                      // desde activeLexicon.length
-  neography:{ glyphs, rules }                            // hardcodeado undefined
-  semantics:{ fields, relations }                       // hardcodeado 0
-  translator:{ translations }                            // hardcodeado 0
-  workbench:{ pending, completed }                      // desde incompleteEntries
-  collections:{ collections }                           // hardcodeado 0
+  grammar:  { rules, categories, strategies, roles }
+  phonology:{ sounds, rules }
+  syntax:   { rules, trees }
+  lexicon:  { entries, categories }
+  neography:{ glyphs, rules }         // unwired → undefined
+  semantics:{ fields, relations }
+  translator:{ translations }
+  workbench:{ pending, completed }
+  collections:{ collections }
 }
 ```
 
-> **Nota**: App.tsx:582-593 usa `(activeGrammar as any)?.morphology?.rules` etc.
-> El `GrammarManifest` (types.ts:366) no declara `.morphology` o `.syntax.rules`
-> como propiedades tipadas — estos son accesos `as any` a propiedades runtime.
-> BLOQUE B debe alinear el cálculo de stats con la interfaz tipada real
-> (`phonology.inventory.consonants`, `phonology.inventory.vowels`,
-> `strategies.length`, `roles.length`, `paradigms.length`, `mutationRules.length`, etc.).
+> **Nota técnica**: App.tsx:607-610 usa accesos `(activeGrammar as any)?....` porque el
+> `GrammarManifest` (types.ts) no declara `.morphology/.syntax.rules` como props tipadas.
+> BLOQUE B los alinea con la interfaz `TypologicalProfile` (pragmaticTypes.ts).
+
+---
+
+## GAUNTLET D — Contratos actualizados (El Árbol de Verdad)
+
+> Implementado en `GraphCanvas.tsx`. Refleja el estado post-D; los bugs del canvas
+> (pipeline en vez de árbol, edges genéricos, sin borrar conexiones, conexiones
+> que se deshacen al navegar, nodos inconsistentes) están corregidos.
+
+### D1 — Árbol jerárquico estrella en `root`
+
+- **Contrato**: `conlang-root` es la raíz del árbol. `ROOT_EDGES` (GraphCanvas.tsx:143) es una
+  **estrella**: cada arista tiene `from.node === ROOT_NODE_ID` y `to.node` = un módulo.
+- **Ventana visible**: el nodo central conecta con sus módulos (Léxico, Gramática, Fonología…).
+- **`workbench`** se dobla como botón dentro del nodo Léxico (D3), no es nodo del árbol.
+- **Añadir módulos** (palette drag) no pierde conexiones existentes: las aristas del árbol son
+  estáticas y se regeneran solo al (re)entrar a `root`; las conexiones dinámicas del usuario se
+  preservan por separado (D5).
+- **Validación**: `tests/graphCanvasTree.test.ts` verifica que todas las ROOT_EDGES salen de root
+  y que cada módulo expone un puerto `in`.
+
+### D2 — Handles nominales (multiples puntos de conexión)
+
+- **Contrato**: `ModuleNodeComponent` (GraphCanvas.tsx:382) renderiza **un `<Handle>` por puerto
+  declarado** (`id = port.id`), apilados verticalmente si hay varios por lado. Dejan de ser
+  "2 dots genéricos".
+- `RootNodeComponent` (GraphCanvas.tsx:338) expone handles nominales en los 4 lados
+  (`top/right/bottom/left`) para anclaje radial del árbol.
+- `GrammarEngineNodeComponent` (GraphCanvas.tsx:495) expone handles por sub-motor:
+  `target` `alignment` + `syntax` (sub-tarjetas E y X), `source` `morph` + `roles`.
+- Las aristas referencian `sourceHandle`/`targetHandle` con el `id` del puerto (toRfEdges:256).
+
+### D3 — Regla de contrato: pantallas vs datos
+
+- **Regla**: los módulos que son **PANTALLAS** no tienen nodo propio — viven como botón dentro
+  de su nodo padre. **Nodos solo para DATOS**.
+  - `Workbench` → botón **dentro del nodo Léxico** (GraphCanvas.tsx:450).
+  - `Neografía` (escritura) → botón dentro del nodo escritura (Neografía conserva su nodo de datos
+    de glifos/reglas; el editor abre vía su botón).
+  - `Importar/Exportar` → nodo `isScreen` con estilo botón de acción (GraphCanvas.tsx:456).
+- Al click se navega a la pantalla vía `onNavigate`.
+
+### D4 — Eliminar conexiones
+
+- **Contrato**: toda conexión puede eliminarse.
+  - (a) **Seleccionar edge + tecla Supr/Borrar** → `handleDeleteSelected` (GraphCanvas.tsx:806),
+    que filtra edgesSeleccionados no estáticos. `onSelectionChange` (GraphCanvas.tsx:907)
+    alimenta `selectedEdges`.
+  - (b) **Botón `×` flotante** sobre el edge en hover → `DeletableEdge` (GraphCanvas.tsx:271),
+    renderizado vía `edgeTypes.deletable` (GraphCanvas.tsx:548).
+- Las aristas **estáticas** (estructura del árbol) están marcadas `data.static = true`
+  (toRfEdges:256) y **no son eliminables**; solo las conexiones dinámicas del usuario lo son.
+- `isValidConnection` (GraphCanvas.tsx:798) impide auto-conexiones.
+
+### D5 — Preservación de posiciones y conexiones (B5-BIS)
+
+- **Bug corregido**: `rootDynNodesRef` (GraphCanvas.tsx:620) guardaba nodos pero se perdían las
+  conexiones al navegar. Ahora `rootDynEdgesRef` (GraphCanvas.tsx:621) también preserva las
+  aristas dinámicas no estáticas (filtrado en 696) y se restauran al volver a `root` (684).
+- **Criterio de aceptación manual**: arrastrar un nodo desde Módulos → conectarlo al central
+  (conlang-root) → navegar a grammar → volver → el nodo y su conexión siguen ahí. Ver
+  [Pruebas manuales D5](#pruebas-manuales-d5).
+- Las posiciones de nodos dinámicos se conservan (el `Node` carra `position`).
+
+### D6 — Unificación de nodos (paleta vs poblados)
+
+- **Contrato**: `grammarNodeType` (GraphCanvas.tsx:229) asigna tipo `grammarNode` a **tanto** el
+  nodo `grammar` de `ROOT_NODES` como a los dinámicos `dyn_grammar_*`. Ambos usan
+  `GrammarEngineNodeComponent` → **un solo sistema de nodos** (GraphCanvas.tsx:771).
+- `handleDrop` (GraphCanvas.tsx:845) construye el data shape `{ node, ...nodeCallbacks }`
+  idéntico al de `toRfNodes`, incluyendo `pragmaticEngine`, de modo que el nodo poblado y el
+  arrastrado muestran los mismos datos reales.
+- El nodo `grammar` muestra stats reales (rulesCount, alignment, headDirection → label X
+  data-driven, H1).
+
+### Pruebas manuales D5
+
+1. En `root`, arrastrar "Gramática" desde la paleta al canvas.
+2. Conectar el nodo arrastrado al nodo central `conlang-root` (arista dinámica).
+3. Hacer Zoom en el nodo `grammar` → nivel `grammar`.
+4. Clic en "Volver al árbol principal" → vuelve a `root`.
+5. **Resultado esperado**: el nodo arrastrado y la conexión al central persisten (posición + edge).
+   Las aristas del árbol (conlang → módulos) también persisten.
+
+---
+
+## Estado actual (post-B2/B3/B4/B5 + H1 + D)
+
+Se ha cerrado la brecha entre el "estado objetivo" de BLOQUE B y la realidad:
+
+- **B2**: `LanguageHomeCanvas.tsx:77` pasa `pragmaticEngine` desde `App.tsx:382`; `GrammarNode` muestra
+  `rulesCount` real, `typologyLabel` capitalizado, `alignment` y `wordOrder` reales; la sub-tarjeta **X**
+  deriva su label de `headDirection` (H1) con fallback `X-Bar`.
+- **B3-B4**: `withStats` (GraphCanvas.tsx:237) mapea `stats` a ROOT/GRAMMAR/LEXICON nodes.
+- **B5**: preservación de nodos dinámicos (rootDynNodesRef) + conexiones (rootDynEdgesRef, D5).
+- **D1-D6**: árbol estrella, handles nominales, delete edges, screen-as-button, unificación.
 
 ---
 
 ## 1. Root Node — `rootNode` / `RootNodeComponent`
 
-**Archivo**: `GraphCanvas.tsx:230-264`
+**Archivo**: `GraphCanvas.tsx:338`
 
-### Estado actual
-- **Data source**: Props `conlangName` / `conlangNames` / `onSelectConlang` en `data` del nodo (línea 423).
-- **Metrics**: Muestra el nombre del conlang como título (`sin conlang` si null). Si `conlangNames.length > 1`, muestra un `<select>` para cambiar de conlang. Si `=== 1`, muestra el nombre grisado.
-- **Children**: No aplica (nodo raíz del canvas). Los módulos se agregan dinámicamente vía `ModulePalette` drag-drop.
-- **Click action**: `handleNodeClick` retorna early si `node.id === ROOT_NODE_ID` (línea 521). El nodo raíz NO es clickeable.
-- **Zoom target**: Ninguno (nivel root, no hay zoom desde raíz).
-
-### Estado objetivo
-- **Data source**: Igual. Proponer agregar `stats.totalEntries` y `stats.totalRules` como subtítulos en el nodo raíz para dar feedback global.
-- **Metrics**: Además del nombre, mostrar badge con total de entradas léxicas + reglas gramaticales.
-- **Children**: Mantener drag-drop desde palette.
-- **Click action**: Podría abrir settings para editar nombre del conlang (future enhancement).
-- **Zoom target**: Ninguno.
+- **Data source**: props `conlangName` / `conlangNames` / `onSelectConlang` / `onZoomToGrammar` en `data`.
+- **Metrics**: nombre del conlang como título (`Sin conlang` si null) + selector múltiple.
+- **Handles (D1/D2)**: handles nominales en los 4 lados para anclaje radial del árbol estrella.
+- **Click action**: `handleNodeClick` retorna early si `node.id === ROOT_NODE_ID` — raíz no navega.
+- **Zoom target**: ninguno (es la raíz).
 
 ---
 
 ## 2. Grammar Engine Node — `grammarNode` / `GrammarEngineNodeComponent`
 
-**Archivo**: `GraphCanvas.tsx:359-378` (wrapper) + `GrammarNode.tsx:32-130` (tarjeta visual)
+**Archivo**: `GraphCanvas.tsx:495` (wrapper) + `GrammarNode.tsx` (tarjeta visual)
 
-### Estado actual
-- **Data source**: `pragmaticEngine` prop en `data` (línea 369-371). **Pero `LanguageHomeCanvas.tsx:59-68` NO pasa `pragmaticEngine`** — `GraphCanvas` lo recibe como prop (línea 397-408) pero `LanguageHomeCanvas` no lo inyecta. `GrammarNode` recibe siempre `rulesCount={0}`, `typologyLabel={undefined}`, `status='inactive'`.
-- **Metrics mostradas (hardcodeadas)**:
-  - Sub-tarjeta `[E] Ergative Case` — muestra `typologyLabel` (hardcodeado `'—'` cuando undefined, línea 76 de GrammarNode).
-  - Sub-tarjeta `[X] X-Bar Syntax` — muestra texto estático `"SOV Specifier"` (línea 83).
-  - Footer: `"Status: {rulesCount} Rules Compiled"` → siempre `"0 Rules Compiled"`.
-- **Children**: Ninguno (es un leaf node en el canvas).
-- **Click action**: El botón "Zoom" llama `onZoom` → `onZoomToGrammar` (línea 373).
-- **Zoom target**: `LanguageHomeCanvas.tsx:68` → `onZoomToNode?.('pragmatic')` → `App.tsx:621` → abre `activeTab='grammar'` + `setActiveGrammarModule('pragmatic')`.
-
-### Estado objetivo (B2)
-- **Data source**: `LanguageHomeCanvas` debe calcular `pragmaticEngine` desde `activeGrammar`:
-  - `typologyLabel` ← `morphologyToTypologyProfile(activeGrammar.typology.morphology)` (pragmaticTypes.ts:147)
-  - `rulesCount` ← `activeGrammar.paradigms.length` + `activeGrammar.mutationRules.length` + `activeGrammar.exceptions.length`
-  - `activeClauseType` ← `activeGrammar.pragmaticEngine?.activeClauseType` (si existe)
-- **Metrics objetivo**:
-  - `[E]` sub-tarjeta: mostrar `typologyLabel` capitalizado real (no `'—'`). Label: "Ergative Case" (o dinámico según alignment).
-  - `[X]` sub-tarjeta: mostrar `wordOrder` del manifest (ej: "SOV Specifier" derivado de `activeGrammar.typology.wordOrder`), no hardcodeado.
-  - Footer: `"Status: {rulesCount} Rules Compiled"` con número real.
-- **Children**: Mantener leaf node.
-- **Click action**: Igual (Zoom → panel pragmático).
-- **Zoom target**: Igual (abre panel de pragmática).
+- **Data source**: `pragmaticEngine` prop (vía `nodeCallbacks`) + `onZoomToGrammar`.
+- **Metrics (data-driven)**: sub-tarjeta `[E]` Alignment (`headDirection`-derived label), sub-tarjeta
+  `[X]` Syntactic Strategy (label de `headDirection`, fallback `X-Bar`, H1), footer `"Status: N Rules Compiled"` real.
+- **Handles (D2)**: `target` `in`/`alignment`/`syntax` (izquierda), `source` `morph`/`roles` (derecha).
+- **Children**: leaf (tarjeta).
+- **Click action**: `handleNodeClick` → `onModuleClick('grammar')` → abre pestaña grammar.
+- **Zoom**: botón `🔍 Sub-módulos` → `onZoom('grammar')` (GraphCanvas.tsx:621) → nivel grammar;
+  botón card `Zoom` → `onZoomToGrammar` → panel pragmático.
+- **Unificación (D6)**: mismo componente para ROOT_NODES `grammar` y paleta `dyn_grammar_*`.
 
 ### Sub-tarjetas — contrato de datos
 
-| Sub-tarjeta | Data source (objetivo) | Métrica |
-|-------------|----------------------|---------|
-| `[E]` (align) | `activeGrammar.typology.alignment` | Alignment del idioma (ej: "ergative-absolutive") |
-| `[X]` (syntax) | `activeGrammar.typology.wordOrder` | Orden de palabras (ej: "SOV") |
+| Sub-tarjeta | Data source | Métrica |
+|-------------|-------------|---------|
+| `[E]` (align) | `typology.alignment` | Alineación del idioma |
+| `[X]` (syntax) | `typology.headDirection` | Estrategia sintáctica (Head-Initial / Head-Final), fallback `X-Bar` |
 
 ---
 
 ## 3. Module Nodes — `moduleNode` / `ModuleNodeComponent`
 
-**Archivo**: `GraphCanvas.tsx:267-355`
+**Archivo**: `GraphCanvas.tsx:382`
 
-### Estado actual
 - **Data source**: `node` (GraphNode) + `callbacks` (NodeCallbacks) en `data`.
-- **Metrics**: Muestra `node.stats` como pares label/value (líneas 307-315). ROOT_NODES tiene `stats` hardcodeado solo para `'grammar'` (`[{ label: 'Reglas', value: 0 }]`). El `stats` prop de GraphCanvas **NO se mapea** a los nodos en niveles `root`, `grammar`, o `lexicon` — los valores hardcodeados en las constantes `ROOT_NODES`/`GRAMMAR_NODES`/`LEXICON_NODES` nunca se actualizan con datos reales.
-- **Children**: `hasChildren` = `['grammar', 'lexicon', 'syntax'].includes(node.id)` (línea 273). Muestra botón "Zoom" solo si `hasChildren`. Botón "→ Ir a pantalla" para nodos con pantalla asociada (líneas 325-332).
-- **Click action**: `handleNodeClick` → `onModuleClick(moduleId)` (línea 523). También `handleNavigate` en `onNavigate` (línea 327).
-- **Zoom target**: `d.onZoom(node.id)` → `zoomIntoNode` (línea 444): `'grammar'` → nivel grammar, `'lexicon'` → nivel lexicon, `'syntax'` → nivel syntax.
+- **Metrics**: `node.stats` como pares label/value (mapeados vía `withStats`).
+- **Handles (D2)**: un Handle por puerto declarado (`id=port.id`).
+- **Children**: `hasChildren = ['grammar','lexicon','syntax'].includes(node.id)` → botón "Zoom" → nivel.
+- **Click action**: `handleNodeClick` → `onModuleClick(moduleId)`.
+- **Navegación**: botón "→ Ir a pantalla" → `onNavigate(...)` (tab).
+- **Screen nodes (D3)**: `isScreen` renderiza estilo botón compacto de acción (import → navega a grammar).
 
-### Estado objetivo (B3-B4)
+### 3a. Root-level Module Nodes (ROOT_NODES) — `GraphCanvas.tsx:129`
 
-#### 3a. Root-level Module Nodes (ROOT_NODES + palette dinámicos)
+Árbol estrella `conlang-root` → {grammar, phonology, syntax, lexicon, neography, semantics, translator}.
+`workbench` **no** es nodo (botón dentro de Léxico, D3).
 
-ROOT_NODES (línea 109-118) define 8 módulos. Pero **estos se PURGEAN** al volver a root (línea 478-482). Los módulos visibles en root son los **dinámicos** creados via `ModulePalette` drag-drop (`handleDrop`, línea 547).
+### 3b. Grammar-level Module Nodes (GRAMMAR_NODES) — `GraphCanvas.tsx:153`
 
-| Node ID | Label | Data Source (objetivo) | Metrics (objetivo) | Children | Click → Pantalla | Zoom target |
-|---------|-------|----------------------|-------------------|---------|-------------------|-------------|
-| `grammar` | Gramática 📐 | `stats.grammar` | Rules, Categories, Strategies, Roles | Sí (grammar level) | `activeTab='grammar'` | `level='grammar'` |
-| `phonology` | Fonología 🔊 | `stats.phonology` | Sounds, Rules | Sí (grammar level, sub-módulo) | `activeTab='grammar'`, módulo `'phonology'` | No (root) |
-| `syntax` | Sintaxis 🧩 | `stats.syntax` | Rules, Trees | Sí (syntax level) | No (abre canvas syntax) | `level='syntax'` |
-| `lexicon` | Léxico 📚 | `stats.lexicon` | Entries, Categories | Sí (lexicon level) | `activeTab='table'` | `level='lexicon'` |
-| `workbench` | Workbench 🔨 | `stats.workbench` | Pending, Completed | No | `activeTab='workbench'` | No |
-| `neography` | Neografía ✍️ | `stats.neography` | Glyphs, Rules | No | `activeTab='writing'` | No |
-| `semantics` | Semántica 💡 | `stats.semantics` | Fields, Relations | No | `activeTab='grammar'` (semántica) | No |
-| `translator` | Traductor 🔁 | `stats.translator` | Translations | No | `activeTab='translator'` | No |
+9 sub-módulos (phonology → typology → morphology → syntax → {semantics, roles, pragmatic} → strategies → notes).
 
-> **Nota**: Los nodos dinámicos (`dyn_*`) se crean con `MODULE_LABELS` (línea 181-190)
-> que mapea tipo → label/icon/descripción. Los stats deben propagarse desde el
-> `stats` prop del canvas al nodo dinámico via `toRfNodes`.
+### 3c. Lexicon-level Module Nodes (LEXICON_NODES) — `GraphCanvas.tsx:176`
 
-#### 3b. Grammar-level Module Nodes (GRAMMAR_NODES)
-
-GRAMMAR_NODES (línea 128-138) define 9 sub-módulos de gramática. Al hacer zoom en el
-nodo `grammar` desde root, se muestra este conjunto.
-
-| Node ID | Label | Data Source (objetivo) | Metrics (objetivo) | Click → Pantalla |
-|---------|-------|----------------------|-------------------|------------------|
-| `phonology` | Fonología 🔊 | `activeGrammar.phonology` | Consonantes, Vowels, Syllable Structures | `activeTab='grammar'`, módulo `'phonology'` |
-| `typology` | Tipología 🧬 | `activeGrammar.typology` | Word Order, Alignment, Morphology, Head Direction | `activeTab='grammar'`, módulo `'typology'` |
-| `morphology` | Morfología 🔧 | `activeGrammar.paradigms`, `activeGrammar.mutationRules` | Paradigms, Affixes, Mutation Rules | `activeTab='grammar'`, módulo `'morphology'` |
-| `syntax` | Sintaxis 🧩 | `activeGrammar.roles` | Roles, Strategies | `activeTab='grammar'`, módulo `'syntax'` |
-| `semantics` | Semántica 💡 | `activeGrammar.notes` | Fields (de manifest), Relations | `activeTab='grammar'`, módulo `'semantics'` |
-| `roles` | Roles 🎭 | `activeGrammar.roles` | Role count | `activeTab='grammar'`, módulo `'roles'` |
-| `strategies` | Estrategias ⚙️ | `activeGrammar.strategies` | Strategy count | `activeTab='grammar'`, módulo `'strategies'` |
-| `pragmatic` | Pragmática 🧭 | `activeGrammar.pragmaticEngine` | Active Clause Type, Slots filled | `activeTab='grammar'`, módulo `'pragmatic'` |
-| `notes` | Notas 📝 | `activeGrammar.notes` | Note count | `activeTab='grammar'`, módulo `'notes'` |
-
-> **Estado actual**: Todos muestran `status: 'empty'` y `stats: undefined` (excepto
-> `'wordtypes'` en LEXICON_NODES que tiene stats hardcodeados). El `stats` prop no
-> se propaga a `toRfNodes(GRAMMAR_NODES, ...)`.
-
-#### 3c. Lexicon-level Module Nodes (LEXICON_NODES)
-
-LEXICON_NODES (línea 151-156) define 4 nodos de léxico. Al hacer zoom en `lexicon`
-desde root, se muestra este conjunto.
-
-| Node ID | Label | Data Source (objetivo) | Metrics (objetivo) | Click → Acción |
-|---------|-------|----------------------|-------------------|---------------|
-| `wordtypes` | Tipos de palabra 🏷️ | `activeLexicon` (categorías únicas) | Número de categorías | No tiene pantalla directa (informativo) |
-| `roots` | Raíces 🌱 | `activeLexicon` (raíces únicas) | Número de raíces | No tiene pantalla directa |
-| `entries` | Entradas 📖 | `activeLexicon.length` | Total de entradas (real, no 0) | `activeTab='table'` |
-| `import` | Importar/Exportar 📦 | N/A | No metrics | Abre `GrammarImporterModal` (texto paste + file upload) |
-
-> **Estado actual**: `wordtypes` tiene stats hardcodeados `[{ label: 'Tipos', value: 10 }]`.
-> `entries` tiene `[{ label: 'Entradas', value: 0 }]` (hardcodeado, debería ser `activeLexicon.length`).
-> `roots` y `import` no tienen stats.
+4 nodos: wordtypes, roots, entries, import (import = `isScreen`).
 
 ---
 
 ## 4. Syntax Level — `SyntaxFlowline`
 
-**Archivo**: `GraphCanvas.tsx:663-668` (render) + `components/SyntaxFlowline.tsx`
+**Archivo**: `GraphCanvas.tsx:1120` (render) + `components/SyntaxFlowline.tsx`
 
-### Estado actual
-- **Data source**: `lexicon` prop (full array).
-- **Metrics**: El `SyntaxFlowline` renderiza el AST con slots E-A-R-I-C-K-Q-F, preview,
-  y botones de acción. Es un overlay, no nodos de React Flow.
-- **Children**: N/A (overlay completo).
-- **Click action**: Dentro del `SyntaxFlowline` (ver su propio contrato).
-- **Zoom target**: N/A (es un nivel hoja, "Volver" vuelve a root).
-
-### Estado objetivo
-- **Data source**: Mantener `lexicon` prop. Proponer pasar `pragmaticEngine` +
-  `activeGrammar` para sincronizar slots reales.
+- **Data source**: `lexicon` prop.
+- Overlay completo (no React Flow nodes). "Volver" vuelve a `root`.
 
 ---
 
-## Canvas State Preservation (B5)
+## Canvas State Preservation (B5/D5)
 
-**Bug**: `GraphCanvas.tsx:466-495` — el `useEffect` en `level === 'root'` purga todos
-los nodos ROOT_NODES y reemplaza con solo `rootNode` + nodos dinámicos preservados:
+**Bug corregido**: navegar `root → grammar/lexicon/syntax → root` preserva ahora posiciones **y
+conexiones** de los nodos dinámicos.
 
-```typescript
-// Línea 478-482 — PURGE de ROOT_NODES
-setNodes(nds => {
-  const dyn = nds.filter(
-    n => n.id !== ROOT_NODE_ID && !ROOT_NODES.some(rn => rn.id === n.id)
-  );
-  return [rootNode, ...dyn];
-});
-```
-
-### Impacto
-- Al hacer zoom en `grammar` → se setean GRAMMAR_NODES.
-- Al hacer clic en "Volver" → `navigateToLevel('root')` → purga todo, deja solo `rootNode`.
-- Cualquier nodo dinámico agregado desde palette desaparece.
-- El canvas vuelve a estar "en blanco" (solo nodo raíz).
-
-### Estado objetivo
-- **Root → Grammar/Lexicon → Root**: Preservar los nodos dinámicos del nivel `root`
-  usando un estado guardado (`const [rootNodes, setRootNodes]` o similar).
-- Al volver a `root`, restaurar `rootNode` + nodos dinámicos guardados, NO purgarlos.
-- Los nodos `GRAMMAR_NODES` / `LEXICON_NODES` son siempre regenerados (son estáticos,
-  no se modifican el usuario), por lo que su purga/recread es aceptable.
-
----
-
-## Cross-reference: Data Flow Summary
-
-```
-App.tsx
-  │
-  ├─ activeGrammar (GrammarManifest) ──────────────┐
-  │   └─ stats.grammar/phonology/syntax           │
-  ├─ activeLexicon (array)                         │
-  │   └─ stats.lexicon.entries                    │
-  ├─ incompleteEntries ────────────────────────────┤
-  │   └─ stats.workbench.pending                  │
-  │                                                │
-  └─ LanguageHomeCanvas                           │
-      ├─ conlangName, conlangNames, onSelectConlang │
-      ├─ lexicon, onZoomToNode                      │
-      ├─ stats (computed)                           │
-      └─ App.tsx:580-599                            │
-           │                                       │
-           ▼                                       ▼
-      LanguageHomeCanvas (passthrough)       LanguageHomeCanvas (NO pasa)
-           │  ← pragmaticEngine                ┌─ pragmaticEngine prop
-           │                                    │  (línea 99-103 GraphCanvas)
-           ▼                                    │  pero LanguageHomeCanvas
-      GraphCanvas                               │  línea 59-68 NO lo pasa
-           │                                    │  → GrammarNode siempre
-           ├─ stats prop (no mapeado a nodos)   │  recibe valores default
-           ├─ pragmaticEngine prop (undefined)  │  ← BUG B2
-           └─ onZoomToGrammar                   │
-              │                                 │
-              ▼                                 │
-      GrammarEngineNodeComponent                │
-      (GraphCanvas.tsx:359-378)                 │
-           │                                    │
-           ▼                                    │
-      GrammarNode.tsx                          │
-      (GrammarNode.tsx:32-130)                 │
-           │  ← hardcodeado "Ergative Case"     │
-           │  ← hardcodeado "SOV Specifier"     │
-           │  ← rulesCount={0} siempre          │
-           │  ← typologyLabel={undefined}       │
-           └─────────────────────────────────────┘
-```
-
-### Cambios requeridos (BLOQUE B)
-
-| Task | Archivo | Descripción |
-|------|---------|-------------|
-| B1 | `docs/NODE_CONTRACTS.md` | ✅ Este documento |
-| B2 | `LanguageHomeCanvas.tsx:59-68` | Pasar `pragmaticEngine` desde `activeGrammar` (usar `morphologyToTypologyProfile`) |
-| B2 | `GrammarNode.tsx:73-84` | Hacer data-driven las sub-tarjetas `[E]` y `[X]` |
-| B3 | `GraphCanvas.tsx:466-495` | Mapear `stats` prop a ROOT_NODES/GRAMMAR_NODES/LEXICON_NODES dinámicamente |
-| B4 | `GraphCanvas.tsx:466-495` | Propagar stats a nodos en niveles grammar/lexicon; lexicon entries = `activeLexicon.length` |
-| B5 | `GraphCanvas.tsx:478-482` | Preservar nodos dinámicos al volver a root |
-```
+- `rootDynNodesRef` (GraphCanvas.tsx:620): nodos `dyn_*` + posición.
+- `rootDynEdgesRef` (GraphCanvas.tsx:621): aristas **no estáticas** (conexiones del usuario).
+- Al salir de `root`: se filtran y guardan (GraphCanvas.tsx:688-696).
+- Al volver a `root`: árbol estático + dinámicos restaurados (GraphCanvas.tsx:683-684).
+- Nodos `GRAMMAR_NODES` / `LEXICON_NODES` se regeneran (son estáticos, no modificables por el usuario).

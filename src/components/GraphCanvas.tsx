@@ -4,16 +4,23 @@
  * Infinite canvas powered by React Flow for LOXAR.
  *
  * Niveles:
- *   root     → Conlang central + módulos (vista principal)
+ *   root     → ÁRBOL JERÁRQUICO: conlang-root (central) conecta a sus nodos módulo (D1)
  *   grammar  → Sub-módulos de gramática (grafo de nodos)
  *   lexicon  → Componentes del léxico (tipos, raíces, entradas)
  *   syntax   → Arnés AST con slots + preview (overlay sobre React Flow)
  *
  * Tareas de React Flow:
- *   1. Interactividad: useNodesState / useEdgesState + onNodesChange /
- *     onEdgesChange / onConnect
+ *   1. Interactividad: useNodesState / useEdgesState + onNodesChange / onEdgesChange / onConnect
  *   2. onConnect usa addEdge(params, eds) para crear conexiones por drag
- *   3. Estado inicial minimalista: initialEdges=[], initialNodes=[rootNode]
+ *   3. Estado inicial: nodo raíz conlang + árbol estrella (ROOT_EDGES)
+ *
+ * Gauntlet D:
+ *   D1 tree root        — ROOT_EDGES es un árbol estrella conlang-root → módulos
+ *   D2 named handles    — ModuleNodeComponent renderiza un Handle por puerto declarado
+ *   D3 contract         — módulos PANTALLA son botones (isScreen), no nodos sueltos
+ *   D4 delete edges     — × flotante en hover + tecla Supr (salta edges estáticos)
+ *   D5 preserve edges   — rootDynEdgesRef preserva conexiones dinámicas al navegar
+ *   D6 unified nodes    — grammar usa grammarNode en raíz y en paleta (un solo sistema)
  */
 
 import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
@@ -31,6 +38,10 @@ import ReactFlow, {
   Background,
   BackgroundVariant,
   ReactFlowInstance,
+  EdgeTypes,
+  EdgeProps,
+  getSmoothStepPath,
+  useReactFlow,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -65,6 +76,8 @@ type GraphNode = {
   description?: string;
   stats?: { label: string; value: string | number }[];
   color?: string;
+  /** D3: módulos que son PANTALLA (acción de navegación) viven como botón, no como nodo de datos. */
+  isScreen?: boolean;
 };
 
 type GraphEdge = {
@@ -93,9 +106,7 @@ type GraphCanvasProps = {
   conlangNames?: string[];
   onSelectConlang?: (name: string) => void;
   lexicon?: Array<{ ID: string; Raíz: string; Léxema: string[]; Categoría: string; Significado: string[] }>;
-  /** Si true, muestra solo el nodo raíz (lienzo en blanco para crecimiento orgánico) */
-  // minimalMode removed (A3) — React Flow always renders root + dynamic nodes
-  /** Estado del motor pragmático (para mostrar datos reales en GrammarNode) */
+  /** Estado del motor pragmático (para mostrar datos reales en GrammarNode). B2 pasado desde App.tsx. */
   pragmaticEngine?: {
     typologyLabel?: string;
     rulesCount?: number;
@@ -109,35 +120,46 @@ type GraphCanvasProps = {
 };
 
 // ── Level Data ─────────────────────────────────────────
-const ROOT_NODES: GraphNode[] = [
-  { id: 'grammar', label: 'Gramática', icon: '📐', x: 500, y: 60, w: 260, h: 130, level: 'root', status: 'partial', description: 'Motor gramatical', ports: [{ id: 'in', label: 'Root', side: 'left', color: 'cyan' }, { id: 'out', label: 'Syntax', side: 'right', color: 'cyan' }], stats: [{ label: 'Reglas', value: 0 }] },
-  { id: 'phonology', label: 'Fonología', icon: '🔊', x: 160, y: 240, w: 240, h: 120, level: 'root', status: 'empty', description: 'Inventario fonético', ports: [{ id: 'out', label: 'Phon Out', side: 'right', color: 'cyan' }] },
-  { id: 'syntax', label: 'Sintaxis', icon: '🧩', x: 840, y: 240, w: 240, h: 120, level: 'root', status: 'empty', description: 'Estructura oracional', ports: [{ id: 'in', label: 'Gram In', side: 'left', color: 'cyan' }, { id: 'out', label: 'Syntax', side: 'right', color: 'cyan' }] },
-  { id: 'lexicon', label: 'Léxico', icon: '📚', x: 160, y: 440, w: 240, h: 120, level: 'root', status: 'empty', description: 'Diccionario', ports: [{ id: 'in', label: 'Morph', side: 'left', color: 'purple' }, { id: 'out', label: 'Lex Out', side: 'right', color: 'purple' }] },
-  { id: 'workbench', label: 'Workbench', icon: '🔨', x: 500, y: 440, w: 240, h: 120, level: 'root', status: 'empty', description: 'Cola de trabajo', ports: [{ id: 'in', label: 'Lex', side: 'left', color: 'purple' }, { id: 'out', label: 'Work', side: 'right', color: 'purple' }] },
-  { id: 'neography', label: 'Neografía', icon: '✍️', x: 840, y: 440, w: 240, h: 120, level: 'root', status: 'empty', description: 'Sistema de escritura', ports: [{ id: 'in', label: 'Surface', side: 'left', color: 'cyan' }] },
-  { id: 'semantics', label: 'Semántica', icon: '💡', x: 330, y: 640, w: 240, h: 120, level: 'root', status: 'empty', description: 'Campos semánticos', ports: [{ id: 'in', label: 'Syntax', side: 'left', color: 'cyan' }] },
-  { id: 'translator', label: 'Traductor', icon: '🔁', x: 670, y: 640, w: 240, h: 120, level: 'root', status: 'empty', description: 'Traducción', ports: [{ id: 'in', label: 'Lex', side: 'left', color: 'purple' }] },
+/** ID del nodo raíz del conlang (centrado del árbol). */
+export const ROOT_NODE_ID = 'conlang-root';
+
+/** Árbol estrella: conlang-root → cada módulo de datos (D1).
+ *  Los módulos PANTALLA (workbench) están plegados como botones dentro de su
+ *  nodo padre (D3), por lo que no aparecen como hijos del árbol. */
+export const ROOT_NODES: GraphNode[] = [
+  { id: 'grammar',    label: 'Gramática',  icon: '📐', x: 500, y: 20,  w: 260, h: 140, level: 'root', status: 'partial', description: 'Motor gramatical', ports: [{ id: 'in', label: 'Root', side: 'left', color: 'cyan' }, { id: 'out', label: 'Syntax', side: 'right', color: 'cyan' }], stats: [{ label: 'Reglas', value: 0 }] },
+  { id: 'phonology',  label: 'Fonología',  icon: '🔊', x: 120, y: 180, w: 240, h: 120, level: 'root', status: 'empty', description: 'Inventario fonético', ports: [{ id: 'in', label: 'Phon In', side: 'left', color: 'cyan' }, { id: 'out', label: 'Phon Out', side: 'right', color: 'cyan' }] },
+  { id: 'syntax',     label: 'Sintaxis',   icon: '🧩', x: 860, y: 180, w: 240, h: 120, level: 'root', status: 'empty', description: 'Estructura oracional', ports: [{ id: 'in', label: 'Gram In', side: 'left', color: 'cyan' }, { id: 'out', label: 'Syntax', side: 'right', color: 'cyan' }] },
+  { id: 'lexicon',    label: 'Léxico',     icon: '📚', x: 120, y: 400, w: 240, h: 120, level: 'root', status: 'empty', description: 'Diccionario', ports: [{ id: 'in', label: 'Morph', side: 'left', color: 'purple' }, { id: 'out', label: 'Lex Out', side: 'right', color: 'purple' }] },
+  { id: 'neography',  label: 'Neografía',  icon: '✍️', x: 860, y: 400, w: 240, h: 120, level: 'root', status: 'empty', description: 'Sistema de escritura', ports: [{ id: 'in', label: 'Surface', side: 'left', color: 'cyan' }] },
+  { id: 'semantics',  label: 'Semántica',  icon: '💡', x: 300, y: 580, w: 240, h: 120, level: 'root', status: 'empty', description: 'Campos semánticos', ports: [{ id: 'in', label: 'Syntax', side: 'left', color: 'cyan' }] },
+  { id: 'translator', label: 'Traductor',  icon: '🔁', x: 680, y: 580, w: 240, h: 120, level: 'root', status: 'empty', description: 'Traducción', ports: [{ id: 'in', label: 'Lex', side: 'left', color: 'purple' }] },
 ];
 
-const ROOT_EDGES: GraphEdge[] = [
-  { from: { node: 'phonology', port: 'out' }, to: { node: 'grammar', port: 'in' }, label: 'phonology', color: 'cyan' },
-  { from: { node: 'grammar', port: 'out' }, to: { node: 'syntax', port: 'in' }, label: 'syntax', color: 'cyan' },
-  { from: { node: 'lexicon', port: 'out' }, to: { node: 'workbench', port: 'in' }, label: 'lexical', color: 'purple' },
-  { from: { node: 'syntax', port: 'out' }, to: { node: 'semantics', port: 'in' }, label: 'semantics', color: 'purple' },
-  { from: { node: 'workbench', port: 'out' }, to: { node: 'neography', port: 'in' }, label: 'surface', color: 'cyan' },
+/**
+ * D1: árbol estrella. Cada arista va de conlang-root (fuente) a un módulo (sumidero 'in').
+ * El sourceHandle indica el lado de anclaje del nodo central según la posición del módulo.
+ */
+export const ROOT_EDGES: GraphEdge[] = [
+  { from: { node: ROOT_NODE_ID, port: 'right' }, to: { node: 'grammar',    port: 'in' }, label: 'grammar',    color: 'cyan' },
+  { from: { node: ROOT_NODE_ID, port: 'left' },  to: { node: 'phonology',  port: 'in' }, label: 'phonology',  color: 'cyan' },
+  { from: { node: ROOT_NODE_ID, port: 'right' }, to: { node: 'syntax',     port: 'in' }, label: 'syntax',     color: 'cyan' },
+  { from: { node: ROOT_NODE_ID, port: 'left' },  to: { node: 'lexicon',    port: 'in' }, label: 'lexical',    color: 'purple' },
+  { from: { node: ROOT_NODE_ID, port: 'bottom' }, to: { node: 'neography', port: 'in' }, label: 'surface',    color: 'cyan' },
+  { from: { node: ROOT_NODE_ID, port: 'bottom' }, to: { node: 'semantics', port: 'in' }, label: 'semantics',  color: 'purple' },
+  { from: { node: ROOT_NODE_ID, port: 'bottom' }, to: { node: 'translator', port: 'in' }, label: 'translation', color: 'cyan' },
 ];
 
 const GRAMMAR_NODES: GraphNode[] = [
-  { id: 'phonology', label: 'Fonología', icon: '🔊', x: 120, y: 100, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Inventario, fonotáctica', ports: [{ id: 'out', label: 'Phon Out', side: 'right', color: 'cyan' }] },
-  { id: 'typology', label: 'Tipología', icon: '🧬', x: 400, y: 100, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Tipo morfológico', ports: [{ id: 'in', label: 'Phon', side: 'left', color: 'cyan' }, { id: 'out', label: 'Typ Out', side: 'right', color: 'cyan' }] },
+  { id: 'phonology',  label: 'Fonología',  icon: '🔊', x: 120, y: 100, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Inventario, fonotáctica', ports: [{ id: 'out', label: 'Phon Out', side: 'right', color: 'cyan' }] },
+  { id: 'typology',   label: 'Tipología',  icon: '🧬', x: 400, y: 100, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Tipo morfológico', ports: [{ id: 'in', label: 'Phon', side: 'left', color: 'cyan' }, { id: 'out', label: 'Typ Out', side: 'right', color: 'cyan' }] },
   { id: 'morphology', label: 'Morfología', icon: '🔧', x: 120, y: 280, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Afijos, reglas', ports: [{ id: 'in', label: 'Typ', side: 'left', color: 'cyan' }, { id: 'out', label: 'Morph', side: 'right', color: 'cyan' }] },
-  { id: 'syntax', label: 'Sintaxis', icon: '🧩', x: 400, y: 280, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Estructura oracional', ports: [{ id: 'in', label: 'Morph', side: 'left', color: 'cyan' }, { id: 'out', label: 'Syn', side: 'right', color: 'cyan' }] },
-  { id: 'semantics', label: 'Semántica', icon: '💡', x: 680, y: 280, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Campos semánticos', ports: [{ id: 'in', label: 'Syn', side: 'left', color: 'purple' }] },
-  { id: 'roles', label: 'Roles', icon: '🎭', x: 120, y: 460, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Roles sintácticos', ports: [{ id: 'in', label: 'Syn', side: 'left', color: 'cyan' }, { id: 'out', label: 'Roles', side: 'right', color: 'cyan' }] },
+  { id: 'syntax',     label: 'Sintaxis',   icon: '🧩', x: 400, y: 280, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Estructura oracional', ports: [{ id: 'in', label: 'Morph', side: 'left', color: 'cyan' }, { id: 'out', label: 'Syn', side: 'right', color: 'cyan' }] },
+  { id: 'semantics',  label: 'Semántica',  icon: '💡', x: 680, y: 280, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Campos semánticos', ports: [{ id: 'in', label: 'Syn', side: 'left', color: 'purple' }] },
+  { id: 'roles',      label: 'Roles',      icon: '🎭', x: 120, y: 460, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Roles sintácticos', ports: [{ id: 'in', label: 'Syn', side: 'left', color: 'cyan' }, { id: 'out', label: 'Roles', side: 'right', color: 'cyan' }] },
   { id: 'strategies', label: 'Estrategias', icon: '⚙️', x: 400, y: 460, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Estrategias morfosintácticas', ports: [{ id: 'in', label: 'Roles', side: 'left', color: 'cyan' }, { id: 'out', label: 'Strat', side: 'right', color: 'cyan' }] },
-  { id: 'pragmatic', label: 'Pragmática', icon: '🧭', x: 680, y: 460, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Intención de oración', ports: [{ id: 'in', label: 'Syn', side: 'left', color: 'purple' }] },
-  { id: 'notes', label: 'Notas', icon: '📝', x: 400, y: 640, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Anotaciones', ports: [{ id: 'in', label: 'Strat', side: 'left', color: 'cyan' }] },
+  { id: 'pragmatic',  label: 'Pragmática', icon: '🧭', x: 680, y: 460, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Intención de oración', ports: [{ id: 'in', label: 'Syn', side: 'left', color: 'purple' }] },
+  { id: 'notes',      label: 'Notas',      icon: '📝', x: 400, y: 640, w: 220, h: 110, level: 'grammar', status: 'empty', description: 'Anotaciones', ports: [{ id: 'in', label: 'Strat', side: 'left', color: 'cyan' }] },
 ];
 
 const GRAMMAR_EDGES: GraphEdge[] = [
@@ -153,19 +175,17 @@ const GRAMMAR_EDGES: GraphEdge[] = [
 
 const LEXICON_NODES: GraphNode[] = [
   { id: 'wordtypes', label: 'Tipos de palabra', icon: '🏷️', x: 120, y: 100, w: 240, h: 120, level: 'lexicon', status: 'partial', description: 'Sustantivo, verbo, adjetivo...', ports: [{ id: 'out', label: 'Types', side: 'right', color: 'cyan' }], stats: [{ label: 'Tipos', value: 10 }] },
-  { id: 'roots', label: 'Raíces', icon: '🌱', x: 420, y: 100, w: 240, h: 120, level: 'lexicon', status: 'empty', description: 'Raíces léxicas', ports: [{ id: 'in', label: 'Types', side: 'left', color: 'cyan' }, { id: 'out', label: 'Roots', side: 'right', color: 'cyan' }] },
-  { id: 'entries', label: 'Entradas', icon: '📖', x: 720, y: 100, w: 240, h: 120, level: 'lexicon', status: 'empty', description: 'Entradas del diccionario', ports: [{ id: 'in', label: 'Roots', side: 'left', color: 'cyan' }], stats: [{ label: 'Entradas', value: 0 }] },
-  { id: 'import', label: 'Importar/Exportar', icon: '📦', x: 420, y: 300, w: 240, h: 120, level: 'lexicon', status: 'empty', description: 'Importar y exportar datos', ports: [{ id: 'in', label: 'Data', side: 'left', color: 'purple' }] },
+  { id: 'roots',     label: 'Raíces',          icon: '🌱', x: 420, y: 100, w: 240, h: 120, level: 'lexicon', status: 'empty', description: 'Raíces léxicas', ports: [{ id: 'in', label: 'Types', side: 'left', color: 'cyan' }, { id: 'out', label: 'Roots', side: 'right', color: 'cyan' }] },
+  { id: 'entries',   label: 'Entradas',        icon: '📖', x: 720, y: 100, w: 240, h: 120, level: 'lexicon', status: 'empty', description: 'Entradas del diccionario', ports: [{ id: 'in', label: 'Roots', side: 'left', color: 'cyan' }, { id: 'out', label: 'Out', side: 'right', color: 'cyan' }], stats: [{ label: 'Entradas', value: 0 }] },
+  // D3: Importar/Exportar es una PANTALLA → botón, no nodo de datos.
+  { id: 'import', label: 'Importar/Exportar', icon: '📦', x: 420, y: 300, w: 240, h: 100, level: 'lexicon', status: 'empty', description: 'Importar y exportar datos', isScreen: true, ports: [{ id: 'in', label: 'Data', side: 'left', color: 'purple' }] },
 ];
 
 const LEXICON_EDGES: GraphEdge[] = [
   { from: { node: 'wordtypes', port: 'out' }, to: { node: 'roots', port: 'in' }, color: 'cyan' },
   { from: { node: 'roots', port: 'out' }, to: { node: 'entries', port: 'in' }, color: 'cyan' },
-  { from: { node: 'entries', port: 'in' }, to: { node: 'import', port: 'in' }, label: 'data', color: 'purple' },
+  { from: { node: 'entries', port: 'out' }, to: { node: 'import', port: 'in' }, label: 'data', color: 'purple' },
 ];
-
-// ── Root node ID ───────────────────────────────────────
-const ROOT_NODE_ID = 'conlang-root';
 
 // ── Helpers ────────────────────────────────────────────
 const STATUS_COLORS: Record<string, { border: string; bg: string; text: string; glow: string }> = {
@@ -204,10 +224,14 @@ interface NodeCallbacks {
 }
 
 // ── React Flow conversion helpers ─────────────────────
+/** D6: 'grammar' (root) and dinámicos 'dyn_grammar_*' usan el mismo
+ *  GrammarEngineNodeComponent → un solo sistema de nodos. */
+export const grammarNodeType = (id: string): boolean => id === 'grammar' || id.startsWith('dyn_grammar_');
+
 const toRfNodes = (src: GraphNode[], callbacks: NodeCallbacks): Node[] =>
   src.map(n => ({
     id: n.id,
-    type: n.id.startsWith('dyn_grammar_') ? 'grammarNode' : 'moduleNode',
+    type: grammarNodeType(n.id) ? 'grammarNode' : 'moduleNode',
     data: { node: n, ...callbacks },
     position: { x: n.x, y: n.y },
     sourcePosition: Position.Right,
@@ -217,11 +241,7 @@ const toRfNodes = (src: GraphNode[], callbacks: NodeCallbacks): Node[] =>
     connectable: true,
   }));
 
-/**
- * B3-B4: Override hardcoded node `stats` with real values from the stats prop.
- * Each node keeps its static layout (x, y, w, h, ports, etc.) but gets
- * live counts computed in App.tsx from grammarDb / lexiconDb.
- */
+/** B3-B4: Override hardcoded node `stats` with real values from the stats prop. */
 function withStats(nodes: GraphNode[], statMap: Record<string, { label: string; value: string | number }[]>): GraphNode[] {
   return nodes.map(n => {
     if (statMap[n.id]) {
@@ -231,25 +251,103 @@ function withStats(nodes: GraphNode[], statMap: Record<string, { label: string; 
   });
 }
 
-const toRfEdges = (src: GraphEdge[]): Edge[] =>
+/** D1/D4: edges marcados como `static` son estructurales (no eliminables) y
+ *  preservados por la regeneración de nivel; las dinámicas (user-drawn) no lo son. */
+export const toRfEdges = (src: GraphEdge[], isStatic = true): Edge[] =>
   src.map((e, i) => ({
     id: `e-${e.from.node}-${e.to.node}-${i}`,
+    type: 'deletable',
     source: e.from.node,
     target: e.to.node,
     sourceHandle: e.from.port,
     targetHandle: e.to.port,
     label: e.label,
     animated: true,
+    data: { color: e.color, static: isStatic },
     style: { stroke: e.color === 'purple' ? '#a855f7' : '#00f0ff' },
   }));
+
+// ── Custom Edge: x flotante para eliminar (D4) ─────────
+const DeletableEdge: React.FC<EdgeProps> = ({
+  id, sourceX, sourceY, targetX, targetY,
+  sourcePosition, targetPosition, data, selected, ...rest
+}) => {
+  const [path] = getSmoothStepPath({
+    sourceX, sourceY, targetX, targetY,
+    sourcePosition, targetPosition,
+    ...rest,
+  });
+  const { setEdges } = useReactFlow();
+  const [hovered, setHovered] = React.useState(false);
+  const color = (data as any)?.color;
+  const isStatic = (data as any)?.static === true;
+  const stroke = color === 'purple' ? '#a855f7' : '#00f0ff';
+  const midX = (sourceX + targetX) / 2;
+  const midY = (sourceY + targetY) / 2;
+
+  const remove = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isStatic) return;
+    setEdges(eds => eds.filter(ed => ed.id !== id));
+  };
+
+  return (
+    <g
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <path
+        d={path}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={selected ? 3 : 2}
+        strokeDasharray="6 8"
+        style={{ transition: 'stroke-width 120ms' }}
+      />
+      {/* Hit-area invisible para hover fiable */}
+      <path
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={10}
+        style={{ cursor: 'pointer' }}
+      />
+      {/* D4b: × flotante sobre el edge (solo conexiones dinámicas) */}
+      {!isStatic && (hovered || selected) && (
+        <foreignObject
+          x={midX - 10}
+          y={midY - 10}
+          width={20}
+          height={20}
+          style={{ pointerEvents: 'visible' }}
+        >
+          <div
+            onClick={remove}
+            className="w-5 h-5 rounded-full bg-red-500/90 hover:bg-red-500 text-white text-[11px] flex items-center justify-center shadow-[0_0_8px_rgba(239,68,68,0.7)] transition-colors cursor-pointer"
+            title="Eliminar conexión (Supr)"
+          >
+            ×
+          </div>
+        </foreignObject>
+      )}
+    </g>
+  );
+};
 
 // ── Custom Node: Root (Conlang Selector) ──────────────
 const RootNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
   const d = data as { conlangName?: string | null; conlangNames?: string[]; onSelectConlang?: (name: string) => void };
   return (
     <>
-      <Handle type="source" position={Position.Right} />
-      <Handle type="target" position={Position.Left} />
+      {/* D1/D2: handles en los 4 lados para anclaje radial del árbol estrella */}
+      <Handle type="source" position={Position.Top} id="top" />
+      <Handle type="source" position={Position.Right} id="right" />
+      <Handle type="source" position={Position.Bottom} id="bottom" />
+      <Handle type="source" position={Position.Left} id="left" />
+      <Handle type="target" position={Position.Top} id="top-in" />
+      <Handle type="target" position={Position.Right} id="right-in" />
+      <Handle type="target" position={Position.Bottom} id="bottom-in" />
+      <Handle type="target" position={Position.Left} id="left-in" />
       <div className={`
         rounded-xl border-2 border-accent/60 bg-accent/10 backdrop-blur-md
         px-4 py-4 shadow-[0_0_30px_rgba(13,185,242,0.2)] text-center
@@ -260,7 +358,7 @@ const RootNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
         <div className="text-xs font-bold tracking-widest text-accent uppercase mb-2">
           {d.conlangName || 'Sin conlang'}
         </div>
-        <div className="text-[10px] text-white/50 mb-3">Lengua central</div>
+        <div className="text-[10px] text-white/50 mb-3">Lengua central (raíz del árbol)</div>
         {d.conlangNames && d.conlangNames.length > 1 && (
           <select
             value={d.conlangName ?? ''}
@@ -286,7 +384,6 @@ const ModuleNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
   const node: GraphNode = d.node;
   const colors = STATUS_COLORS[node.status];
   const isActive = d.activeModule === node.id || selected;
-  const isHovered = false; // handled by React Flow hover
   const hasChildren = ['grammar', 'lexicon', 'syntax'].includes(node.id);
 
   const nodeClasses = `
@@ -298,12 +395,15 @@ const ModuleNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
 
   return (
     <>
-      {node.ports.some(p => p.side === 'left') && (
-        <Handle type="target" position={Position.Left} />
-      )}
-      {node.ports.some(p => p.side === 'right') && (
-        <Handle type="source" position={Position.Right} />
-      )}
+      {/* D2: un Handle por puerto declarado (ancho vertical centrado; apilado si hay varios por lado) */}
+      {node.ports.map((p, i) => {
+        const position = p.side === 'left' ? Position.Left : Position.Right;
+        const sameSideCount = node.ports.filter(q => q.side === p.side).length;
+        const offsetPct = (i - (sameSideCount - 1) / 2) * (sameSideCount > 1 ? 16 : 0) + 50;
+        return p.side === 'left'
+          ? <Handle key={p.id} type="target" position={position} id={p.id} style={{ top: `${offsetPct}%` }} />
+          : <Handle key={p.id} type="source" position={position} id={p.id} style={{ top: `${offsetPct}%` }} />;
+      })}
       <div className={nodeClasses} style={{ width: node.w, minHeight: node.h }}>
         {/* Header */}
         <div className="h-8 px-3 flex items-center justify-between border-b border-white/10 rounded-t-xl bg-white/5">
@@ -347,6 +447,25 @@ const ModuleNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
               <span>→</span><span>Ir a pantalla</span>
             </button>
           )}
+          {/* D3: Workbench (pantalla) → botón dentro del nodo Léxico */}
+          {node.id === 'lexicon' && d.level === 'root' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); d.onNavigate?.('workbench'); }}
+              className="mt-1 flex items-center gap-1 text-[9px] px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors w-full justify-center"
+              title="Workbench — entradas pendientes"
+            >
+              <span>🔨</span><span>Workbench</span>
+            </button>
+          )}
+          {/* D3: nodo PANTALLA — estilo botón compacto de acción */}
+          {node.isScreen && (
+            <button
+              onClick={(e) => { e.stopPropagation(); d.onNavigate?.(node.id === 'import' ? 'grammar' : node.id); }}
+              className="mt-1 flex items-center gap-1 text-[9px] px-2 py-1 rounded-lg bg-accent/15 hover:bg-accent/25 text-accent font-semibold border border-accent/30 transition-colors w-full justify-center"
+            >
+              <span>{node.icon}</span><span>{node.label}</span>
+            </button>
+          )}
           <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-white/5">
             <div className="flex items-center gap-1">
               <span className={`relative flex h-1.5 w-1.5`}>
@@ -374,14 +493,27 @@ const ModuleNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
 
 // ── Custom Node: Grammar Engine ────────────────────────
 const GrammarEngineNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
-  const d = data as { pragmaticEngine?: GraphCanvasProps['pragmaticEngine']; onZoom?: () => void; activeModule?: string };
+  const d = data as {
+    node?: GraphNode;
+    pragmaticEngine?: GraphCanvasProps['pragmaticEngine'];
+    onZoomToGrammar?: () => void;
+    onZoom?: (nodeId: string) => void;
+    onNavigate?: (tab: string) => void;
+    onModuleClick?: (id: string) => void;
+    activeModule?: string;
+  };
   const isActive = d.activeModule === 'grammar' || selected;
 
   return (
     <div className={isActive
       ? "relative rounded-xl border border-cyan-400/50 bg-surface-dark/95 backdrop-blur-xl shadow-[0_0_25px_rgba(0,240,255,0.1)] transition-all duration-300 scale-[1.03]"
       : "relative"}>
-      <Handle type="target" position={Position.Left} />
+      {/* D2: handles por sub-motor del Grammar Engine (E = alignment, X = syntax) */}
+      <Handle type="target" position={Position.Left} id="in" />
+      <Handle type="target" position={Position.Left} id="alignment" style={{ top: '30%' }} />
+      <Handle type="target" position={Position.Left} id="syntax" style={{ top: '70%' }} />
+      <Handle type="source" position={Position.Right} id="morph" />
+      <Handle type="source" position={Position.Right} id="roles" style={{ top: '50%' }} />
       <GrammarNode
         rulesCount={d.pragmaticEngine?.rulesCount ?? 0}
         typologyLabel={d.pragmaticEngine?.typologyLabel}
@@ -389,19 +521,32 @@ const GrammarEngineNodeComponent: React.FC<NodeProps> = ({ data, selected }) => 
         wordOrder={d.pragmaticEngine?.wordOrder}
         headDirection={d.pragmaticEngine?.headDirection}
         status={d.pragmaticEngine?.activeClauseType ? 'active' : 'inactive'}
-        onZoom={() => d.onZoom?.()}
+        onZoom={() => d.onZoomToGrammar?.()}
         connected={false}
       />
-      <Handle type="source" position={Position.Right} />
+      {/* D6: navegación al nivel grammar (sub-módulos) + pantalla grammar */}
+      {d.onZoom && (
+        <button
+          onClick={(e) => { e.stopPropagation(); d.onZoom?.('grammar'); }}
+          className="absolute bottom-1 left-1/2 -translate-x-1/2 text-[8px] font-mono bg-cyan-400/15 hover:bg-cyan-400/30 text-cyan-300 border border-cyan-400/30 px-1.5 py-0.5 rounded transition-all uppercase tracking-wider"
+          title="Sub-módulos de gramática"
+        >
+          🔍 Sub-módulos
+        </button>
+      )}
     </div>
   );
 };
 
-// ── Node types registration ────────────────────────────
+// ── Node types & edge types registration ───────────────
 const nodeTypes: NodeTypes = {
   rootNode: RootNodeComponent,
   moduleNode: ModuleNodeComponent,
   grammarNode: GrammarEngineNodeComponent,
+};
+
+const edgeTypes: EdgeTypes = {
+  deletable: DeletableEdge,
 };
 
 // ── Utility ────────────────────────────────────────────
@@ -423,7 +568,6 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   conlangNames = [],
   onSelectConlang,
   lexicon = [],
-  // minimalMode removed (A3)
   pragmaticEngine,
   onZoomToGrammar,
 }) => {
@@ -432,27 +576,28 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [draggingPalette, setDraggingPalette] = useState<ModuleNodeType | null>(null);
   const [zoomValue, setZoomValue] = useState(100);
   const reactFlowInstanceRef = useRef<ReactFlowInstance | null>(null);
+  // D4: edges seleccionados para eliminación con Supr
+  const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
 
-  // ── Initial nodes & edges (Task 3: Minimal Clean Graph) ──
-  // initialNodes contiene ÚNICAMENTE el nodo raíz del conlang.
-  // initialEdges está completamente vacío.
+  // ── Initial nodes & edges (D1: árbol estrella) ──
   const initialNodes: Node[] = [
     {
       id: ROOT_NODE_ID,
       type: 'rootNode',
-      data: { conlangName, conlangNames, onSelectConlang },
+      data: { conlangName, conlangNames, onSelectConlang, onZoomToGrammar },
       position: { x: 400, y: 300 },
     },
   ];
   const initialEdges: Edge[] = [];
 
-  // ── React Flow state (Task 1: Interactividad) ──
+  // ── React Flow state ──
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // ── onConnect (Task 2: addEdge) ──────────────────────────
+  // ── onConnect — conexiones dinámicas son tipo 'deletable' y no estáticas (D4/D5) ──
   const onConnect = useCallback(
-    (params: Connection) => setEdges(eds => addEdge(params, eds)),
+    (params: Connection) =>
+      setEdges(eds => addEdge({ ...params, type: 'deletable', data: { static: false } }, eds)),
     [setEdges]
   );
 
@@ -471,11 +616,9 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     onNavigate?.(tab === 'lexicon' ? 'table' : tab);
   }, [onNavigate]);
 
-  // ── B5: Ref to preserve palette-dropped nodes across level changes ──
-  // When the user drags a module from the palette onto the root canvas and
-  // then navigates to the grammar/lexicon level, those dynamic nodes must
-  // survive the round-trip back to root.
+  // ── D5: refs para preservar nodos Y conexiones dinámicas al navegar ──
   const rootDynNodesRef = useRef<Node[]>([]);
+  const rootDynEdgesRef = useRef<Edge[]>([]);
 
   // ── Node callbacks bundle ──
   const nodeCallbacks: NodeCallbacks = useMemo(() => ({
@@ -488,10 +631,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     onZoomToGrammar,
   }), [activeModule, onModuleClick, handleNavigate, zoomIntoNode, level, pragmaticEngine, onZoomToGrammar]);
 
-  // ── B3-B4: Dynamic node arrays with live stats ──────────────────────
-  // Each node keeps its static layout but gets real counts from the stats
-  // prop (computed in App.tsx from grammarDb / lexiconDb). If stats is
-  // unavailable, fall back to the static arrays.
+  // ── B3-B4: Dynamic node arrays with live stats ──
   const rootNodesWithStats = useMemo(() => {
     if (!stats) return ROOT_NODES;
     return withStats(ROOT_NODES, {
@@ -529,7 +669,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     });
   }, [stats]);
 
-  // ── Update nodes/edges when level changes ─────────────────────────
+  // ── D5: Update nodes/edges when level changes (preserve dinámicos) ──
   useEffect(() => {
     if (level === 'root') {
       const rootNode: Node = {
@@ -538,30 +678,26 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         data: { conlangName, conlangNames, onSelectConlang, onZoomToGrammar },
         position: { x: 400, y: 300 },
       };
-      // B5: restore root node + ROOT_NODES (with live stats B3-B4) +
-      // preserved dynamic palette nodes
+      // D5: restaurar árbol estático (ROOT_NODES) + posiciones y conexiones
+      // dinámicas preservadas (arrastrados desde la paleta).
       setNodes([rootNode, ...toRfNodes(rootNodesWithStats, { ...nodeCallbacks, level: 'root' }), ...rootDynNodesRef.current]);
-      setEdges(toRfEdges(ROOT_EDGES));
-    } else if (level === 'grammar') {
-      // B5: save root-level dynamic nodes before swapping to grammar view
-      setNodes(nds => {
+      setEdges([...toRfEdges(ROOT_EDGES, true), ...rootDynEdgesRef.current]);
+    } else if (level === 'grammar' || level === 'lexicon' || level === 'syntax') {
+      // D5: guardar nodos y conexiones dinámicas del root antes de cambiar de nivel
+      setNodes((nds) => {
         rootDynNodesRef.current = nds.filter(
-          n => n.id.startsWith('dyn_') && n.id !== ROOT_NODE_ID
+          (n) => n.id.startsWith('dyn_') && n.id !== ROOT_NODE_ID,
         );
-        return toRfNodes(grammarNodesWithStats, { ...nodeCallbacks, level });
+        if (level === 'grammar') return toRfNodes(grammarNodesWithStats, { ...nodeCallbacks, level });
+        if (level === 'lexicon') return toRfNodes(lexiconNodesWithStats, { ...nodeCallbacks, level });
+        return []; // syntax
       });
-      setEdges(toRfEdges(GRAMMAR_EDGES));
-    } else if (level === 'lexicon') {
-      setNodes(nds => {
-        rootDynNodesRef.current = nds.filter(
-          n => n.id.startsWith('dyn_') && n.id !== ROOT_NODE_ID
-        );
-        return toRfNodes(lexiconNodesWithStats, { ...nodeCallbacks, level });
+      setEdges((eds) => {
+        rootDynEdgesRef.current = eds.filter((e) => !e.data?.static);
+        if (level === 'grammar') return toRfEdges(GRAMMAR_EDGES, true);
+        if (level === 'lexicon') return toRfEdges(LEXICON_EDGES, true);
+        return []; // syntax
       });
-      setEdges(toRfEdges(LEXICON_EDGES));
-    } else if (level === 'syntax') {
-      setNodes([]);
-      setEdges([]);
     }
   }, [level, conlangName, conlangNames, onSelectConlang, nodeCallbacks, onZoomToGrammar, rootNodesWithStats, grammarNodesWithStats, lexiconNodesWithStats, setNodes, setEdges]);
 
@@ -629,27 +765,26 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const id = `dyn_${type}_${Date.now()}`;
     const info = MODULE_LABELS[type];
 
+    // D6: un solo data shape { node, ...callbacks } para grammar y el resto.
     const newNode: Node = {
       id,
-      type: type === 'grammar' ? 'grammarNode' : 'moduleNode',
-      data: type === 'grammar'
-        ? { pragmaticEngine, onZoom: onZoomToGrammar, activeModule }
-        : {
-            node: {
-              id,
-              label: info.label,
-              icon: info.icon,
-              x: 0,
-              y: 0,
-              w: 260,
-              h: 140,
-              level: 'root',
-              status: 'empty' as const,
-              description: info.description,
-              ports: DYNAMIC_NODE_PORTS,
-            },
-            ...nodeCallbacks,
-          },
+      type: grammarNodeType(id) ? 'grammarNode' : 'moduleNode',
+      data: {
+        node: {
+          id,
+          label: info.label,
+          icon: info.icon,
+          x: 0,
+          y: 0,
+          w: 260,
+          h: 140,
+          level: 'root',
+          status: 'empty' as const,
+          description: info.description,
+          ports: DYNAMIC_NODE_PORTS,
+        },
+        ...nodeCallbacks,
+      },
       position,
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
@@ -659,12 +794,33 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
 
     setNodes(nds => nds.concat(newNode));
     setDraggingPalette(null);
-  }, [level, pragmaticEngine, onZoomToGrammar, activeModule, nodeCallbacks, setNodes]);
+  }, [level, nodeCallbacks, setNodes]);
 
   // ── Prevent connections from a node to itself ──
   const isValidConnection = useCallback((connection: Connection) => {
     return connection.source !== connection.target;
   }, []);
+
+  // ── D4: eliminar conexiones seleccionadas con Supr ──
+  // D4: eliminar conexiones seleccionadas (salta edges estáticos/estructurales)
+  const handleDeleteSelected = useCallback(() => {
+    const toRemove = selectedEdges.filter((e) => e.data?.static !== true);
+    if (toRemove.length) {
+      setEdges(eds => eds.filter(e => !toRemove.some(s => s.id === e.id)));
+    }
+  }, [selectedEdges, setEdges]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      // no borrar conexiones si el foco está en un input de texto
+      const active = document.activeElement as HTMLElement | null;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+      handleDeleteSelected();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [handleDeleteSelected]);
 
   // ── Breadcrumb ──
   const breadcrumb = useMemo(() => {
@@ -748,11 +904,13 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             onNodeMouseEnter={(_e, n) => setHoveredNode(n.id)}
             onNodeMouseLeave={() => setHoveredNode(null)}
             onPaneClick={() => setHoveredNode(null)}
+            onSelectionChange={({ edges }) => setSelectedEdges(edges)}
             onInit={onInit}
             onMove={onMove}
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
             isValidConnection={isValidConnection}
             nodesDraggable={true}
             elementsSelectable={true}
@@ -763,6 +921,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             }}
             defaultEdgeOptions={{
               animated: true,
+              type: 'deletable',
               style: { stroke: '#00f0ff' },
             }}
             snapToGrid={true}
