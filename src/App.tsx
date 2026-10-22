@@ -15,6 +15,7 @@ import { loadSessionCache, saveSessionCache } from './services/sessionCache';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode } from './types';
 import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
+import { FloatingWidget } from './components/FloatingWidget';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -831,6 +832,16 @@ const App = () => {
           <AppToastLayer
             notifications={notifications}
             onDismissNotification={id => setNotifications(prev => prev.filter(n => n.id !== id))}
+          />
+
+          {/* F1: Floating widget — persists position/dock state in localStorage */}
+          <FloatingWidget
+            isCapturing={false}
+            missingWords={[]}
+            onAddWord={handleWidgetAddWord}
+            onSearch={handleWidgetSearch}
+            onToggleCapture={() => window.loxarBridge.openWidget()}
+            lastResult={null}
           />
 
           <AppProjectBootstrapLayer
