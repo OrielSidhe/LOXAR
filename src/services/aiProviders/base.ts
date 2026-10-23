@@ -14,6 +14,8 @@ export type ProviderEndpointStyle =
   | 'gemini'
   | 'custom';
 
+export type ReasoningEffort = 'off' | 'low' | 'medium' | 'high';
+
 export interface AIProviderConfig {
   id: string;
   name: string;
@@ -29,6 +31,8 @@ export interface AIProviderConfig {
   responseMapper?: (data: unknown) => string;
   testEndpoint?: string;
   testMethod?: 'GET' | 'POST';
+  /** Reasoning effort level for providers that support it (OpenAI-compatible, etc.). 'off' means no reasoning parameter sent. */
+  reasoningEffort?: ReasoningEffort;
 }
 
 /** Regex matching leading/trailing quote characters (single, double, or backtick). */

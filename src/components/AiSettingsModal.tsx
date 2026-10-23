@@ -5,7 +5,7 @@ import AlertTriangleIcon from './icons/AlertTriangleIcon';
 import SparkleIcon from './icons/SparkleIcon';
 import InfoIcon from './icons/InfoIcon';
 import { testAiConnection, loadAIConfig, saveAIConfig, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
-import { PRESET_PROVIDERS, DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle, getProviderKeyPrefix } from '../services/aiProviderRegistry';
+import { PRESET_PROVIDERS, DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle, type ReasoningEffort, getProviderKeyPrefix } from '../services/aiProviderRegistry';
 import EyeIcon from './icons/EyeIcon';
 import EyeOffIcon from './icons/EyeOffIcon';
 
@@ -34,6 +34,7 @@ interface ProviderFormData {
     endpointStyle: ProviderEndpointStyle;
     defaultModel: string;
     models: string[];
+    reasoningEffort: ReasoningEffort;
 }
 
 const emptyProvider = (): ProviderFormData => ({
@@ -45,6 +46,7 @@ const emptyProvider = (): ProviderFormData => ({
     endpointStyle: 'openai-chat',
     defaultModel: '',
     models: [],
+    reasoningEffort: 'off',
 });
 
 const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -128,6 +130,7 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             endpointStyle: provider.endpointStyle,
             defaultModel: provider.defaultModel,
             models: provider.models,
+            reasoningEffort: provider.reasoningEffort || 'off',
         });
         setIsCreating(false);
     };
@@ -143,6 +146,14 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         });
         setEditingProvider(null);
         setIsCreating(false);
+    };
+
+    const handleReasoningEffortChange = (value: ReasoningEffort) => {
+        if (editingProvider) {
+            updateEditingProvider({ reasoningEffort: value });
+        } else if (activeProvider) {
+            updateActiveProvider({ reasoningEffort: value });
+        }
     };
 
     const deleteProvider = (id: string) => {
@@ -336,6 +347,22 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     onChange={e => updateActiveProvider({ defaultModel: e.target.value })}
                                     className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="block text-sm font-medium text-text-secondary">Reasoning effort</label>
+                                <select
+                                    value={activeProvider.reasoningEffort || 'off'}
+                                    onChange={e => updateActiveProvider({ reasoningEffort: e.target.value as ReasoningEffort })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
+                                >
+                                    <option value="off">Off (no reasoning parameter sent)</option>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                                <p className="text-xs text-text-secondary">
+                                    Cuando está desactivado, no se envía ningún parámetro de razonamiento (compatible con modelos que rechazan parámetros de reasoning como Nous free).
+                                </p>
                             </div>
                         </div>
                     )}

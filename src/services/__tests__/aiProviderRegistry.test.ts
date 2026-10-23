@@ -292,3 +292,69 @@ describe('getProviderKeyPrefix (re-exported)', () => {
     expect(getProviderKeyPrefix('openrouter')).toBe('sk-or-v1-');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Phase X: reasoningEffort round-trip in registry
+// ---------------------------------------------------------------------------
+describe('Phase X: reasoningEffort in registry config round-trip', () => {
+  beforeEach(() => mockLocalStorage.clear());
+
+  it('preserves reasoningEffort through save/load round-trip', async () => {
+    const customConfig: GenericAISettings = {
+      activeProviderId: 'nous',
+      providers: [
+        {
+          id: 'nous',
+          name: 'Nous',
+          baseURL: 'https://inference-api.nousresearch.com/v1',
+          apiKey: 'sk-test-123',
+          authHeader: 'Authorization',
+          endpointStyle: 'openai-chat',
+          defaultModel: 'poolside/laguna-s-2.1:free',
+          models: ['poolside/laguna-s-2.1:free'],
+          reasoningEffort: 'high',
+        },
+      ],
+    };
+    await saveGenericAISettings(customConfig);
+
+    const loaded = await loadGenericAISettings();
+    expect(loaded.providers[0].reasoningEffort).toBe('high');
+  });
+
+  it('defaults to "off" when reasoningEffort is not specified in loaded config', async () => {
+    mockLocalStorage.setItem(
+      'conlang_ai_settings_generic',
+      JSON.stringify({
+        activeProviderId: 'nous',
+        providers: [{
+          id: 'nous',
+          name: 'Nous',
+          baseURL: 'https://x.com',
+          apiKey: 'key-123',
+          authHeader: 'Authorization',
+          endpointStyle: 'openai-chat',
+          defaultModel: 'gpt-4o',
+          models: [],
+          // reasoningEffort intentionally omitted
+        }],
+      })
+    );
+    const loaded = await loadGenericAISettings();
+    // The loaded provider won't have reasoningEffort field, but the default
+    // should be 'off' when used in the adapter (tested separately)
+    expect(loaded.providers[0].reasoningEffort).toBeUndefined();
+  });
+
+  it('DEFAULT_PROVIDERS all have reasoningEffort set to "off"', () => {
+    DEFAULT_PROVIDERS.forEach(p => {
+      expect(p.reasoningEffort).toBe('off');
+    });
+  });
+
+  it('PRESET_PROVIDERS all have reasoningEffort set to "off"', () => {
+    PRESET_PROVIDERS.forEach(p => {
+      expect(p.reasoningEffort).toBe('off');
+    });
+  });
+});

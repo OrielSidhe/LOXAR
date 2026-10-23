@@ -1,7 +1,7 @@
-import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult } from './aiProviders/base';
+import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult, ReasoningEffort } from './aiProviders/base';
 import { createGeminiProvider, invalidateGeminiCache } from './aiProviders/geminiAdapter';
 import { createOllamaProvider } from './aiProviders/ollamaAdapter';
-import { createOpenAICompatibleProvider } from './aiProviders/openAIAdapter';
+import { createOpenAICompatibleProvider, type HttpErrorInfo } from './aiProviders/openAIAdapter';
 import { sanitizeCredential } from './aiProviders/base';
 
 export type {
@@ -10,8 +10,10 @@ export type {
   ProviderRequestOptions,
   TestConnectionResult,
   ProviderEndpointStyle,
+  ReasoningEffort,
 } from './aiProviders/base';
 export { sanitizeCredential, getProviderKeyPrefix, looksLikeWrongProvider } from './aiProviders/base';
+export type { HttpErrorInfo } from './aiProviders/openAIAdapter';
 
 export interface AISettings {
   activeProviderId: string;
@@ -28,6 +30,7 @@ export const DEFAULT_PROVIDERS: AIProviderConfig[] = [
     endpointStyle: 'gemini',
     defaultModel: 'gemini-2.5-flash',
     models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+    reasoningEffort: 'off',
   },
   {
     id: 'ollama',
@@ -38,6 +41,7 @@ export const DEFAULT_PROVIDERS: AIProviderConfig[] = [
     endpointStyle: 'ollama',
     defaultModel: 'llama3',
     models: ['llama3', 'llama3.1', 'llama3.2', 'llama2', 'mistral', 'mixtral', 'codellama', 'phi3', 'gemma2', 'qwen2', 'deepseek-coder-v2'],
+    reasoningEffort: 'off',
   },
 ];
 
@@ -62,6 +66,7 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
       'hermes-3-llama-3.1-70b',
       'hermes-2-mixtral-8x7b',
     ],
+    reasoningEffort: 'off',
   },
   {
     id: 'openai',
@@ -72,6 +77,7 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
     endpointStyle: 'openai-chat',
     defaultModel: 'gpt-4o',
     models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+    reasoningEffort: 'off',
   },
   {
     id: 'groq',
@@ -82,6 +88,7 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
     endpointStyle: 'openai-chat',
     defaultModel: 'llama-3.1-70b-versatile',
     models: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+    reasoningEffort: 'off',
   },
   {
     id: 'stepfun',
@@ -92,6 +99,7 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
     endpointStyle: 'openai-chat',
     defaultModel: 'step-2-16k',
     models: ['step-2-16k', 'step-1-8k', 'step-1-32k', 'step-1-128k', 'step-1-256k'],
+    reasoningEffort: 'off',
   },
   {
     id: 'openrouter',
@@ -108,6 +116,7 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
       'google/gemini-2.5-flash',
       'google/gemini-2.5-pro',
     ],
+    reasoningEffort: 'off',
   },
 ];
 
@@ -137,6 +146,7 @@ export function migrateLegacyToGeneric(legacy: LegacyAiSettings): AISettings {
       endpointStyle: 'gemini',
       defaultModel: legacy.geminiModel || 'gemini-2.5-flash',
       models: ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+      reasoningEffort: 'off',
     });
   }
 
@@ -150,6 +160,7 @@ export function migrateLegacyToGeneric(legacy: LegacyAiSettings): AISettings {
       endpointStyle: 'ollama',
       defaultModel: legacy.ollamaModel || 'llama3',
       models: ['llama3', 'llama3.1', 'llama3.2', 'llama2', 'mistral', 'mixtral', 'codellama', 'phi3', 'gemma2', 'qwen2', 'deepseek-coder-v2'],
+      reasoningEffort: 'off',
     });
   }
 

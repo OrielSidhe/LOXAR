@@ -248,7 +248,6 @@ describe('createGeminiProvider — cache isolation', () => {
     authHeader: 'x-goog-api-key', endpointStyle: 'gemini',
     defaultModel: 'gemini-2.5-flash', models: [],
   });
-
   afterEach(() => {
     __clearGeminiFactory();
     invalidateGeminiCache();
@@ -271,8 +270,6 @@ describe('createGeminiProvider — cache isolation', () => {
     const providerB = createGeminiProvider(makeConfig('key-bbb'));
     await providerB.complete([{ role: 'user', content: 'hi' }]);
 
-    // Each provider creates its own instance with its own key — proving the
-    // old module-level cache that leaked the first apiKey is gone.
     expect(calls).toHaveLength(2);
     expect(calls[0]).toBe('key-aaa');
     expect(calls[1]).toBe('key-bbb');
@@ -330,5 +327,265 @@ describe('createGeminiProvider — cache isolation', () => {
 
   it('invalidateGeminiCache is a safe no-op (instances are per-provider)', () => {
     expect(() => invalidateGeminiCache()).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase X: HTTP 400 body surfacing
+// ---------------------------------------------------------------------------
+describe('Phase X: HTTP 400 body surfacing', () => {
+  const openAiConfig: AIProviderConfig = {
+    id: 'nous',
+    name: 'NousResearch',
+    baseURL: 'https://inference-api.nousresearch.com/v1',
+    apiKey: 'sk-test-123',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'poolside/laguna-s-2.1:free',
+    models: [],
+  };
+
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('throws error with status, endpoint, and body when HTTP 400 is returned (OpenAI-compatible)', async () => {
+    const mockBody = JSON.stringify({
+      error: {
+        message: 'invalid_request_error: The request was malformed',
+        type: 'invalid_request_error',
+        code: 400,
+      }
+    });
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(mockBody, {
+        status: 400,
+        statusText: 'Bad Request',
+        headers: { 'Content-Type': 'application/json' }
+      }))
+    );
+
+    const provider = createOpenAICompatibleProvider(openAiConfig);
+    const error = await provider.complete([{ role: 'user', content: 'test' }]).catch(e => e);
+
+    expect(error.message).toContain('HTTP 400');
+    expect(error.message).toContain('Bad Request');
+    expect(error.message).toContain('endpoint');
+    expect(error.message).toContain('Body:');
+    expect(error.message).toContain('invalid_request_error');
+  });
+
+  it('truncates response body to 2000 characters on large error responses', async () => {
+    const largeBody = 'x'.repeat(3000);
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(largeBody, {
+        status: 400,
+        statusText: 'Bad Request'
+      }))
+    );
+
+    const provider = createOpenAICompatibleProvider(openAiConfig);
+    const error = await provider.complete([{ role: 'user', content: 'test' }]).catch(e => e);
+
+    expect(error.message).toContain('HTTP 400');
+    expect(error.message).toContain('Body:');
+    // The error message should not exceed 2000 chars of body + overhead
+    expect(error.message.length).toBeLessThan(2200);
+  });
+
+  it('handles HTTP error when response.text() fails', async () => {
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(null, {
+        status: 500,
+        statusText: 'Internal Server Error'
+      }))
+    );
+
+    const provider = createOpenAICompatibleProvider(openAiConfig);
+    const error = await provider.complete([{ role: 'user', content: 'test' }]).catch(e => e);
+
+    expect(error.message).toContain('HTTP 500');
+    expect(error.message).toContain('Body:');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase X: reasoningEffort parameter
+// ---------------------------------------------------------------------------
+describe('Phase X: reasoningEffort parameter', () => {
+  const openAiConfig: AIProviderConfig = {
+    id: 'nous',
+    name: 'NousResearch',
+    baseURL: 'https://inference-api.nousresearch.com/v1',
+    apiKey: 'sk-test-123',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'poolside/laguna-s-2.1:free',
+    models: [],
+  };
+
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('does NOT include reasoning parameter when reasoningEffort is "off" (default)', async () => {
+    const capturedBodies: Record<string, unknown>[] = [];
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      capturedBodies.push(body);
+      return Promise.resolve(new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] }), { status: 200 }));
+    });
+
+    const provider = createOpenAICompatibleProvider(openAiConfig);
+    await provider.complete([{ role: 'user', content: 'test' }]);
+
+    // Should NOT have reasoning_effort or reasoning keys
+    expect(capturedBodies[0]).not.toHaveProperty('reasoning_effort');
+    expect(capturedBodies[0]).not.toHaveProperty('reasoning');
+  });
+
+  it('includes reasoning_effort: "low" when reasoningEffort is "low"', async () => {
+    const capturedBodies: Record<string, unknown>[] = [];
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      capturedBodies.push(body);
+      return Promise.resolve(new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] }), { status: 200 }));
+    });
+
+    const provider = createOpenAICompatibleProvider({
+      ...openAiConfig,
+      reasoningEffort: 'low',
+    });
+    await provider.complete([{ role: 'user', content: 'test' }]);
+
+    expect(capturedBodies[0]).toHaveProperty('reasoning_effort', 'low');
+  });
+
+  it('includes reasoning_effort: "medium" when reasoningEffort is "medium"', async () => {
+    const capturedBodies: Record<string, unknown>[] = [];
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      capturedBodies.push(body);
+      return Promise.resolve(new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] }), { status: 200 }));
+    });
+
+    const provider = createOpenAICompatibleProvider({
+      ...openAiConfig,
+      reasoningEffort: 'medium',
+    });
+    await provider.complete([{ role: 'user', content: 'test' }]);
+
+    expect(capturedBodies[0]).toHaveProperty('reasoning_effort', 'medium');
+  });
+
+  it('includes reasoning_effort: "high" when reasoningEffort is "high"', async () => {
+    const capturedBodies: Record<string, unknown>[] = [];
+    globalThis.fetch = vi.fn().mockImplementation((url: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      capturedBodies.push(body);
+      return Promise.resolve(new Response(JSON.stringify({ choices: [{ message: { content: 'OK' } }] }), { status: 200 }));
+    });
+
+    const provider = createOpenAICompatibleProvider({
+      ...openAiConfig,
+      reasoningEffort: 'high',
+    });
+    await provider.complete([{ role: 'user', content: 'test' }]);
+
+    expect(capturedBodies[0]).toHaveProperty('reasoning_effort', 'high');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase X: provider config round-trip with reasoningEffort
+// ---------------------------------------------------------------------------
+describe('Phase X: provider config round-trip with reasoningEffort', () => {
+  it('preserves reasoningEffort in AIProviderConfig through provider creation', () => {
+    const originalConfig: AIProviderConfig = {
+      id: 'nous',
+      name: 'NousResearch',
+      baseURL: 'https://inference-api.nousresearch.com/v1',
+      apiKey: 'sk-test-123',
+      authHeader: 'Authorization',
+      endpointStyle: 'openai-chat',
+      defaultModel: 'poolside/laguna-s-2.1:free',
+      models: ['poolside/laguna-s-2.1:free'],
+      reasoningEffort: 'high',
+    };
+
+    const provider = createOpenAICompatibleProvider(originalConfig);
+    expect(provider.config.reasoningEffort).toBe('high');
+  });
+
+  it('defaults to "off" when reasoningEffort is not specified', () => {
+    const configWithoutEffort: AIProviderConfig = {
+      id: 'nous',
+      name: 'NousResearch',
+      baseURL: 'https://inference-api.nousresearch.com/v1',
+      apiKey: 'sk-test-123',
+      authHeader: 'Authorization',
+      endpointStyle: 'openai-chat',
+      defaultModel: 'poolside/laguna-s-2.1:free',
+      models: [],
+    };
+
+    const provider = createOpenAICompatibleProvider(configWithoutEffort);
+    expect(provider.config.reasoningEffort).toBe('off');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase X: Ollama error surfacing
+// ---------------------------------------------------------------------------
+describe('Phase X: Ollama error surfacing', () => {
+  const ollamaConfig: AIProviderConfig = {
+    id: 'ollama',
+    name: 'Ollama (Local)',
+    baseURL: 'http://localhost:11434',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'ollama',
+    defaultModel: 'llama3',
+    models: [],
+  };
+
+  let originalFetch: typeof globalThis.fetch;
+
+  beforeEach(() => {
+    originalFetch = globalThis.fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('throws error with status, endpoint, and body when HTTP error is returned (Ollama)', async () => {
+    const mockBody = JSON.stringify({ error: 'model not found' });
+    globalThis.fetch = vi.fn().mockImplementation(() =>
+      Promise.resolve(new Response(mockBody, {
+        status: 404,
+        statusText: 'Not Found'
+      }))
+    );
+
+    const provider = createOllamaProvider(ollamaConfig);
+    const error = await provider.complete([{ role: 'user', content: 'test' }]).catch(e => e);
+
+    expect(error.message).toContain('HTTP 404');
+    expect(error.message).toContain('endpoint');
+    expect(error.message).toContain('Body:');
+    expect(error.message).toContain('model not found');
   });
 });

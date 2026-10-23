@@ -2,6 +2,15 @@ import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions,
 import { sanitizeCredential } from './base';
 
 const DEFAULT_TIMEOUT = 60_000;
+const MAX_ERROR_BODY = 2000;
+
+/** Error info extracted from an HTTP error response */
+export interface HttpErrorInfo {
+  status: number;
+  statusText: string;
+  endpoint: string;
+  body: string;
+}
 
 async function requestWithTimeout(url: string, init: RequestInit, timeoutMs = DEFAULT_TIMEOUT): Promise<Response> {
   const controller = new AbortController();
@@ -18,6 +27,26 @@ function mapMessages(messages: ChatMessage[]) {
     .map(({ role, content }) => `${role === 'assistant' ? 'Assistant' : role === 'user' ? 'User' : 'System'}: ${content}`)
     .join('\n');
   return prompt;
+}
+
+/**
+ * Extract detailed error info from a failed response.
+ * Returns status, endpoint, and body (truncated to MAX_ERROR_BODY chars).
+ */
+async function extractErrorInfo(response: Response, url: string): Promise<HttpErrorInfo> {
+  let body = '';
+  try {
+    const text = await response.text();
+    body = text.length > MAX_ERROR_BODY ? text.slice(0, MAX_ERROR_BODY) + '... (truncated)' : text;
+  } catch {
+    body = '(unable to read response body)';
+  }
+  return {
+    status: response.status,
+    statusText: response.statusText || 'Unknown',
+    endpoint: url,
+    body,
+  };
 }
 
 export function createOllamaProvider(config: AIProviderConfig): AIProvider {
@@ -55,8 +84,9 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
     );
 
     if (!response.ok) {
-      const text = await response.text().catch(() => '');
-      throw new Error(`HTTP ${response.status}: ${text.slice(0, 500)}`);
+      const errorInfo = await extractErrorInfo(response, url);
+      const errorDetail = `HTTP ${response.status} (${response.statusText}) on endpoint ${errorInfo.endpoint}\nBody: ${errorInfo.body}`;
+      throw new Error(errorDetail);
     }
 
     const data = await response.json();
@@ -78,11 +108,11 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
       );
 
       if (!response.ok) {
-        const text = await response.text().catch(() => '');
+        const errorInfo = await extractErrorInfo(response, tagsUrl);
         return {
           success: false,
           error: `HTTP ${response.status}`,
-          details: `Ollama responded with code ${response.status} (${response.statusText}). URL: ${tagsUrl}. Response: ${text.slice(0, 500)}`,
+          details: `Ollama responded with code ${response.status} (${response.statusText}). URL: ${errorInfo.endpoint}. Response: ${errorInfo.body}`,
         };
       }
 
