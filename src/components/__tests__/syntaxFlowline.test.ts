@@ -292,3 +292,138 @@ describe('G4: SyntaxFlowline — localStorage persistence', () => {
     expect(loaded[0].pins[0].value).toBeNull();
   });
 });
+
+// ─── G6: Morphological properties from manifest ────────────────────────────
+
+describe('G6: SyntaxFlowline — properties from manifest inventory', () => {
+  const manifestWithParadigms: GrammarManifest = {
+    ...mockManifest,
+    paradigms: [
+      {
+        category: 'sustantivo',
+        slots: [
+          {
+            feature: 'number',
+            order: 1,
+            realization: { kind: 'affix', position: 'suffix', form: '-k' },
+            allomorphs: [
+              { when: 'prevVowel', realization: { kind: 'affix', position: 'suffix', form: '-u' } },
+            ],
+          },
+          {
+            feature: 'case',
+            order: 2,
+            realization: { kind: 'affix', position: 'suffix', form: '-la' },
+          },
+        ],
+      },
+      {
+        category: 'verbo',
+        slots: [
+          {
+            feature: 'tense',
+            order: 1,
+            realization: { kind: 'affix', position: 'suffix', form: '-é' },
+            allomorphs: [
+              { when: 'afterConsonant', realization: { kind: 'affix', position: 'suffix', form: '-a' } },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+
+  it('extracts morphological properties from manifest paradigms', async () => {
+    const { extractMorphologicalProperties } = await import('../../components/SyntaxFlowline');
+    const props = extractMorphologicalProperties(manifestWithParadigms);
+    expect(props['sustantivo']).toBeDefined();
+    expect(props['sustantivo']).toContain('number=-k');
+    expect(props['sustantivo']).toContain('number=-u'); // from allomorph
+    expect(props['sustantivo']).toContain('case=-la');
+    expect(props['verbo']).toBeDefined();
+    expect(props['verbo']).toContain('tense=-é');
+    expect(props['verbo']).toContain('tense=-a'); // from allomorph
+  });
+
+  it('returns empty object when no manifest paradigms exist', async () => {
+    const { extractMorphologicalProperties } = await import('../../components/SyntaxFlowline');
+    const props = extractMorphologicalProperties(undefined);
+    expect(props).toEqual({});
+  });
+
+  it('builds blocks with feature + morphoCategory from manifest', async () => {
+    const { buildBlocksFromManifest } = await import('../../components/SyntaxFlowline');
+    const blocks = buildBlocksFromManifest(manifestWithParadigms);
+
+    // Find the subject block (has case pin)
+    const subjectBlock = blocks.find(b => b.roleId === 'subject');
+    expect(subjectBlock).toBeDefined();
+    const casePin = subjectBlock!.pins.find(p => p.feature === 'case');
+    expect(casePin).toBeDefined();
+    expect(casePin!.morphoCategory).toBe('sustantivo');
+    // Options should come from manifest
+    expect(casePin!.options).toContain('-la');
+  });
+
+  it('buildBlocksFromManifest falls back to hardcoded options without manifest', async () => {
+    const { buildBlocksFromManifest } = await import('../../components/SyntaxFlowline');
+    const blocks = buildBlocksFromManifest(undefined);
+    const subjectBlock = blocks.find(b => b.roleId === 'subject');
+    expect(subjectBlock).toBeDefined();
+    const casePin = subjectBlock!.pins.find(p => p.feature === 'case');
+    expect(casePin).toBeDefined();
+    expect(casePin!.options).toContain('nominativo');
+  });
+});
+
+// ─── G7: Drop-outside returns piece to inventory ────────────────────────────
+
+describe('G7: SyntaxFlowline — drop-outside returns piece to inventory', () => {
+  it('handleDropOutside clears pin value when blockId + pinId provided', async () => {
+    const { handleDropOutside } = await import('../../components/SyntaxFlowline');
+
+    const blocks: any[] = [
+      {
+        id: 'block_0',
+        label: 'SUJETO',
+        roleId: 'subject',
+        expanded: true,
+        pins: [
+          { id: 'root', label: 'Raíz', expectedFunction: 'sustantivo', required: true, value: { root: 'faryo', function: 'Sustantivo', meaning: 'fuego' } },
+          { id: 'case', label: 'Caso', expectedFunction: 'caso', required: false, value: { root: 'nominativo', function: 'caso', meaning: 'nominativo' } },
+        ],
+      },
+    ];
+
+    const result = handleDropOutside(blocks, 'block_0', 'case');
+    expect(result).toHaveLength(1);
+    expect(result[0].pins[1].value).toBeNull();
+    // Root pin should be untouched
+    expect(result[0].pins[0].value.root).toBe('faryo');
+  });
+
+  it('handleDropOutside removes block when only blockId provided (returns to inventory)', async () => {
+    const { handleDropOutside } = await import('../../components/SyntaxFlowline');
+
+    const blocks: any[] = [
+      { id: 'block_0', label: 'SUJETO', roleId: 'subject', expanded: true, pins: [] },
+      { id: 'block_1', label: 'VERBO', roleId: 'verb', expanded: true, pins: [] },
+    ];
+
+    const result = handleDropOutside(blocks, 'block_0', null);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('block_1');
+  });
+
+  it('handleDropOutside returns blocks unchanged when both blockId and pinId are null', async () => {
+    const { handleDropOutside } = await import('../../components/SyntaxFlowline');
+
+    const blocks: any[] = [
+      { id: 'block_0', label: 'SUJETO', roleId: 'subject', expanded: true, pins: [] },
+    ];
+
+    const result = handleDropOutside(blocks, null, null);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('block_0');
+  });
+});

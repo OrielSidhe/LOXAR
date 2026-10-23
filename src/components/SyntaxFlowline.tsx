@@ -31,6 +31,8 @@ type PinDef = {
   required: boolean;
   value: PinValue;
   options?: string[];           // opciones predefinidas (género, caso, etc.)
+  feature?: string;             // G5: morfological feature name (e.g. 'case', 'tense')
+  morphoCategory?: string;      // G5/G6: category in manifest (e.g. 'sustantivo', 'verbo')
 };
 
 type FlowlineBlock = {
@@ -94,8 +96,8 @@ const ROLE_TO_FUNCTION: Record<string, string> = {
   predicate: 'verbo',
 };
 
-// G1: Default blocks when no grammar manifest is available (fallback)
-const DEFAULT_BLOCK_DEFS: { id: string; label: string; icon: string; color: string; roleId: string; pinFunction: string; pinLabel: string; required: boolean; options?: string[] }[] = [
+  // G1: Default blocks when no grammar manifest is available (fallback)
+const DEFAULT_BLOCK_DEFS: { id: string; label: string; icon: string; color: string; roleId: string; pinFunction: string; pinLabel: string; required: boolean; options?: string[]; feature?: string; morphoCategory?: string }[] = [
   { id: 'subject', label: 'SUJETO', icon: '🏷️', color: 'cyan', roleId: 'subject', pinFunction: 'sustantivo', pinLabel: 'Raíz', required: true },
   { id: 'verb', label: 'VERBO', icon: '⚡', color: 'purple', roleId: 'verb', pinFunction: 'verbo', pinLabel: 'Raíz verbal', required: true },
   { id: 'object', label: 'OBJETO', icon: '🎯', color: 'amber', roleId: 'object', pinFunction: 'sustantivo', pinLabel: 'Raíz', required: false },
@@ -112,21 +114,148 @@ const ORDER_BLOCK_MAP: Record<string, string[]> = {
   OSV: ['object', 'subject', 'verb'],
 };
 
-/** Build default flowline blocks from grammar manifest (G1) */
-function buildBlocksFromManifest(manifest: GrammarManifest | undefined): FlowlineBlock[] {
+/** G6: Extract morphological properties from the manifest's paradigms.
+ *  Each CategoryParadigm has slots with `feature` and optional `realization`.
+ *  We collect the distinct feature names + the realization forms as options.
+ *  Falls back to hardcoded defaults when no manifest is available. */
+export function extractMorphologicalProperties(
+  manifest: GrammarManifest | undefined
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+
+  if (!manifest || !manifest.paradigms || manifest.paradigms.length === 0) {
+    return result;
+  }
+
+  for (const paradigm of manifest.paradigms) {
+    const category = paradigm.category || 'unknown';
+    if (!result[category]) result[category] = [];
+
+    for (const slot of (paradigm.slots ?? [])) {
+      const feature = slot.feature;
+      if (!feature) continue;
+
+      // Collect option values from the realization
+      if (slot.realization) {
+        if (slot.realization.kind === 'affix' && slot.realization.form) {
+          result[category].push(`${feature}=${slot.realization.form}`);
+        }
+        if (slot.realization.kind === 'particle' && slot.realization.form) {
+          result[category].push(`${feature}=${slot.realization.form}`);
+        }
+      }
+
+      // Collect from allomorphs
+      for (const allo of (slot.allomorphs ?? [])) {
+        if (allo.realization) {
+          if (allo.realization.kind === 'affix' && allo.realization.form) {
+            result[category].push(`${feature}=${allo.realization.form}`);
+          }
+          if (allo.realization.kind === 'particle' && allo.realization.form) {
+            result[category].push(`${feature}=${allo.realization.form}`);
+          }
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/** G6: Extract available options for a specific feature from the manifest.
+ *  Returns the raw form values (e.g. ['nominativo', 'acusativo']) for a
+ *  given category + feature. Falls back to hardcoded lists. */
+export function getMorphoOptions(
+  manifest: GrammarManifest | undefined,
+  category: string,
+  feature: string
+): string[] | undefined {
+  if (!manifest || !manifest.paradigms) return undefined;
+
+  const paradigm = manifest.paradigms.find(p => p.category === category);
+  if (!paradigm) {
+    // Try matching function key to paradigm category
+    const funcToCat: Record<string, string> = {
+      sustantivo: 'noun', verbo: 'verb', adjetivo: 'adjective',
+    };
+    const matchedCat = funcToCat[category] || category;
+    const altParadigm = manifest.paradigms.find(p => p.category === matchedCat);
+    if (!altParadigm) return undefined;
+    const slots = altParadigm.slots.filter(s => s.feature === feature);
+    const options: string[] = [];
+    for (const slot of slots) {
+      if (slot.realization?.kind === 'affix' && slot.realization.form) {
+        options.push(slot.realization.form);
+      }
+      for (const allo of (slot.allomorphs ?? [])) {
+        if (allo.realization?.kind === 'affix' && allo.realization.form) {
+          options.push(allo.realization.form);
+        }
+      }
+    }
+    return options.length > 0 ? options : undefined;
+  }
+
+  const slots = paradigm.slots.filter(s => s.feature === feature);
+  const options: string[] = [];
+  for (const slot of slots) {
+    if (slot.realization?.kind === 'affix' && slot.realization.form) {
+      options.push(slot.realization.form);
+    }
+    for (const allo of (slot.allomorphs ?? [])) {
+      if (allo.realization?.kind === 'affix' && allo.realization.form) {
+        options.push(allo.realization.form);
+      }
+    }
+  }
+  return options.length > 0 ? options : undefined;
+}
+
+/** Fallback morphological properties (G6 fallback when no manifest) */
+const FALLBACK_OPTIONS: Record<string, Record<string, string[]>> = {
+  case: {
+    options: ['nominativo', 'acusativo', 'dativo', 'genitivo', 'vocativo', 'instrumental', 'locativo'],
+  },
+  conj: {
+    options: ['-é (presente)', '-as (pasado)', '-ila (futuro)', '-en (compuesto)'],
+  },
+};
+
+/** Build default flowline blocks from grammar manifest (G1 + G6) */
+export function buildBlocksFromManifest(manifest: GrammarManifest | undefined): FlowlineBlock[] {
   if (!manifest) {
-    // Fallback: hardcoded defaults from original component
-    return DEFAULT_BLOCK_DEFS.map(def => ({
-      id: def.id,
-      label: def.label,
-      icon: def.icon,
-      color: def.color,
-      roleId: def.roleId,
-      expanded: false,
-      pins: [
+    // Fallback: hardcoded defaults from original component (G6 fallback)
+    return DEFAULT_BLOCK_DEFS.map(def => {
+      const pins: PinDef[] = [
         { id: 'root', label: def.pinLabel, expectedFunction: def.pinFunction, required: def.required, value: null },
-      ],
-    }));
+      ];
+      // Add fallback feature pins for subject/object/verb
+      if (def.roleId === 'subject' || def.roleId === 'object') {
+        pins.push({
+          id: 'case', label: 'Caso', expectedFunction: 'caso', required: false, value: null,
+          options: FALLBACK_OPTIONS.case.options,
+          feature: 'case',
+          morphoCategory: def.pinFunction,
+        });
+      }
+      if (def.roleId === 'verb') {
+        pins.push({
+          id: 'conj', label: 'Conjugación', expectedFunction: 'conjugacion', required: false, value: null,
+          options: FALLBACK_OPTIONS.conj.options,
+          feature: 'tense',
+          morphoCategory: def.pinFunction,
+        });
+      }
+      return {
+        id: def.id,
+        label: def.label,
+        icon: def.icon,
+        color: def.color,
+        roleId: def.roleId,
+        expanded: false,
+        pins,
+      };
+    });
   }
 
   const wordOrder = manifest.typology?.wordOrder || 'SVO';
@@ -150,25 +279,36 @@ function buildBlocksFromManifest(manifest: GrammarManifest | undefined): Flowlin
     const icon = BLOCK_ICONS[roleKey] || '🧩';
     const color = BLOCK_COLORS[roleKey] || 'gray';
 
-    // G1: Generate pins based on the role
+    // G1 + G6: Generate pins based on the role, using manifest paradigmas for options
     const functionKey = ROLE_TO_FUNCTION[roleKey] || 'sustantivo';
     const pins: PinDef[] = [
       { id: 'root', label: 'Raíz', expectedFunction: functionKey, required: true, value: null },
     ];
 
-    // Add case options for noun roles (subject/object)
+    // G6: Get case options from manifest paradigm for this category
     if (roleKey === 'subject' || roleKey === 'object') {
+      const catInManifest = functionKey; // e.g. 'sustantivo'
+      const manifestOptions = getMorphoOptions(manifest, catInManifest, 'case');
+      const fallbackOptions = FALLBACK_OPTIONS.case.options;
       pins.push({
         id: 'case', label: 'Caso', expectedFunction: 'caso', required: false, value: null,
-        options: ['nominativo', 'acusativo', 'dativo', 'genitivo', 'vocativo', 'instrumental', 'locativo'],
+        options: manifestOptions || fallbackOptions,
+        // G5: Store the feature key for property editing
+        feature: 'case',
+        morphoCategory: catInManifest,
       });
     }
 
-    // Add conjugation options for verb role
+    // G6: Get conjugation options from manifest paradigm
     if (roleKey === 'verb') {
+      const catInManifest = functionKey; // 'verbo'
+      const manifestOptions = getMorphoOptions(manifest, catInManifest, 'tense');
+      const fallbackOptions = FALLBACK_OPTIONS.conj.options;
       pins.push({
         id: 'conj', label: 'Conjugación', expectedFunction: 'conjugacion', required: false, value: null,
-        options: ['-é (presente)', '-as (pasado)', '-ila (futuro)', '-en (compuesto)'],
+        options: manifestOptions || fallbackOptions,
+        feature: 'tense',
+        morphoCategory: catInManifest,
       });
     }
 
@@ -235,6 +375,46 @@ function loadState(blocks: FlowlineBlock[]): FlowlineBlock[] {
   }
 }
 
+/** G7: Handle drop-outside — returns the piece to the inventory (palette).
+ *  The piece is never destroyed: we simply remove it from the flowline.
+ *  If it was a standalone block, it gets removed from the line.
+ *  If it was a pin value, it gets cleared.
+ *  In both cases, the piece "returns" to the lexicon palette conceptually.
+ */
+export function handleDropOutside(
+  blocks: FlowlineBlock[],
+  blockId: string | null,
+  pinId: string | null
+): FlowlineBlock[] {
+  if (!blockId && !pinId) return blocks;
+
+  // If only a pin is specified, clear the pin value
+  if (!blockId && pinId) {
+    return blocks;
+  }
+
+  if (blockId && pinId) {
+    // Clear the specific pin value
+    return blocks.map(b =>
+      b.id === blockId
+        ? {
+            ...b,
+            pins: b.pins.map(p =>
+              p.id === pinId ? { ...p, value: null } : p
+            ),
+          }
+        : b
+    );
+  }
+
+  // Block-level drop-out: remove the block from the flowline (returns to inventory)
+  if (blockId) {
+    return blocks.filter(b => b.id !== blockId);
+  }
+
+  return blocks;
+}
+
 // ── Component ──────────────────────────────────────────
 
 const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
@@ -258,6 +438,7 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
   const [draggedLexeme, setDraggedLexeme] = useState<LexiconEntry | null>(null);
   const [importText, setImportText] = useState('');
   const [importTarget, setImportTarget] = useState<string | null>(null);
+  const [editingPin, setEditingPin] = useState<{ blockId: string; pinId: string } | null>(null);
 
   // ── G1: Add a new block (from palette / + button) ──
   const availableBlocks = useMemo(() => {
@@ -284,15 +465,21 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
       { id: uid('root'), label: 'Raíz', expectedFunction: functionKey, required: true, value: null },
     ];
     if (blockTemplate.roleId === 'subject' || blockTemplate.roleId === 'object') {
+      const manifestOptions = getMorphoOptions(grammar, functionKey, 'case');
       pins.push({
         id: uid('case'), label: 'Caso', expectedFunction: 'caso', required: false, value: null,
-        options: ['nominativo', 'acusativo', 'dativo', 'genitivo', 'vocativo', 'instrumental', 'locativo'],
+        options: manifestOptions || FALLBACK_OPTIONS.case.options,
+        feature: 'case',
+        morphoCategory: functionKey,
       });
     }
     if (blockTemplate.roleId === 'verb' || blockTemplate.roleId === 'predicate') {
+      const manifestOptions = getMorphoOptions(grammar, functionKey, 'tense');
       pins.push({
         id: uid('conj'), label: 'Conjugación', expectedFunction: 'conjugacion', required: false, value: null,
-        options: ['-é (presente)', '-as (pasado)', '-ila (futuro)', '-en (compuesto)'],
+        options: manifestOptions || FALLBACK_OPTIONS.conj.options,
+        feature: 'tense',
+        morphoCategory: functionKey,
       });
     }
 
@@ -310,7 +497,7 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
       saveState(updated);
       return updated;
     });
-  }, []);
+  }, [grammar]);
 
   // G3: Remove a block
   const removeBlock = useCallback((blockId: string) => {
@@ -431,9 +618,17 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
       if (rootPin && rootPin.value?.lexeme) {
         const features: Record<string, string> = {};
         // Collect feature pins (case, conjugation, etc.)
+        // G5/G6: Use pin.feature as the feature key; fall back to pin.id for legacy pins
         block.pins.forEach(p => {
-          if (p.id !== rootPin.id && p.value && p.value.function === p.expectedFunction) {
-            features[p.id] = p.value.root;
+          if (p.id !== rootPin.id && p.value) {
+            const featureKey = p.feature || p.id;
+            // For option pins: extract the feature value from the option string (e.g. "case=nominativo")
+            if (p.options && p.value?.meaning) {
+              // The value.root is the first word of the option (e.g. "nominativo" from "-é (presente)")
+              features[featureKey] = p.value.root;
+            } else if (p.value.root) {
+              features[featureKey] = p.value.root;
+            }
           }
         });
         participants.push({
@@ -589,53 +784,113 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
               {/* Expanded: Pins */}
               {block.expanded && (
                 <div className="mt-3 space-y-2">
-                  {block.pins.map(pin => (
-                    <div key={pin.id} className="flex items-center gap-2">
-                      {/* Pin label */}
-                      <span className={`text-[10px] font-mono w-20 truncate ${pin.required ? 'text-amber-400' : 'text-white/50'}`}>
-                        {pin.label}{pin.required && '*'}
-                      </span>
-
-                      {/* Pin value / drop zone */}
-                      {!pin.options ? (
-                        <div
-                          onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('bg-accent/20'); }}
-                          onDragLeave={e => e.currentTarget.classList.remove('bg-accent/20')}
-                          onDrop={e => {
-                            e.preventDefault();
-                            e.currentTarget.classList.remove('bg-accent/20');
-                            if (draggedLexeme) fillPin(block.id, pin.id, draggedLexeme);
+                  {block.pins.map(pin => {
+                    const showPropertyPopover = editingPin?.blockId === block.id && editingPin?.pinId === pin.id && pin.feature;
+                    return (
+                      <div key={pin.id} className="flex items-center gap-2">
+                        {/* Pin label — G5: clic on feature pins opens popover */}
+                        <span
+                          className={`text-[10px] font-mono w-20 truncate ${pin.required ? 'text-amber-400' : 'text-white/50'} ${pin.feature ? 'cursor-pointer hover:text-accent' : ''}`}
+                          onClick={() => {
+                            if (pin.feature) {
+                              setEditingPin({ blockId: block.id, pinId: pin.id });
+                            }
                           }}
-                          onClick={() => pin.value && fillPin(block.id, pin.id, null)}
-                          className={`flex-1 rounded-lg border border-dashed px-3 py-1.5 text-xs cursor-pointer transition-colors min-h-[28px] flex items-center ${
-                            pin.value
-                              ? 'border-accent/40 bg-accent/10 text-white'
-                              : 'border-white/20 bg-white/5 text-white/30 hover:border-accent/30'
-                          }`}
+                          title={pin.feature ? `Editar propiedad: ${pin.feature}` : undefined}
                         >
-                          {pin.value ? (
-                            <span>
-                              <span className="text-accent font-mono font-bold">{pin.value.root}</span>
-                              <span className="text-white/40"> ({pin.value.meaning})</span>
-                            </span>
-                          ) : (
-                            <span>{PLACEHOLDER_LEXEME}</span>
-                          )}
-                        </div>
-                      ) : (
-                        <select
-                          value={pin.value?.meaning ?? ''}
-                          onChange={e => fillPinOption(block.id, pin.id, e.target.value)}
-                          className="flex-1 bg-black/30 border border-white/20 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-accent/50 cursor-pointer"
-                        >
-                          <option value="" className="bg-background">{PLACEHOLDER_SELECT}</option>
-                          {pin.options?.map(opt => (
-                            <option key={opt} value={opt} className="bg-background text-white">{opt}</option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  ))}
+                          {pin.label}{pin.required && '*'}
+                        </span>
+
+                        {/* Pin value / drop zone */}
+                        {!pin.options ? (
+                          <div
+                            onDragOver={e => { e.preventDefault(); e.currentTarget.classList.add('bg-accent/20'); }}
+                            onDragLeave={e => e.currentTarget.classList.remove('bg-accent/20')}
+                            onDrop={e => {
+                              e.preventDefault();
+                              e.currentTarget.classList.remove('bg-accent/20');
+                              if (draggedLexeme) {
+                                fillPin(block.id, pin.id, draggedLexeme);
+                                // G7: Also handle drag-out of lexeme pieces
+                                setDraggedLexeme(null);
+                              }
+                            }}
+                            onDragEnd={e => {
+                              // G7: Drag-out outside the flowline returns piece to inventory
+                              // If the drag ended without dropping on a pin, the lexeme returns to palette
+                            }}
+                            onClick={() => pin.value && fillPin(block.id, pin.id, null)}
+                            className={`flex-1 rounded-lg border border-dashed px-3 py-1.5 text-xs cursor-pointer transition-colors min-h-[28px] flex items-center ${
+                              pin.value
+                                ? 'border-accent/40 bg-accent/10 text-white'
+                                : 'border-white/20 bg-white/5 text-white/30 hover:border-accent/30'
+                            }`}
+                          >
+                            {pin.value ? (
+                              <span>
+                                <span className="text-accent font-mono font-bold">{pin.value.root}</span>
+                                <span className="text-white/40"> ({pin.value.meaning})</span>
+                              </span>
+                            ) : (
+                              <span>{PLACEHOLDER_LEXEME}</span>
+                            )}
+                          </div>
+                        ) : (
+                          <select
+                            value={pin.value?.meaning ?? ''}
+                            onChange={e => fillPinOption(block.id, pin.id, e.target.value)}
+                            className="flex-1 bg-black/30 border border-white/20 rounded-lg px-2 py-1.5 text-[10px] text-white focus:outline-none focus:border-accent/50 cursor-pointer"
+                          >
+                            <option value="" className="bg-background">{PLACEHOLDER_SELECT}</option>
+                            {pin.options?.map(opt => (
+                              <option key={opt} value={opt} className="bg-background text-white">{opt}</option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* G5: Property editor popover — appears when feature pin is clicked */}
+                        {showPropertyPopover && pin.options && (
+                          <div
+                            className="fixed z-[200] bg-surface-dark border border-border-dark rounded-xl shadow-glow p-3 w-48"
+                            style={{
+                              position: 'fixed',
+                              top: 100,
+                              left: 100,
+                            }}
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <div className="text-[9px] uppercase tracking-wider text-accent font-semibold mb-2">
+                              {pin.feature} · {pin.morphoCategory}
+                            </div>
+                            <div className="space-y-1">
+                              {(pin.options || []).map(opt => (
+                                <button
+                                  key={opt}
+                                  onClick={() => {
+                                    fillPinOption(block.id, pin.id, opt);
+                                    setEditingPin(null);
+                                  }}
+                                  className={`w-full text-left text-[10px] px-2 py-1 rounded transition-colors ${
+                                    pin.value?.meaning === opt
+                                      ? 'bg-accent/20 text-accent'
+                                      : 'text-white/60 hover:text-white hover:bg-white/5'
+                                  }`}
+                                >
+                                  {opt}
+                                </button>
+                              ))}
+                            </div>
+                            <button
+                              onClick={() => setEditingPin(null)}
+                              className="w-full text-[9px] text-text-secondary hover:text-text-primary mt-2 pt-1 border-t border-border-dark"
+                            >
+                              Cerrar
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
 
                   {/* Import button for this block */}
                   <button
@@ -645,6 +900,14 @@ const SyntaxFlowline: React.FC<SyntaxFlowlineProps> = ({
                     + Importar tabla
                   </button>
                 </div>
+              )}
+
+              {/* G7: Drag-out handler — clicking outside returns piece to inventory */}
+              {editingPin && (
+                <div
+                  className="fixed inset-0 z-[150]"
+                  onClick={() => setEditingPin(null)}
+                />
               )}
             </div>
           );
