@@ -16,6 +16,8 @@ import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './s
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode } from './types';
 import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
 import { FloatingWidget } from './components/FloatingWidget';
+import FirstRunWizard from './components/FirstRunWizard';
+import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -86,6 +88,43 @@ const App = () => {
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
   const [isAppLoaded, setIsAppLoaded] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // I1: First-run wizard state
+  const { showWizard, step, dataFolder, goToStep, nextStep, prevStep, skipWizard, completeWizard, updateDataFolder } = useFirstRunWizard();
+
+  const handleWizardConfigureAi = () => {
+    // I2: Open the EXISTING AiSettingsModal — do not create a second modal
+    setActiveModal('ai_settings');
+    // Complete the wizard after the user is done with settings
+    // The wizard will be dismissed when they close settings, but we also
+    // need to mark it complete here so it doesn't reappear
+    completeWizard();
+  };
+
+  const handleWizardSkip = () => {
+    // I3: "Más tarde" — skip but mark as shown so it doesn't reappear
+    skipWizard();
+  };
+
+  const handleWizardComplete = () => {
+    // I5: Mark as complete
+    completeWizard();
+  };
+
+  const handleChooseDataFolder = () => {
+    // I4: Open Tauri file dialog to choose data folder
+    open({
+      multiple: false,
+      directory: true,
+      title: 'Seleccionar carpeta de datos del proyecto',
+    }).then(selected => {
+      if (selected) {
+        updateDataFolder(selected);
+      }
+    }).catch(err => {
+      console.error('Error choosing data folder:', err);
+    });
+  };
 
   const [tabHistory, setTabHistory] = useState<Array<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>>(['dashboard']);
   const activeTab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' = tabHistory[tabHistory.length - 1] ?? 'dashboard';
@@ -463,7 +502,22 @@ const App = () => {
           isTourActive={isTourActive}
           tourSteps={currentTourSteps}
           onTourEnd={onTourEnd}
-        />
+          />
+
+        {/* I1-I5: First-run wizard */}
+        {showWizard && (
+          <FirstRunWizard
+            step={step}
+            dataFolder={dataFolder}
+            onNext={nextStep}
+            onPrev={prevStep}
+            onSkip={handleWizardSkip}
+            onComplete={step === 'data-folder' ? handleWizardComplete : nextStep}
+            onConfigureAi={handleWizardConfigureAi}
+            onChooseDataFolder={handleChooseDataFolder}
+            onDataFolderChange={updateDataFolder}
+          />
+        )}
 
         <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished && !showWelcome ? 'opacity-100' : 'opacity-0'}`}>
           <AppAmbientLightsLayer />
