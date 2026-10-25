@@ -8,25 +8,20 @@ repository = ""
 edition = "2021"
 rust-version = "1.77.2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [lib]
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.6", features = [] }
+tauri-build = "2.5.2"
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "2.11.1", features = ["tray-icon"] }
-tauri-plugin-fs = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-process = "2"
-tauri-plugin-sql = { version = "2", features = ["sqlite"] }
-tauri-plugin-global-shortcut = "2"
-# OS keychain access for the Gemini API key (Windows Credential Manager /
-# macOS Keychain / libsecret). The secret never touches localStorage or the
-# frontend bundle.
+tauri = { version = "=2.12.3", features = ["tray-icon"] }
+tauri-plugin-fs = { version = "=2.5.1" }
+tauri-plugin-dialog = { version = "=2.7.1" }
+tauri-plugin-process = { version = "=2.3.1" }
+tauri-plugin-sql = { version = "=2.4.0", features = ["sqlite"] }
+tauri-plugin-global-shortcut = { version = "=2.4.1" }
 keyring = "3"
