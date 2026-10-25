@@ -309,11 +309,15 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
 
   const handleWidgetAddWord = useCallback((word: string) => {
     lexiconHook.addWord({ Raíz: word, Léxema: [word], Categoría: 'sustantivo', Significado: ['[Pendiente]'], extraData: {} });
+    // F4: Guardar inmediatamente para que funcione con app minimizada
+    lexiconHook.saveChanges();
     showNotification(`Palabra "${word}" añadida desde el Widget.`, 'success');
   }, [lexiconHook, showNotification]);
 
   const handleWidgetAddInflection = useCallback((payload: { word: string; originalMeaning: string; formName: string }) => {
     lexiconHook.addWord({ Raíz: payload.word, Léxema: [payload.word], Categoría: 'desconocida', Significado: [`${payload.formName} de ${payload.originalMeaning}`], extraData: {} });
+    // F4: Guardar inmediatamente para que funcione con app minimizada
+    lexiconHook.saveChanges();
     showNotification(`Flexión "${payload.word}" añadida.`, 'success');
   }, [lexiconHook, showNotification]);
 

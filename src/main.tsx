@@ -11,6 +11,7 @@ import { writeTextFile, readDir, readTextFile, mkdir, exists } from '@tauri-apps
 import { exit } from '@tauri-apps/plugin-process';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { emit, listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 
 // Define the type for the API exposed by the preload script
 declare global {
@@ -69,17 +70,12 @@ if (isTauriContext) {
             exit(0);
         },
         openWidget: () => {
-            const webview = new WebviewWindow('widget', {
-                url: 'widget.html',
-                width: 350,
-                height: 500,
-                transparent: true,
-                alwaysOnTop: true,
-                decorations: false
-            });
-            webview.once('tauri://error', function (e: any) {
-                console.error("Error creating widget window", e);
-            });
+            // F1: Opens/Shows the always-on-top widget window
+            invoke('toggle_widget').catch((e: any) => console.error("Widget error:", e));
+        },
+        showMainApp: () => {
+            // F2: Shows the main app window (for tray menu "Show app")
+            invoke('show_main_app').catch((e: any) => console.error("Show app error:", e));
         },
         send: (channel: string, data: any) => {
             emit(channel, data);
@@ -112,6 +108,7 @@ if (isTauriContext) {
         readBackupFile: reject,
         quitApp: () => {},
         openWidget: () => {},
+        showMainApp: () => {},
         send: () => {},
         on: () => () => {},
         compileFont: () => Promise.resolve({ success: false, error: WEB_PREVIEW_ERROR })

@@ -397,6 +397,10 @@ export interface LoxarBridge {
     compileFont: (options: { profile: NeographyProfile, outputPath: string }) => Promise<{ success: boolean; error?: string; message?: string }>;
     quitApp: () => void;
     openWidget: () => void;
+    showMainApp: () => void;
     send: (channel: string, data: any) => void;
     on: (channel: string, func: (...args: any[]) => void) => (() => void);
+    // F4: Direct lexicon operations from widget
+    addWordToLexicon: (wordData: { root: string; lexeme: string[]; categoria: string; significado: string[]; extraData?: any }) => Promise<boolean>;
+    searchLexiconDirect: (term: string) => Promise<any[]>;
 }
