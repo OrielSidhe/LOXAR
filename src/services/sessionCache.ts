@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { join } from '@tauri-apps/api/path';
 
 export interface SessionCache {
   activeTab?: string;
@@ -11,7 +12,7 @@ export interface SessionCache {
   showWelcomeOnStart?: boolean;
 }
 
-const STORE_KEY = 'loxar-session-cache';
+const FILENAME = 'session-cache.json';
 
 function isTauri(): boolean {
   return (
@@ -19,6 +20,17 @@ function isTauri(): boolean {
     // @ts-expect-error - injected by Tauri at runtime
     !!window.__TAURI_INTERNALS__
   );
+}
+
+/**
+ * Get the full path for the session cache file within the app data directory.
+ * This ensures the path is inside the allowed FS scope ($APPDATA/*, etc.)
+ */
+async function getSessionCachePath(): Promise<string> {
+  if (!isTauri()) return FILENAME;
+  const { appDataDir } = await import('@tauri-apps/api/path');
+  const dir = await appDataDir();
+  return join(dir, FILENAME);
 }
 
 export async function loadSessionCache(): Promise<SessionCache> {
@@ -32,8 +44,9 @@ export async function loadSessionCache(): Promise<SessionCache> {
   }
 
   try {
+    const path = await getSessionCachePath();
     const result = await invoke<{ data: string }>('plugin:fs|read_text_file', {
-      path: STORE_KEY,
+      path,
     });
     return JSON.parse(result.data) as SessionCache;
   } catch (e: any) {
@@ -52,8 +65,9 @@ export async function saveSessionCache(state: SessionCache): Promise<void> {
     return;
   }
 
+  const path = await getSessionCachePath();
   await invoke('plugin:fs|write_file', {
-    path: STORE_KEY,
+    path,
     contents: JSON.stringify(state, null, 2),
   });
 }
