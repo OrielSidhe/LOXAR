@@ -3,14 +3,12 @@ import { sanitizeCredential } from './base';
 
 const DEFAULT_TIMEOUT = 180_000;
 
-/** Shape of the instance returned by the GoogleGenAI constructor. */
 export interface GeminiInstance {
   models: {
     generateContent: (opts: { model: string; contents: unknown[] }) => Promise<{ text?: string }>;
   };
 }
 
-/** Factory that creates a Gemini instance from an apiKey. */
 export type GeminiInstanceFactory = (opts: { apiKey: string }) => GeminiInstance;
 
 let _genAIFactory: GeminiInstanceFactory | null = null;
@@ -19,30 +17,6 @@ export function __setGeminiFactory(fn: GeminiInstanceFactory | null) {
 }
 export function __clearGeminiFactory() {
   _genAIFactory = null;
-}
-
-/**
- * Creates an AbortController that wraps an external signal and timeout.
- * The resulting controller aborts when either the source signal aborts or timeout expires.
- */
-function createGeminiAbortController(
-  options?: { signal?: AbortSignal; timeout?: number }
-): AbortController {
-  const timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT;
-  const controller = new AbortController();
-  
-  if (options?.signal) {
-    if (options.signal.aborted) {
-      controller.abort();
-    } else {
-      options.signal.addEventListener('abort', () => controller.abort(), { once: true });
-    }
-  }
-  
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true });
-  
-  return controller;
 }
 
 export function createGeminiProvider(config: AIProviderConfig): AIProvider {
@@ -72,20 +46,26 @@ export function createGeminiProvider(config: AIProviderConfig): AIProvider {
     const contents = messages.map(({ role, content }) => ({ role, content }));
     const extraBody = config.extraBody || {};
     
-    // Create abort controller that merges external signal with timeout
-    const controller = createGeminiAbortController({
-      signal: options?.signal,
-      timeout: options?.timeout ?? defaultTimeout,
-    });
+    // Check if aborted before making request
+    if (options?.signal?.aborted) {
+      const err = new Error('The operation was aborted.');
+      err.name = 'AbortError';
+      throw err;
+    }
     
+    const timeoutMs = options?.timeout ?? defaultTimeout;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    // Forward abort from external signal
+    if (options?.signal && options.signal !== controller.signal) {
+      options.signal.addEventListener('abort', () => {
+        clearTimeout(timeoutId);
+        controller.abort();
+      }, { once: true });
+    }
+
     try {
-      // Check if already aborted before making request
-      if (controller.signal.aborted) {
-        const err = new Error('Request was cancelled');
-        err.name = 'AbortError';
-        throw err;
-      }
-      
       const response = await inst.models.generateContent({
         model: modelToUse,
         contents: {
@@ -95,12 +75,14 @@ export function createGeminiProvider(config: AIProviderConfig): AIProvider {
       });
       return (response as { text?: string }).text?.trim() || '';
     } catch (error) {
-      if (controller.signal.aborted) {
-        const err = new Error('Request was cancelled');
+      if (controller.signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        const err = new Error('The operation was aborted.');
         err.name = 'AbortError';
         throw err;
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 

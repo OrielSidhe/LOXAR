@@ -3,53 +3,38 @@ import { sanitizeCredential } from './base';
 
 const DEFAULT_TIMEOUT = 180_000;
 
-function createOllamaAbortController(
-  options?: { signal?: AbortSignal; timeout?: number }
-): AbortController {
-  const timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT;
-  const controller = new AbortController();
-  
-  if (options?.signal) {
-    if (options.signal.aborted) {
-      controller.abort();
-    } else {
-      options.signal.addEventListener('abort', () => controller.abort(), { once: true });
-    }
-  }
-  
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-  controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true });
-  
-  return controller;
-}
-
 export function createOllamaProvider(config: AIProviderConfig): AIProvider {
-  const sanitizedBaseURL = sanitizeCredential(config.baseURL);
+  const sanitizedBaseURL = sanitizeCredential(config.baseURL).replace(/\/+$/, ''); // Remove trailing slashes
   const defaultModel = sanitizeCredential(config.defaultModel);
   const defaultTimeout = config.requestTimeoutMs ?? DEFAULT_TIMEOUT;
 
   const complete = async (messages: ChatMessage[], options?: ProviderRequestOptions): Promise<string> => {
-    const url = `${sanitizedBaseURL}/api/chat`;
+    // Create fresh abort controller for this request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), defaultTimeout);
     
-    const controller = createOllamaAbortController({
-      signal: options?.signal,
-      timeout: options?.timeout ?? defaultTimeout,
-    });
-    
-    if (controller.signal.aborted) {
-      const err = new Error('Request was cancelled');
+    // If external signal is provided and already aborted, throw immediately
+    if (options?.signal?.aborted) {
+      clearTimeout(timeoutId);
+      const err = new Error('The operation was aborted.');
       err.name = 'AbortError';
       throw err;
     }
     
+    // Forward abort from external signal
+    if (options?.signal) {
+      options.signal.addEventListener('abort', () => {
+        clearTimeout(timeoutId);
+        controller.abort();
+      }, { once: true });
+    }
+
+    const url = `${sanitizedBaseURL}/api/generate`;
     const body = {
       model: options?.model || defaultModel,
-      messages: messages.map(({ role, content }) => ({ role, content })),
+      prompt: messages.map(({ role, content }) => `${role}: ${content}`).join('\n'),
       stream: false,
-      options: {
-        ...(options?.temperature !== undefined && { temperature: options.temperature }),
-        ...(options?.maxTokens !== undefined && { num_predict: options.maxTokens }),
-      },
+      ...config.extraBody,
     };
 
     try {
@@ -64,16 +49,18 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(`Ollama API error: ${response.status} ${response.statusText}\n${text}`);
+        throw new Error(`HTTP ${response.status} (${response.statusText}) on endpoint ${url}\nBody: ${text}`);
       }
 
       const data = await response.json();
-      return data.message?.content?.trim() || '';
+      return data.response?.trim() || '';
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw error;
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
@@ -83,7 +70,7 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
       if (!result.ok) {
         return { success: false, error: 'Connection failed', details: `HTTP ${result.status}` };
       }
-      return { success: true, details: 'Connection OK' };
+      return { success: true, details: 'Ollama is reachable.' };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return { success: false, error: message, details: message };

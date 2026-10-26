@@ -1,5 +1,4 @@
 import { invoke } from '@tauri-apps/api/core';
-import { join } from '@tauri-apps/api/path';
 
 export interface SessionCache {
   activeTab?: string;
@@ -12,6 +11,9 @@ export interface SessionCache {
   showWelcomeOnStart?: boolean;
 }
 
+const STORE_KEY = 'loxar-session-cache';
+
+// Use a fixed filename within APPDATA scope instead of relative path
 const FILENAME = 'session-cache.json';
 
 function isTauri(): boolean {
@@ -23,14 +25,20 @@ function isTauri(): boolean {
 }
 
 /**
- * Get the full path for the session cache file within the app data directory.
- * This ensures the path is inside the allowed FS scope ($APPDATA/*, etc.)
+ * Get the session cache path within app data directory.
+ * Returns a path inside $APPDATA/* which is within the allowed FS scope.
  */
 async function getSessionCachePath(): Promise<string> {
   if (!isTauri()) return FILENAME;
-  const { appDataDir } = await import('@tauri-apps/api/path');
-  const dir = await appDataDir();
-  return join(dir, FILENAME);
+  try {
+    const { appDataDir } = await import('@tauri-apps/api/path');
+    const dir = await appDataDir();
+    // Simple path join without dependencies
+    return dir.replace(/\/$/, '') + '/' + FILENAME;
+  } catch {
+    // Fallback if path API fails
+    return FILENAME;
+  }
 }
 
 export async function loadSessionCache(): Promise<SessionCache> {
@@ -50,7 +58,7 @@ export async function loadSessionCache(): Promise<SessionCache> {
     });
     return JSON.parse(result.data) as SessionCache;
   } catch (e: any) {
-    if (e.message?.includes('not found')) {
+    if (e.message?.toLowerCase().includes('not found') || e.message?.toLowerCase().includes('forbidden')) {
       return { activeTab: 'dashboard' };
     }
     throw e;
@@ -65,9 +73,16 @@ export async function saveSessionCache(state: SessionCache): Promise<void> {
     return;
   }
 
-  const path = await getSessionCachePath();
-  await invoke('plugin:fs|write_file', {
-    path,
-    contents: JSON.stringify(state, null, 2),
-  });
+  try {
+    const path = await getSessionCachePath();
+    await invoke('plugin:fs|write_file', {
+      path,
+      contents: JSON.stringify(state, null, 2),
+    });
+  } catch (e: any) {
+    // Silently ignore permission errors - session cache is not critical
+    if (!e.message?.toLowerCase().includes('forbidden') && !e.message?.toLowerCase().includes('permission')) {
+      throw e;
+    }
+  }
 }

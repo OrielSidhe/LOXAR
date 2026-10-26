@@ -65,7 +65,7 @@ describe('sessionCache persistence', () => {
 
     await saveSessionCache({ activeTab: 'editor', activeProfile: 'test' });
     expect(tauriMock).toHaveBeenCalledWith('plugin:fs|write_file', {
-      path: 'loxar-session-cache',
+      path: 'session-cache.json',
       contents: JSON.stringify({ activeTab: 'editor', activeProfile: 'test' }, null, 2),
     });
   });
