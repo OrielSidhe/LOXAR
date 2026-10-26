@@ -10,7 +10,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useImportStore } from '../importStore';
+import { useImportStore, getJobSignal } from '../importStore';
 import type { InductProgress } from '../../services/grammar/inductFromText';
 import type { DeclarativeManifest } from '../../services/grammar/declarativeFormat';
 
@@ -205,5 +205,97 @@ describe('ImportStore — resume-on-reopen (E4)', () => {
 
     store.clearJob();
     expect(localStorage.getItem('loxar_importer_jobs_v1')).toBeNull();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GAUNTLET v3.12 Phase A — single-owner AbortController + retryable chunks
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('ImportStore — A1: owning AbortController + cancel aborts the run', () => {
+  it('A1.1: startJob registers an AbortSignal retrievable by job id', () => {
+    const store = useImportStore.getState();
+    store.startJob('test text');
+    const jobId = useImportStore.getState().job!.id;
+
+    const signal = getJobSignal(jobId);
+    expect(signal).not.toBeNull();
+    expect(signal!.aborted).toBe(false);
+  });
+
+  it('A1.2: cancelJob aborts the owning signal that reaches the fetch chain', () => {
+    const store = useImportStore.getState();
+    store.startJob('test text');
+    const jobId = useImportStore.getState().job!.id;
+    const signal = getJobSignal(jobId)!;
+
+    // Simulate a fetch that listens to the run's signal.
+    let fetchAborted = false;
+    signal.addEventListener('abort', () => { fetchAborted = true; });
+
+    store.cancelJob();
+
+    // The signal the adapter fetched against is now aborted — the fetch stops.
+    expect(signal.aborted).toBe(true);
+    expect(fetchAborted).toBe(true);
+    expect(useImportStore.getState().job!.status).toBe('cancelled');
+  });
+
+  it('A1.3: the owning controller is released once the job reaches a terminal state', () => {
+    const store = useImportStore.getState();
+    store.startJob('test text');
+    const jobId = useImportStore.getState().job!.id;
+    expect(getJobSignal(jobId)).not.toBeNull();
+
+    store.setJobResult({
+      manifest: makeMinimalManifest(),
+      confidence: 80,
+      method: 'hybrid',
+      parseReport: { sectionsFound: [], sectionsUnparsed: [], paradigmsExtracted: 0, exceptionsExtracted: 0, warnings: [] },
+      report: { ok: true, score: 80, sections: {} as any, problems: [], suggestions: [] },
+    } as any);
+
+    // Controller released — a fresh getJobSignal returns null (no leak).
+    expect(getJobSignal(jobId)).toBeNull();
+  });
+});
+
+describe('ImportStore — A5: retry ONLY failed chunks', () => {
+  function seedJobWithChunks(): string {
+    const store = useImportStore.getState();
+    store.startJob('test text');
+    const jobId = useImportStore.getState().job!.id;
+    store.updateProgress({ chunk: 1, total: 3, message: 'c1', charCount: 100 });
+    // chunk 1 success, chunk 2 failed, chunk 3 running (mid-flight)
+    store.completeChunk(1, makeMinimalManifest(), 80, ['ok']);
+    store.failChunk(2, 'LLM timeout');
+    return jobId;
+  }
+
+  it('A5.1: retryFailedChunks returns a fresh signal only when failures exist', () => {
+    const jobId = seedJobWithChunks();
+    const signal = useImportStore.getState().retryFailedChunks();
+    expect(signal).not.toBeNull();
+    expect(signal!.aborted).toBe(false);
+    // Re-armed as running for the retry run.
+    expect(useImportStore.getState().job!.status).toBe('running');
+  });
+
+  it('A5.2: retryFailedChunks returns null when no chunk failed', () => {
+    const store = useImportStore.getState();
+    store.startJob('test text');
+    store.updateProgress({ chunk: 1, total: 1, message: 'c1', charCount: 100 });
+    store.completeChunk(1, makeMinimalManifest(), 80, ['ok']);
+    expect(store.retryFailedChunks()).toBeNull();
+  });
+
+  it('A5.3: markChunkRetrying flips a failed chunk to retrying (visible progress)', () => {
+    seedJobWithChunks();
+    useImportStore.getState().markChunkRetrying(2);
+    const chunk2 = useImportStore.getState().job!.chunks.find(c => c.displayIndex === 2)!;
+    expect(chunk2.status).toBe('retrying');
+    // The successful chunk is untouched.
+    const chunk1 = useImportStore.getState().job!.chunks.find(c => c.displayIndex === 1)!;
+    expect(chunk1.status).toBe('success');
   });
 });

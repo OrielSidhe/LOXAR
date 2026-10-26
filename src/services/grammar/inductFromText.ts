@@ -70,11 +70,18 @@ export interface InductOptions {
   /** Output del LLM (para testing). Si no se provee, se simula. */
   llmOutput?: { manifest: DeclarativeManifest; confidence: number } | null;
   /** Callback para llamar al LLM con un prompt. Usa esta función para la ruta de producción. */
-  llmCall?: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>;
+  llmCall?: (prompt: string, signal?: AbortSignal) => Promise<{ manifest: DeclarativeManifest; confidence: number }>;
   /** Progreso del procesamiento (disparado durante chunking). */
   onProgress?: (progress: InductProgress) => void;
   /** Per-chunk result callback (E4: incremental manifests). Fired after each chunk completes. */
   onChunkResult?: (chunkIndex: number, result: { manifest: DeclarativeManifest; confidence: number } | null, note: string) => void;
+  /**
+   * A2/A3: the owning AbortSignal for this run (from the job's AbortController).
+   * Threaded into every chunk's llmCall so a user cancel aborts the in-flight
+   * fetch. A3: an external-abort AbortError propagates as a cancellation, NOT a
+   * retryable error — the caller (modal/store) classifies it as 'cancelled'.
+   */
+  signal?: AbortSignal;
 }
 
 export interface InductResult {
@@ -159,16 +166,26 @@ export function computeScore(manifest: DeclarativeManifest, report: ParseReport)
  */
 async function callLlmForChunk(
   chunkText: string,
-  llmCall: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>,
+  llmCall: (prompt: string, signal?: AbortSignal) => Promise<{ manifest: DeclarativeManifest; confidence: number }>,
   notes: string[],
+  signal?: AbortSignal,
 ): Promise<{ manifest: DeclarativeManifest; confidence: number } | null> {
   const prompt = getLlmPrompt(chunkText);
+
+  // A3: if the owning run was already cancelled, short-circuit before spending
+  // an LLM call. The caller classifies this as 'cancelled', not 'failed'.
+  if (signal?.aborted) {
+    const err = new Error('Run cancelled before this chunk started.');
+    err.name = 'AbortError';
+    throw err;
+  }
+
   let attempt = 0;
   const maxAttempts = 2; // 1 initial + 1 retry on malformed JSON / Zod failure
 
   while (attempt < maxAttempts) {
     try {
-      const result = await llmCall(prompt);
+      const result = await llmCall(prompt, signal);
       // Defensive re-validation: llmCall should already validate, but tests
       // may pass a mock that doesn't. This also handles the case where llmCall
       // returns without throwing but the manifest is structurally invalid.
@@ -184,6 +201,12 @@ async function callLlmForChunk(
         return null;
       }
     } catch (e) {
+      // A3: a cancellation (external signal aborted) is NEVER retryable — rethrow
+      // so the run stops cleanly and the caller marks the job 'cancelled'.
+      if (signal?.aborted || (e instanceof Error && e.name === 'AbortError')) {
+        throw e;
+      }
+
       const msg = e instanceof Error ? e.message : String(e);
       const isTransient = msg.toLowerCase().includes('429') ||
         msg.toLowerCase().includes('rate limit') ||
@@ -217,9 +240,10 @@ async function callLlmForChunk(
  */
 async function callLlmChunked(
   rawText: string,
-  llmCall: (prompt: string) => Promise<{ manifest: DeclarativeManifest; confidence: number }>,
+  llmCall: (prompt: string, signal?: AbortSignal) => Promise<{ manifest: DeclarativeManifest; confidence: number }>,
   onProgress?: (progress: InductProgress) => void,
   onChunkResult?: (chunkIndex: number, result: { manifest: DeclarativeManifest; confidence: number } | null, note: string) => void,
+  signal?: AbortSignal,
 ): Promise<{ manifests: DeclarativeManifest[]; confidence: number; notes: string[] }> {
   const notes: string[] = [];
 
@@ -255,7 +279,7 @@ async function callLlmChunked(
     const chunkText = chunks[0].text;
     onProgress?.({ chunk: 1, total: 1, message: 'Analizando con IA...', charCount: chunks[0].charCount });
     const result = await withRetry(
-      () => callLlmForChunk(chunkText, llmCall, notes),
+      () => callLlmForChunk(chunkText, llmCall, notes, signal),
       MAX_RETRIES,
       undefined,
       (attempt, err) => {
@@ -276,6 +300,15 @@ async function callLlmChunked(
   let failedChunks = 0;
 
   for (const chunk of chunks) {
+    // A3: stop cleanly between chunks if the run was cancelled. The abort inside
+    // callLlmForChunk also catches a cancel mid-fetch; this guard avoids kicking
+    // off a new chunk after a cancel was observed.
+    if (signal?.aborted) {
+      const err = new Error('Run cancelled.');
+      err.name = 'AbortError';
+      throw err;
+    }
+
     onProgress?.({
       chunk: chunk.displayIndex,
       total: totalChunks,
@@ -284,7 +317,7 @@ async function callLlmChunked(
     });
 
     const result = await withRetry(
-      () => callLlmForChunk(chunk.text, llmCall, notes),
+      () => callLlmForChunk(chunk.text, llmCall, notes, signal),
       MAX_RETRIES,
       undefined,
       (attempt, err) => {
@@ -411,7 +444,7 @@ export async function inductFromText(
   rawText: string,
   options: InductOptions = {}
 ): Promise<InductResult> {
-  const { llmAvailable = false, llmOutput, llmCall, parserLocalScore: providedScore, onProgress } = options;
+  const { llmAvailable = false, llmOutput, llmCall, parserLocalScore: providedScore, onProgress, signal } = options;
 
   // Paso 1: Parser local siempre
   const localResult = parseLocal(rawText);
@@ -478,7 +511,7 @@ export async function inductFromText(
   if (llmCall) {
     try {
       const { onChunkResult } = options;
-      const llmResult = await callLlmChunked(rawText, llmCall, onProgress, onChunkResult);
+      const llmResult = await callLlmChunked(rawText, llmCall, onProgress, onChunkResult, signal);
 
       // Merge LLM notes (chunking, lexicon exclusion, retry, fallback, etc.)
       notes.push(...llmResult.notes);
@@ -523,6 +556,13 @@ export async function inductFromText(
         notes,
       };
     } catch (error) {
+      // A3: a user cancellation (owning signal aborted) is NOT a failure.
+      // Rethrow so the caller keeps the job in 'cancelled' state and does NOT
+      // silently swallow it into a local fallback (NADA se pierde, pero un
+      // cancel no es un error que deba disfrazarse de resultado local).
+      if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+        throw error;
+      }
       const msg = error instanceof Error ? error.message : 'unknown';
       console.warn('[inductFromText] LLM chunked call falló, usando resultado local:', msg);
       const manifest = applyNormalization(localResult.manifest);

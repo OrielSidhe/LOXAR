@@ -23,7 +23,7 @@ import { isAiAvailable, callAi, extractJson, getActiveProviderInfo } from '../se
 import { inductFromText } from '../services/grammar/inductFromText';
 import type { InductProgress, InductResult } from '../services/grammar/inductFromText';
 import type { InductJob, StoredChunk } from '../stores/importStore';
-import { useImportStore } from '../stores/importStore';
+import { useImportStore, getJobSignal } from '../stores/importStore';
 import { validatePostImport } from '../services/grammar/postImportValidator';
 import { convertToLegacy } from '../services/grammarParser';
 import { validateLlmManifest } from '../services/grammar/llmSchema';
@@ -154,8 +154,8 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
 
     // ── LLM call factory (production path) ────────────────────────────
     const createLlmCall = useCallback(async () => {
-        return async (prompt: string): Promise<{ manifest: DeclarativeManifest; confidence: number }> => {
-            const responseText = await callAi(prompt);
+        return async (prompt: string, signal?: AbortSignal): Promise<{ manifest: DeclarativeManifest; confidence: number }> => {
+            const responseText = await callAi(prompt, null, signal);
             const jsonStr = extractJson(responseText);
             if (!jsonStr) {
                 throw new Error('No se encontró JSON válido en la respuesta de la IA');
@@ -276,6 +276,11 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         // E1: Start the job in the store (NOT in modal local state)
         startJob(text, job?.fileName, ai);
 
+        // A1/A2: thread the job's owning AbortSignal into the whole fetch chain.
+        // cancelJob() (store) aborts this signal; the adapters stop the fetch.
+        const jobId = job?.id || '';
+        const liveSignal = getJobSignal(jobId);
+
         const llmCall = ai ? await createLlmCall() : undefined;
 
         try {
@@ -285,6 +290,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
             const result = await inductFromText(text, {
                 llmAvailable: ai,
                 llmCall,
+                signal: liveSignal ?? undefined,
                 onProgress: (progress: InductProgress) => {
                     // E1 fix: dedupe — chunker message no longer embeds (N/total).
                     // UI formats display without re-appending chunk/total.
@@ -302,9 +308,12 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
             // E2: Store the final result
             setJobResult(result);
         } catch (e) {
+            // A3: a user cancellation is NOT an error — the store already moved
+            // the job to 'cancelled' via cancelJob(). Stay silent (no toast).
+            if (e instanceof Error && e.name === 'AbortError') return;
             setError(e instanceof Error ? e.message : 'Error desconocido en la inducción');
         }
-    }, [job?.text, job?.fileName, rawText, ai, startJob, updateProgress, completeChunk, failChunk, setJobResult, setError, createLlmCall]);
+    }, [job?.text, job?.fileName, job?.id, rawText, ai, startJob, updateProgress, completeChunk, failChunk, setJobResult, setError, createLlmCall]);
 
     // ── Pre-flight handler ────────────────────────────────────────────────────────
     // W1-J1: Pre-flight check — if AI is needed but not configured, show clear message

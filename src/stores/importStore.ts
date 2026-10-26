@@ -21,7 +21,7 @@ import type { FlexibleGrammar } from '../types/grammar-flexible';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
-export type ChunkStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped';
+export type ChunkStatus = 'pending' | 'running' | 'success' | 'failed' | 'skipped' | 'retrying';
 export type JobStatus = 'idle' | 'running' | 'done' | 'error' | 'cancelled';
 
 export interface StoredChunk {
@@ -53,6 +53,38 @@ export interface InductJob {
   endTime: number | null;
   /** Whether AI is available for this job */
   aiAvailable: boolean;
+}
+
+// ── AbortController ownership (A1: single owner of the run's signal) ────────
+//
+// The AbortController for a running job lives OUTSIDE the persisted job state
+// (AbortControllers are not serializable). This side-table maps job_id → the
+// controller that owns the in-flight fetch chain. cancelJob() aborts it; the
+// controller is removed when the job reaches a terminal state.
+//
+// The job (and its controller) live in the store, NOT inside a component's
+// useEffect — so React 18 StrictMode's double-invoke of effects can never
+// abort an in-flight run (A6: StrictMode safety). The component only
+// subscribes to store state; cleanup of a subscription never touches the run.
+const jobControllers = new Map<string, AbortController>();
+
+/** Return the AbortController that owns this job's in-flight fetch, if any. */
+export function getJobSignal(jobId: string): AbortSignal | null {
+  return jobControllers.get(jobId)?.signal ?? null;
+}
+
+/** Register the owning controller for a job and return its signal. */
+export function registerJobController(jobId: string): AbortSignal {
+  const existing = jobControllers.get(jobId);
+  if (existing) return existing.signal;
+  const controller = new AbortController();
+  jobControllers.set(jobId, controller);
+  return controller.signal;
+}
+
+/** Remove the owning controller once the job is terminal. */
+function unregisterJobController(jobId: string): void {
+  jobControllers.delete(jobId);
 }
 
 // ── LocalStorage persistence ──────────────────────────────────────────────
@@ -182,6 +214,9 @@ export const useImportStore = create<ImportState>((set, get) => ({
       endTime: null,
       aiAvailable: aiAvailable ?? true,
     };
+    // A1: register the owning AbortController before the run starts so the
+    // caller can thread getJobSignal(job.id) into the LLM fetch chain.
+    registerJobController(job.id);
     set({ job });
     savePersistedJob(job);
   },
@@ -286,6 +321,7 @@ export const useImportStore = create<ImportState>((set, get) => ({
   setJobResult: (result) => {
     const job = get().job;
     if (!job) return;
+    unregisterJobController(job.id); // run finished — release the controller
     const completed: InductJob = {
       ...job,
       status: 'done',
@@ -307,6 +343,7 @@ export const useImportStore = create<ImportState>((set, get) => ({
   setError: (error) => {
     const job = get().job;
     if (!job) return;
+    unregisterJobController(job.id); // run ended in error — release the controller
     set({
       job: {
         ...job,
@@ -323,10 +360,48 @@ export const useImportStore = create<ImportState>((set, get) => ({
   cancelJob: () => {
     const job = get().job;
     if (!job) return;
+    // A1: abort the owning controller so the in-flight fetch chain stops NOW.
+    // This is the ONLY path that aborts the run — the user (J2) or retry logic.
+    const controller = jobControllers.get(job.id);
+    controller?.abort();
+    unregisterJobController(job.id);
     set({
       job: { ...job, status: 'cancelled', endTime: Date.now(), progress: null },
     });
     savePersistedJob(null);
+  },
+
+  /**
+   * A5: retry ONLY the chunks that previously failed, without re-running the
+   * whole document. Successful chunks keep their manifests. Returns the signal
+   * the caller should thread into a fresh inductFromText scoped to failed
+   * chunks (the modal wires this in Phase J).
+   */
+  retryFailedChunks: () => {
+    const job = get().job;
+    if (!job) return null;
+    const failedCount = job.chunks.filter(c => c.status === 'failed').length;
+    if (failedCount === 0) return null;
+    // Re-arm as running and register a fresh owning controller for the retry run.
+    set({ job: { ...job, status: 'running', endTime: null, error: null } });
+    return registerJobController(job.id);
+  },
+
+  /** Mark a chunk as mid-retry (A4: retrying status visible in the job). */
+  markChunkRetrying: (displayIndex: number) => {
+    const job = get().job;
+    if (!job) return;
+    set({
+      job: {
+        ...job,
+        chunks: job.chunks.map(c =>
+          c.displayIndex === displayIndex && c.status === 'failed'
+            ? { ...c, status: 'retrying' }
+            : c
+        ),
+      },
+    });
+    savePersistedJob(get().job);
   },
 
   clearJob: () => {

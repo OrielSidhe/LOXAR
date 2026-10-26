@@ -371,7 +371,7 @@ export const normalizeText = (text: string): string => {
     return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
-export const callAi = async (prompt: string, fallbackResult: any = null): Promise<string> => {
+export const callAi = async (prompt: string, fallbackResult: any = null, signal?: AbortSignal): Promise<string> => {
     const config = await loadAIConfig();
     const providerConfig = getActiveProviderConfig(config);
     if (!providerConfig) throw new Error('No hay ningún proveedor configurado.');
@@ -384,7 +384,7 @@ export const callAi = async (prompt: string, fallbackResult: any = null): Promis
         const result = await completeWithProvider(
             providerConfig,
             [{ role: 'user', content: prompt }],
-            { model: providerConfig.defaultModel }
+            { model: providerConfig.defaultModel, signal }
         );
         recordDebug({
             timestamp: new Date().toISOString(),
@@ -397,6 +397,12 @@ export const callAi = async (prompt: string, fallbackResult: any = null): Promis
         });
         return result;
     } catch (error) {
+        // A3: a user cancellation is NOT a provider error — rethrow the abort so
+        // the run stops cleanly and the caller keeps the job 'cancelled'. Never
+        // disguise a cancel as a fallback response.
+        if (signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+            throw error;
+        }
         const message = error instanceof Error ? error.message : 'Error desconocido';
         console.error("AI Provider Error:", message, error);
         recordDebug({
