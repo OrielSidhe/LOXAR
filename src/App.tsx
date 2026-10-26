@@ -92,13 +92,22 @@ const App = () => {
   // I1: First-run wizard state
   const { showWizard, step, dataFolder, goToStep, nextStep, prevStep, skipWizard, completeWizard, updateDataFolder } = useFirstRunWizard();
 
+  // W1: "Configurar ahora" must open AiSettingsModal and WAIT for the user to close it.
+  // The wizard only completes (onboarding flag set) when the modal closes.
   const handleWizardConfigureAi = () => {
-    // I2: Open the EXISTING AiSettingsModal — do not create a second modal
+    // Open the EXISTING AiSettingsModal
     setActiveModal('ai_settings');
-    // Complete the wizard after the user is done with settings
-    // The wizard will be dismissed when they close settings, but we also
-    // need to mark it complete here so it doesn't reappear
-    completeWizard();
+    // Mark wizard as showing, but don't complete until modal closes
+  };
+
+  // W4: Called when AiSettingsModal closes - closes modal AND marks wizard complete
+  const handleAiSettingsModalClose = () => {
+    // First close the modal
+    setActiveModal('none');
+    // Then complete the wizard (mark onboarding as done)
+    if (showWizard && step === 'ai') {
+      completeWizard();
+    }
   };
 
   const handleWizardSkip = () => {
@@ -573,7 +582,7 @@ const App = () => {
             }}
             showNotification={showNotification}
           />
-          {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleCloseModal} />}
+          {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleAiSettingsModalClose} />}
           </Suspense>
           <AppSettingsModalLayer
             showSettings={showSettings}
