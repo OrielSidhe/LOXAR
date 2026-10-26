@@ -33,6 +33,8 @@ export interface AIProviderConfig {
   testMethod?: 'GET' | 'POST';
   /** Reasoning effort level for providers that support it (OpenAI-compatible, etc.). 'off' means no reasoning parameter sent. */
   reasoningEffort?: ReasoningEffort;
+  /** Request timeout in milliseconds (default: 180000). */
+  requestTimeoutMs?: number;
 }
 
 /** Regex matching leading/trailing quote characters (single, double, or backtick). */
@@ -89,6 +91,10 @@ export interface ProviderRequestOptions {
   temperature?: number;
   maxTokens?: number;
   stop?: string[];
+  /** Optional abort signal for cancellation. */
+  signal?: AbortSignal;
+  /** Optional timeout override (ms). */
+  timeout?: number;
 }
 
 export interface ChatMessage {

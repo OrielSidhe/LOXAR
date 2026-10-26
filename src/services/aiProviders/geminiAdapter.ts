@@ -1,6 +1,8 @@
 import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult } from './base';
 import { sanitizeCredential } from './base';
 
+const DEFAULT_TIMEOUT = 180_000;
+
 /** Shape of the instance returned by the GoogleGenAI constructor. */
 export interface GeminiInstance {
   models: {
@@ -11,12 +13,6 @@ export interface GeminiInstance {
 /** Factory that creates a Gemini instance from an apiKey. */
 export type GeminiInstanceFactory = (opts: { apiKey: string }) => GeminiInstance;
 
-/**
- * Test/diagnostic hook: when set, the adapter uses this factory instead of
- * `require('@google/genai')`. This allows tests to verify cache isolation and
- * key sanitization without making real API calls.
- * In production this stays `null` and the real SDK is used.
- */
 let _genAIFactory: GeminiInstanceFactory | null = null;
 export function __setGeminiFactory(fn: GeminiInstanceFactory | null) {
   _genAIFactory = fn;
@@ -26,23 +22,36 @@ export function __clearGeminiFactory() {
 }
 
 /**
- * Creates a Gemini provider. Unlike the previous module-level cache, the
- * GoogleGenAI instance is stored **inside the provider closure** and is tied
- * to the specific apiKey passed at creation time. When the apiKey changes,
- * `getProvider` in the registry will build a fresh provider (because
- * `cached.config === config` fails for a new config object), so a stale
- * instance is never reused with a different key.
+ * Creates an AbortController that wraps an external signal and timeout.
+ * The resulting controller aborts when either the source signal aborts or timeout expires.
  */
+function createGeminiAbortController(
+  options?: { signal?: AbortSignal; timeout?: number }
+): AbortController {
+  const timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT;
+  const controller = new AbortController();
+  
+  if (options?.signal) {
+    if (options.signal.aborted) {
+      controller.abort();
+    } else {
+      options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+  }
+  
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  controller.signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true });
+  
+  return controller;
+}
+
 export function createGeminiProvider(config: AIProviderConfig): AIProvider {
-  // Sanitize all credential fields at the boundary so they are never sent raw.
   const apiKey = sanitizeCredential(config.apiKey);
   const model = sanitizeCredential(config.defaultModel);
   const authHeader = sanitizeCredential(config.authHeader);
   const baseURL = sanitizeCredential(config.baseURL);
+  const defaultTimeout = config.requestTimeoutMs ?? DEFAULT_TIMEOUT;
 
-  // Instance is created lazily and cached within *this* provider closure only.
-  // If a new config (different apiKey) arrives, a new provider is built by the
-  // registry, so this closure's instance is naturally discarded.
   let instance: GeminiInstance | null = null;
 
   const getInstance = (): GeminiInstance => {
@@ -50,8 +59,6 @@ export function createGeminiProvider(config: AIProviderConfig): AIProvider {
       if (_genAIFactory) {
         instance = _genAIFactory({ apiKey });
       } else {
-        // Dynamic require to avoid hard dependency when Gemini is not selected.
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
         const { GoogleGenAI } = require('@google/genai') as { GoogleGenAI: new (opts: { apiKey: string }) => { models: { generateContent: (opts: { model: string; contents: unknown[] }) => Promise<{ text?: string }> } } };
         instance = new GoogleGenAI({ apiKey });
       }
@@ -64,14 +71,37 @@ export function createGeminiProvider(config: AIProviderConfig): AIProvider {
     const modelToUse = sanitizeCredential(options?.model || model);
     const contents = messages.map(({ role, content }) => ({ role, content }));
     const extraBody = config.extraBody || {};
-    const response = await inst.models.generateContent({
-      model: modelToUse,
-      contents: {
-        ...contents,
-        ...extraBody,
-      },
+    
+    // Create abort controller that merges external signal with timeout
+    const controller = createGeminiAbortController({
+      signal: options?.signal,
+      timeout: options?.timeout ?? defaultTimeout,
     });
-    return (response as { text?: string }).text?.trim() || '';
+    
+    try {
+      // Check if already aborted before making request
+      if (controller.signal.aborted) {
+        const err = new Error('Request was cancelled');
+        err.name = 'AbortError';
+        throw err;
+      }
+      
+      const response = await inst.models.generateContent({
+        model: modelToUse,
+        contents: {
+          ...contents,
+          ...extraBody,
+        },
+      });
+      return (response as { text?: string }).text?.trim() || '';
+    } catch (error) {
+      if (controller.signal.aborted) {
+        const err = new Error('Request was cancelled');
+        err.name = 'AbortError';
+        throw err;
+      }
+      throw error;
+    }
   };
 
   const testConnection = async (): Promise<TestConnectionResult> => {
@@ -95,17 +125,12 @@ export function createGeminiProvider(config: AIProviderConfig): AIProvider {
   };
 
   return {
-    config: { ...config, apiKey, authHeader, baseURL, defaultModel: model },
+    config: { ...config, apiKey, authHeader, baseURL, defaultModel: model, requestTimeoutMs: defaultTimeout },
     testConnection,
     complete,
   };
 }
 
-/**
- * No-op retained for backward compatibility. The Gemini provider no longer
- * caches the instance at module level (see comment above), so there is nothing
- * to invalidate globally. Each provider closure holds its own instance.
- */
 export function invalidateGeminiCache() {
-  /* module-level cache removed — instances are per-provider */
+  _genAIFactory = null;
 }

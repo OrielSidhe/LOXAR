@@ -12,13 +12,58 @@ export interface HttpErrorInfo {
   body: string;
 }
 
-async function requestWithTimeout(url: string, init: RequestInit, timeoutMs = DEFAULT_TIMEOUT): Promise<Response> {
+/** Context for abort controller management */
+interface AbortContext {
+  controller: AbortController;
+  timeoutId: ReturnType<typeof setTimeout>;
+}
+
+/**
+ * Create an AbortController with optional external signal and timeout.
+ * If an external signal is already aborted, throws immediately.
+ * Merges the external signal with the timeout controller.
+ */
+function createAbortController(
+  options?: { signal?: AbortSignal; timeout?: number }
+): AbortContext {
+  const timeoutMs = options?.timeout ?? DEFAULT_TIMEOUT;
+  
+  // If caller-provided signal is already aborted, throw immediately
+  if (options?.signal?.aborted) {
+    const err = new Error('The operation was aborted.');
+    (err as any).name = 'AbortError';
+    throw err;
+  }
+  
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  // Forward abort from external signal to our controller
+  if (options?.signal && options.signal !== AbortSignal.timeout(timeoutMs)) {
+    options.signal.addEventListener('abort', () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    }, { once: true });
+  }
+  
+  return { controller, timeoutId };
+}
+
+/**
+ * Fetch with timeout, supporting external abort signal.
+ * Merges caller-provided signal with timeout-based abort.
+ */
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  options?: { signal?: AbortSignal; timeout?: number }
+): Promise<Response> {
+  const ctx = createAbortController(options);
+  
   try {
-    return await fetch(url, { ...init, signal: controller.signal });
+    return await fetch(url, { ...init, signal: ctx.controller.signal });
   } finally {
-    clearTimeout(timeoutId);
+    clearTimeout(ctx.timeoutId);
   }
 }
 
@@ -38,7 +83,6 @@ function buildReasoningParam(effort: ReasoningEffort, endpointStyle: string): { 
   // For Anthropic: reasoning is an object with effort field
   switch (endpointStyle) {
     case 'anthropic-messages':
-      // Anthropic uses reasoning with thought_budget_tokens or type
       return {
         reasoning: {
           type: 'equivalence',
@@ -49,8 +93,6 @@ function buildReasoningParam(effort: ReasoningEffort, endpointStyle: string): { 
     case 'openai-completion':
     case 'custom':
     default:
-      // Use reasoning_effort for most OpenAI-compatible APIs
-      // Many providers accept this format
       return { reasoning_effort: effort };
   }
 }
@@ -84,6 +126,7 @@ export function createOpenAICompatibleProvider(config: AIProviderConfig): AIProv
   const defaultModel = sanitizeCredential(config.defaultModel);
   const extraBody = config.extraBody || {};
   const reasoningEffort: ReasoningEffort = config.reasoningEffort || 'off';
+  const defaultTimeout = config.requestTimeoutMs ?? DEFAULT_TIMEOUT;
 
   const complete = async (messages: ChatMessage[], options?: ProviderRequestOptions): Promise<string> => {
     const url = `${normalizedBaseURL}/chat/completions`;
@@ -105,7 +148,7 @@ export function createOpenAICompatibleProvider(config: AIProviderConfig): AIProv
       Object.assign(body, reasoningParam);
     }
 
-    const response = await requestWithTimeout(
+    const response = await fetchWithTimeout(
       url,
       {
         method: 'POST',
@@ -115,7 +158,7 @@ export function createOpenAICompatibleProvider(config: AIProviderConfig): AIProv
         },
         body: JSON.stringify(body),
       },
-      DEFAULT_TIMEOUT
+      { signal: options?.signal, timeout: options?.timeout ?? defaultTimeout }
     );
 
     if (!response.ok) {
@@ -156,6 +199,7 @@ export function createOpenAICompatibleProvider(config: AIProviderConfig): AIProv
       defaultModel, 
       baseURL: sanitizedBaseURL,
       reasoningEffort,
+      requestTimeoutMs: defaultTimeout,
     },
     testConnection,
     complete,
