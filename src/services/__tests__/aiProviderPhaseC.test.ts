@@ -307,6 +307,8 @@ describe('C3: Gemini cache invalidation on credential change', () => {
   // ── 3.2: invalidateProviderCache('gemini') clears and forces rebuild ──
   it('C3.2: invalidateProviderCache("gemini") clears cache, forcing a new provider', async () => {
     const apiKeyCalls: string[] = [];
+    // Inject a mock factory so complete() never hits the real GoogleGenAI client
+    // (no network / API key required — keeps this test green in CI without credentials).
     __setGeminiFactory(({ apiKey }) => {
       apiKeyCalls.push(apiKey);
       return {
@@ -323,8 +325,18 @@ describe('C3: Gemini cache invalidation on credential change', () => {
     expect(apiKeyCalls).toHaveLength(1);
     expect(apiKeyCalls[0]).toBe('key-original');
 
-    // Invalidate the gemini cache
+    // Invalidate the gemini cache. NOTE: invalidateProviderCache('gemini') also
+    // calls invalidateGeminiCache(), which nulls the injected factory — re-inject
+    // it so the rebuilt provider stays mocked (no real GoogleGenAI / API key).
     invalidateProviderCache('gemini');
+    __setGeminiFactory(({ apiKey }) => {
+      apiKeyCalls.push(apiKey);
+      return {
+        models: {
+          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
+        },
+      };
+    });
 
     // New config with a different key — must create a fresh provider
     const config2 = makeGeminiConfig('key-replaced');
@@ -353,8 +365,17 @@ describe('C3: Gemini cache invalidation on credential change', () => {
     expect(apiKeyCalls).toHaveLength(1);
     expect(apiKeyCalls[0]).toBe('key-one');
 
-    // Full cache clear
+    // Full cache clear. invalidateProviderCache() also nulls the injected
+    // gemini factory — re-inject it so the rebuilt provider stays mocked.
     invalidateProviderCache();
+    __setGeminiFactory(({ apiKey }) => {
+      apiKeyCalls.push(apiKey);
+      return {
+        models: {
+          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
+        },
+      };
+    });
 
     const config2 = makeGeminiConfig('key-two');
     const provider2 = getProvider(config2);
