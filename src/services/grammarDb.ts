@@ -55,16 +55,10 @@ export function _resetDbCache(): void {
 }
 
 async function ensureSchema(db: any): Promise<void> {
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS pragmatic_clause_types (
-      id TEXT PRIMARY KEY,
-      label TEXT NOT NULL,
-      description TEXT,
-      blocks TEXT NOT NULL DEFAULT '[]',
-      templates TEXT NOT NULL DEFAULT '{}',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
+  // Enable foreign key constraints first
+  await db.execute(`PRAGMA foreign_keys = ON`);
+  
+  // Create parent tables FIRST (no FK dependencies)
   await db.execute(`
     CREATE TABLE IF NOT EXISTS construction_blocks (
       id TEXT PRIMARY KEY,
@@ -72,6 +66,37 @@ async function ensureSchema(db: any): Promise<void> {
       description TEXT,
       required INTEGER NOT NULL DEFAULT 0,
       morphology_override TEXT DEFAULT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS grammatical_functions (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      category TEXT NOT NULL,
+      fills_slots TEXT NOT NULL DEFAULT '[]',
+      common_in TEXT NOT NULL DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  
+  // Create child tables with FK constraints
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS block_slot_fillers (
+      block_id TEXT NOT NULL REFERENCES construction_blocks(id) ON DELETE CASCADE,
+      function_id TEXT NOT NULL REFERENCES grammatical_functions(id) ON DELETE CASCADE,
+      PRIMARY KEY (block_id, function_id)
+    )
+  `);
+  
+  // Create pragma tables that reference clause types
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS pragmatic_clause_types (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      description TEXT,
+      blocks TEXT NOT NULL DEFAULT '[]',
+      templates TEXT NOT NULL DEFAULT '{}',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
@@ -85,16 +110,6 @@ async function ensureSchema(db: any): Promise<void> {
     )
   `);
   await db.execute(`
-    CREATE TABLE IF NOT EXISTS grammatical_functions (
-      id TEXT PRIMARY KEY,
-      label TEXT NOT NULL,
-      category TEXT NOT NULL,
-      fills_slots TEXT NOT NULL DEFAULT '[]',
-      common_in TEXT NOT NULL DEFAULT '[]',
-      created_at TEXT NOT NULL DEFAULT (datetime('now'))
-    )
-  `);
-  await db.execute(`
     CREATE TABLE IF NOT EXISTS sentence_templates (
       id TEXT PRIMARY KEY,
       clause_type_id TEXT NOT NULL REFERENCES pragmatic_clause_types(id),
@@ -104,16 +119,11 @@ async function ensureSchema(db: any): Promise<void> {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  
+  // Create indexes
   await db.execute(`
     CREATE INDEX IF NOT EXISTS idx_templates_ct_typ
       ON sentence_templates(clause_type_id, typology)
-  `);
-  await db.execute(`
-    CREATE TABLE IF NOT EXISTS block_slot_fillers (
-      block_id TEXT NOT NULL REFERENCES construction_blocks(id) ON DELETE CASCADE,
-      function_id TEXT NOT NULL REFERENCES grammatical_functions(id) ON DELETE CASCADE,
-      PRIMARY KEY (block_id, function_id)
-    )
   `);
   await db.execute(`
     CREATE INDEX IF NOT EXISTS idx_fillers_block
