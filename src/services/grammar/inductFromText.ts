@@ -393,6 +393,13 @@ REGLAS:
 - No inventes categorías que no estén en el texto
 - Los arrays vacíos [] son válidos para secciones no mencionadas
 
+ANTI-ALUCINACIÓN (CRÍTICO):
+- Los valores ILUSTRATIVOS entre comillas en el FORMATO (-k, prevVowel, "ir → fue") son SOLO ejemplos de estructura. NO los copies si NO aparecen en el DOCUMENTO real.
+- Para exceptions, roles y slots: solo incluye valores que estén REALMENTE descritos en el documento.
+- Si el documento NO menciona excepciones, usa el array vacío [] para exceptions.
+- Si el documento NO menciona estrategias, usa [] para strategies.
+- No inventes datos de fonología, roles o excepciones fuera del texto.
+
 DOCUMENTO:
 ${rawText}`;
 
