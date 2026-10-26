@@ -45,7 +45,7 @@ const WelcomeScreen = ({ onCreateLexicon, onContinue, onImport, onStartTour }: W
                 <AppLogoIcon className="w-24 h-24 text-primary mx-auto mb-6 drop-shadow-[0_0_15px_rgba(34,211,238,0.5)]" />
                 <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary via-white to-primary font-display mb-4 tracking-wider drop-shadow-sm">LOXAR</h1>
                 <p className="text-lg text-text-secondary mb-10 leading-relaxed font-light tracking-wide">
-                    Tu sistema avanzado para la construcción de léxicos artificiales.
+                    Tu sistema avanzado para la construcción de lenguas.
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">

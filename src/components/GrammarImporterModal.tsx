@@ -470,6 +470,8 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                                         Cargar Archivo de Gramática
                                         <input
                                             type="file"
+                                            id="grammar-file-input"
+                                            name="grammarFile"
                                             accept=".txt,.md,.doc,.docx,.csv,.xlsx,text/*"
                                             className="hidden"
                                             onChange={handleFileSelect}
@@ -487,6 +489,8 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                                 )}
 
                                 <textarea
+                                    id="grammar-input"
+                                    name="grammarText"
                                     value={rawText}
                                     onChange={e => setRawText(e.target.value)}
                                     placeholder="Pega aquí tu gramática, reglas o notas... o usa el botón de arriba para cargar un archivo"

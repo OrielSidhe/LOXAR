@@ -431,7 +431,9 @@ const ModuleNodeComponent: React.FC<NodeProps> = ({ data, selected }) => {
               {node.stats.map((s, i) => (
                 <div key={i} className="flex justify-between text-[10px]">
                   <span className="text-white/40">{s.label}:</span>
-                  <span className="text-accent font-mono font-semibold">{s.value}</span>
+                  <span className="text-accent font-mono font-semibold">
+                    {Number.isFinite(s.value) ? s.value : '-'}
+                  </span>
                 </div>
               ))}
             </div>
