@@ -3,12 +3,14 @@
   "identifier": "default",
   "description": "Permisos de Loxar: fs acotado a zonas seguras (carpeta del usuario $HOME + datos de la app), dialog (selector de carpeta), process (salir) y sql (persistencia SQLite).",
   "windows": [
-    "main"
+    "main",
+    "widget"
   ],
   "permissions": [
     "core:default",
     "dialog:default",
     "process:default",
+    "core:event:default",
     "fs:default",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
@@ -18,6 +20,8 @@
     "fs:allow-mkdir",
     "fs:allow-exists",
     "sql:default",
+    "sql:allow-select",
+    "sql:allow-execute",
     {
       "identifier": "fs:scope",
       "allow": [
