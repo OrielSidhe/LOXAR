@@ -93,12 +93,26 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         }
     }, [existingNotes, rawText, job]);
 
+// W1: Pre-flight check — if user wants AI but it's not configured, show banner
+    const [aiConfigChecked, setAiConfigChecked] = useState<boolean | null>(null);
+
+    // Check AI availability when IA mode is enabled
+    useEffect(() => {
+        if (ai) {
+            isAiAvailable().then(available => {
+                setAiConfigChecked(available);
+            });
+        } else {
+            setAiConfigChecked(null);
+        }
+    }, [ai]);
+
     // I2: Guided example prompts for AI-first onboarding — user clicks one
     // to populate the textarea, then clicks "Analizar con IA".
     const EXAMPLE_PROMPTS = [
         '§ Tipología: SOV, aglutinante, head-final\n§ Fonología: /p t k m n s l r/, /a e i o u/\n§ Sustantivos: plural por -k sufijo\n§ Verbos: pasado por -t sufijo\n§ Estrategias: Sufijo de plural: posición suffix, forma -k',
         'Orden de palabras: SVO. El plural se marca con -s. El pasado con -ed. Vocabulario: casa, perro, correr, agua.',
-        '§ Tipología: VSO, fusional\n§ Fonología: /b d g f v z/, /a e i o u/\n§ Verbos: conjuncación por -a (1ª persona), -s (2ª), -t (3ª)\n§ Casos: nominativo, acusativo, dativo',
+        '§ Tipología: VSO, fusional\n§ Fonología: /b d g f v z/, /a e i o u/\n§ Verbos: conjunción por -a (1ª persona), -s (2ª), -t (3ª)\n§ Casos: nominativo, acusativo, dativo',
     ];
 
     const handleUseExample = (prompt: string) => {
@@ -292,10 +306,20 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         }
     }, [job?.text, job?.fileName, rawText, ai, startJob, updateProgress, completeChunk, failChunk, setJobResult, setError, createLlmCall]);
 
-    // ── Handlers ────────────────────────────────────────────────────────
+    // ── Pre-flight handler ────────────────────────────────────────────────────────
+    // W1-J1: Pre-flight check — if AI is needed but not configured, show clear message
     const handleAnalyze = useCallback(async () => {
         const text = rawText || job?.text || '';
         if (!text.trim()) return;
+
+        // W1: Pre-flight for AI mode
+        if (ai && aiConfigChecked === false) {
+            showNotification('No hay IA configurada. Ve a Ajustes > IA para configurar un proveedor.', 'error');
+            // J1: Open AI settings modal
+            // We need to trigger the app's openAiSettings - but we're in a modal,
+            // so we'll just stop here and let user know
+            return;
+        }
 
         // Clear previous analysis
         setAnalysisResult(null);
@@ -307,7 +331,7 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         } catch (e) {
             showNotification(e instanceof Error ? e.message : 'Error al procesar la gramática.', 'error');
         }
-    }, [rawText, job?.text, runInduction, showNotification]);
+    }, [rawText, job?.text, ai, aiConfigChecked, runInduction, showNotification]);
 
     const handleSave = () => {
         if (analysisResult) {
