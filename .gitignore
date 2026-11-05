@@ -60,3 +60,11 @@ tests-gui/tests-gui/
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
 .graft/
+
+# Estado local de agentes/IDEs — nunca se sube
+.zcode/
+.claude/
+
+# Dumps generados para auditoría externa
+PROYECTO_*.json
+ZCODE_DUMP.*
