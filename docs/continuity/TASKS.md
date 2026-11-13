@@ -2582,3 +2582,48 @@ relativos) más verificación palabra por palabra: 6 archivos sin ningún import
 
 **Próximo bloque ejecutable:** `git push` + CI (bloqueado por autorización) o barrer la deuda huérfana
 restante si el usuario lo aprueba.
+
+---
+
+## [2026-11-13] Checkpoint: CLN — auditoría de huérfanos reproducible (`npm run audit:orphans`)
+
+**Rama:** `master`. **Commit:** `aeea62a` (local, NO pusheado). **Motivo:** la deuda huérfana de
+`src/` se venía auditando con scripts ad-hoc que no quedaban en el repo; se agrega la herramienta
+para que el inventario sea reproducible en cada sesión y desbloquear la decisión de producto.
+
+**Cambios:**
+- `scripts/audit_orphans.cjs` (NUEVO): construye el grafo de imports relativos de `src/`, excluye
+  `__tests__/` y `*.test|spec.*`, excluye entrypoints (`main`/`index`/`widget`/`App`) y archivos
+  ambient (`.d.ts`), y lista los módulos sin importador entrante con su tamaño en bytes.
+- `package.json`: nuevo script `audit:orphans`.
+
+**Resultado del inventario (265 archivos escaneados, 21 huérfanos):**
+- **Features completas nunca montadas (requieren decisión de producto, NO borrado automático):**
+  `SyntaxCanvas.tsx` (27.8 KB), `InflectionView.tsx` (42 KB), `InflectionModal.tsx` (35.7 KB),
+  `WritingWorkshop.tsx` (12 KB), `CategoryManagerModal.tsx` (11 KB), `CompletionDashboard.tsx`
+  (10 KB), `LexiconAuditPanel.tsx` (9.8 KB), `GrammarGuidedTour.tsx` (9.8 KB),
+  `ProgressModal.tsx`, `TabButton.tsx`, `Button.tsx`, `AiStatusIndicator.tsx`,
+  `icons/Header.tsx`, `icons/HelpIcon.tsx`, `icons/LineIcon.tsx`.
+- **Candidatos a borrado seguro (sin uso ni en tests):** `utils/drawingUtils.ts`,
+  `data/commonWords.ts`, `data/swadeshList.ts`, `components/icons/Header.tsx`,
+  `components/icons/HelpIcon.tsx`, `components/icons/LineIcon.tsx`, `components/Button.tsx`,
+  `components/TabButton.tsx`, `components/ProgressModal.tsx`.
+- **Huérfanos con tests propios (no borrar sin re-cablear):** `services/grammar/strategyBridge.ts`
+  (solo lo importan tests: el puente Estrategias→Motor NO está cableado en la app),
+  `services/typologyProfile.ts` (duplicado de `src/types/pragmaticTypes.ts`, solo tests),
+  `services/jsonWorker.ts` (implementado, nunca importado; el punto D2 del AUTO_PILOT está
+  falsamente marcado como hecho).
+
+**Hallazgo paralelo (bug de UI, no tocado):** `App.tsx` declara `isAppLoaded`,
+`hasLocalData` y `showHomePanel`, pero **ningún setter se invoca** (`setIsAppLoaded`,
+`setHasLocalData`, `setShowHomePanel` no existen en `src/`). Consecuencia:
+`AppProjectBootstrapLayer` retorna `null` siempre (`if (!isAppLoaded) return null;`) → el flujo de
+bootstrap de proyecto está muerto en runtime. Requiere decisión: cablear el alta de `isAppLoaded`
+tras el primer load o eliminar la capa.
+
+**Validaciones:** `npm run typecheck` 0 errores · `npm run lint` OK · `npm run build` OK ·
+`npx vitest run` 369/369 (44 archivos).
+
+**Próximo bloque ejecutable:** `git push` de 5 commits locales + CI (bloqueado por autorización del
+skill `loxar-progress-supervisor`), o decisión del usuario sobre el destino de los 21 huérfanos y del
+bug de `isAppLoaded`.

@@ -136,6 +136,22 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
+Hay **5 commits locales** en `master` que no están en `origin` (`ee2a505`, `ed45653`, `9bc5f70`,
+`2ebb88b`, `aeea62a`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la
+Fase J; el skill `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con
+scopes `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso
+no hay número de run y la fase queda formalmente abierta.
+
+**[ ] CLN — bug de UI: `isAppLoaded` / `hasLocalData` / `showHomePanel` nunca se setean.**
+`AppProjectBootstrapLayer` retorna `null` siempre, así que el bootstrap de proyecto está muerto en
+runtime. Decisión requerida: cablear `setIsAppLoaded(true)` tras el primer load o eliminar la capa.
+
+**[ ] CLN — decidir destino de los 21 huérfanos de `src/`.** Inventario reproducible con
+`npm run audit:orphans` (creado en `aeea62a`). 9 candidatos a borrado seguro (sin uso ni en tests),
+10 features completas nunca montadas (decisión de producto), 3 con tests propios (no borrar sin
+re-cablear). Ver checkpoint en `docs/continuity/TASKS.md`.
+
 **[x] CLN — higiene de release (2026-11-13, 2da pasada).** Creado `LICENSE` (MIT) y corregido el
 contador de tests del `README.md` (122 → 369/369, verificado con `npx vitest run`). Pendiente de
 decisión de usuario: FASE L de `GAUNTLET_CLN.md` (borrado de `.zcode/`, `.claude/` y

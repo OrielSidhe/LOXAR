@@ -1,8 +1,8 @@
 {
-  "lastUpdated": "2026-11-13T03:10:00.000Z",
+  "lastUpdated": "2026-11-13T04:15:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
-    "syntaxSubTab": "canvas",
+    "syntaxSubTab": "ast",
     "activeProfile": "default",
     "editorMode": "add",
     "incompleteIndex": 0,
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: cerrar pendientes de higiene de release (crear LICENSE MIT, corregir contador de tests del README a 369/369) y actualizar memoria viva.",
+    "lastPrompt": "CLN: hacer reproducible la auditoría de módulos huérfanos de src/ y actualizar la memoria viva.",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Higiene de release del Gauntlet CLN: creado LICENSE (MIT) en la raíz (el README ya declaraba MIT pero el archivo no existía) y corregido el README a 369/369 tests (44 archivos) verificados con npx vitest run. Se añadió checkpoint en docs/continuity/TASKS.md y se actualizaron GAUNTLET_CLN.md y LOXAR_AUTO_PILOT.md. Validaciones: typecheck 0 errores, lint OK, vitest 369/369. Pendiente por autorización del usuario: (1) git push de 3 commits locales (ee2a505, ed45653, 9bc5f70) + CI con número de run; (2) FASE L de CLN — borrar .zcode/, .claude/ y _ARTIFACTS_NO_GIT/ del disco local, no automatizable porque .zcode/skills/loxar-continuity es la skill viva de continuidad; (3) decidir destino de los 17 huérfanos de src/ que requieren decisión de producto; (4) validación runtime del usuario con npm run tauri dev."
+  "sessionSummary": "Añadido `scripts/audit_orphans.cjs` + `npm run audit:orphans` (commit local `aeea62a`) para que el inventario de deuda huérfana sea reproducible en vez de depender de scripts ad-hoc. Inventario real: 21 huérfanos en 265 archivos de src/. Clasificados: 9 candidatos a borrado seguro (drawingUtils, commonWords, swadeshList, icons/Header, icons/HelpIcon, icons/LineIcon, Button, TabButton, ProgressModal), 10 features completas nunca montadas que requieren decisión de producto (SyntaxCanvas, InflectionView, InflectionModal, WritingWorkshop, CategoryManagerModal, CompletionDashboard, LexiconAuditPanel, GrammarGuidedTour, AiStatusIndicator), 3 con tests propios que NO se borran sin re-cablear (strategyBridge, typologyProfile, jsonWorker). Hallazgo nuevo: `isAppLoaded`, `hasLocalData` y `showHomePanel` se declaran en App.tsx pero ningún setter se invoca, así que AppProjectBootstrapLayer retorna null siempre (bootstrap de proyecto muerto en runtime). Validaciones: typecheck 0 errores, lint OK, build OK, vitest 369/369. Pendiente por autorización del usuario: (1) git push de 5 commits locales + CI con número de run (el gauntlet v3.12 exige push+CI para cerrar Fase J; el skill loxar-progress-supervisor prohíbe push automático); (2) FASE L de CLN (borrado de .zcode/, .claude/ y _ARTIFACTS_NO_GIT/ del disco local); (3) decidir destino de los 21 huérfanos; (4) decidir el bug de isAppLoaded; (5) demo runtime con `npm run tauri dev`."
 }
