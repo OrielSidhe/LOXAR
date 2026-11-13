@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-09-09T00:00:00.000Z",
+  "lastUpdated": "2026-11-13T01:15:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "canvas",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "Implementar Capa Pragmática (E-A-R-I-C-K-Q-F) para LOXAR: motor de sintaxis basado en intención de oración con SQL schema, UI sentence builder y pragmaticEngine en GrammarManifest. Reutilizar taxonomy.ts y sqlStorage.ts patterns.",
-    "lastModelUsed": "gemini-2.5-flash",
+    "lastPrompt": "Gauntlet v3.12 Fase J: cerrar jobs visibles y cancelables (J1 boton Configurar IA, J2 cancelar real, J3 ImportJobBanner, J4 tests) y verificar typecheck/lint/build/vitest.",
+    "lastModelUsed": "stepfun/step-3.7-flash",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Capa Pragmática implementada: pragmaticTypes.ts (tipos E-A-R-I-C-K-Q-F), grammarDb.ts (CRUD SQLite+fallback), GrammarPragmaticPanel (UI constructor), GrammarManifest extendido con pragmaticEngine, GrammarModuleSidebar/GrammarTab/GrammarTabHeader cableados. 3 errores TS corregidos (PragmaticSlotState unificado, GrammarModule 'pragmatic' en header, defaultFunction fallback). Build verde: typecheck 0 errores, lint OK."
+  "sessionSummary": "Fase J del Gauntlet v3.12 cerrada en commit local ee2a505 (sin push): J1 onOpenAiSettings cableado App->GrammarTab->GrammarTabModals->GrammarImporterModal con boton Configurar IA; J2 cancelar real via cancelJob; J3 ImportJobBanner en pantalla principal con 6 tests RTL; J4 tests de store ya existentes. Fix: AiSettingsModal se montaba dos veces (ModalManager + App) con activeModal==='ai_settings'; se dejo solo el de App. Higiene lint: onboarding.test.ts con forward slashes. Validaciones: typecheck 0, lint OK, build OK, vitest 369/369. Pendiente: git push + CI con numero de run, y demo runtime del gauntlet por el usuario."
 }

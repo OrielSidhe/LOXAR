@@ -62,3 +62,25 @@ En el spec, deja una sección "DEMO PENDIENTE" con esta checklist SIN marcar, pa
 3. Mensajes de commit honestos: solo lo que está en el diff. Si un archivo del mapa (A2) no fue tocado, el commit no puede decir que la fase está hecha.
 4. Válvula "NO LO SÉ" activa en todo momento.
 5. Orden obligatorio: 0 → R → A → J. Fase R es la única puerta: master verde o no hay gauntlet.
+
+---
+
+## ESTADO DE EJECUCIÓN (2026-11-13)
+
+- **Fase 0:** hecho. Spec commiteado.
+- **Fase R (CI verde):** hecho. Runs `41989659720`, `41989830413` success en `master`.
+- **Fase A (anti-abort):** hecho. Commit `25a5440` ("A: anti-abort real (signal de punta a punta)"),
+  run `41989139745` success. Dueño único del AbortController + clasificación timeout/cancelación.
+- **Fase J (jobs visibles):** código y tests completos en commit LOCAL `ee2a505`
+  ("J: cancelar + banner + botón settings"). Cubre J1 (botón Configurar IA), J2 (cancelar real),
+  J3 (`ImportJobBanner` + tests RTL), J4 (tests de store preexistentes + banner).
+  - Evidencia: `git show --stat ee2a505` → 8 archivos (App.tsx, GrammarImporterModal.tsx,
+    GrammarTab.tsx, GrammarTabModals.tsx, ImportJobBanner.tsx, ModalManager.tsx,
+    importJobBanner.test.tsx, onboarding.test.ts).
+  - Validaciones locales: `npm run typecheck` 0 errores · `npm run lint` OK · `npm run build` OK ·
+    `npx vitest run` 369/369.
+  - **CI: SIN VERIFICAR** para `ee2a505` — el commit NO fue pusheado (el skill
+    `loxar-progress-supervisor` prohíbe push automático). Para cerrar la fase según el protocolo,
+    falta `git push` + run verde con número.
+  - Extra en el commit: se eliminó el doble montaje de `AiSettingsModal` (lo activa J1).
+- **Demo runtime:** sigue PENDIENTE (checklist de arriba, sin marcar). No fingirla.

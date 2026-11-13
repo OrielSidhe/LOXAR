@@ -2491,3 +2491,39 @@ canvas inicial.
 - Validaciones: `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
   `npx vitest run` 134 passed. Nota: la única suite fallida es `tests-gui/smoke.spec.ts` (Playwright),
   que queda como suite GUI separada pendiente de autorización por SOP §9 y no se considera regresión.
+
+---
+## [2026-11-13] Checkpoint: Gauntlet v3.12 Fase J cerrada (cancelar + banner + botón settings)
+**Rama:** `master`. **Commit:** `ee2a505` (local, NO pusheado). **Motivo:** cerrar la Fase J del
+Gauntlet v3.12 con el trabajo que quedó en el working tree de la sesión previa, verificado y con
+las validaciones en verde.
+
+**Mapa de la Fase J (GAUNTLET_v3.12.md):**
+- **J1 — Botón "Configurar IA":** `GrammarImporterModal.tsx` expone `onOpenAiSettings?`; el aviso
+  "IA no configurada" (pre-flight) muestra un botón que abre `AiSettingsModal` y el importador NO se
+  cierra. Cableado: `App.tsx:844` → `GrammarTab` → `GrammarTabModals` → `GrammarImporterModal`.
+- **J2 — Cancelar real:** botón "Cancelar análisis" visible mientras `isProcessing`; llama
+  `handleCancel` → `cancelJob()` (store) → job `cancelled`. Sin toast de error.
+- **J3 — Banner simple:** `src/components/ImportJobBanner.tsx` (NUEVO) montado en `App.tsx` (pantalla
+  principal, no dentro del modal), data-driven desde `useImportStore`. Muestra "Analizando gramática"
+  con `chunk X/Y`, contadores de completados/fallidos, mensaje de progreso, error, y botones
+  Cancelar/Cerrar; se oculta sin job o en `idle`.
+- **J4 — Tests unitarios sin GUI:** `src/components/__tests__/importJobBanner.test.tsx` (NUEVO, 6
+  tests RTL: null, idle, running, cancel dispara cancelJob, clear, error) + `src/stores/__tests__/importStore.test.ts`
+  (ya existente: A1 dueño único del AbortController, A5 retry de fallados, ciclo de vida).
+
+**Fix incluido (lo activa J1):** `AiSettingsModal` se montaba DOS veces con
+`activeModal === 'ai_settings'` (`ModalManager.tsx:166` + `App.tsx:588`), produciendo doble overlay.
+Se eliminó el montaje de `ModalManager` y su import; queda el de `App.tsx`, que además ejecuta la
+lógica W4 del wizard al cerrar.
+
+**Higiene:** `src/services/__tests__/onboarding.test.ts` usa `C:/Users/test/LoxarData` (forward
+slashes); el validador de escapes marcaba `\t` como secuencia ilegal sobre `C:\test` (falso positivo).
+
+**Validaciones:** `npm run typecheck` 0 errores · `npm run lint` OK · `npm run build` OK ·
+`npx vitest run` 369/369 (44 archivos).
+
+**Pendiente:** `git push` + verificación de CI (el skill `loxar-progress-supervisor` prohíbe push
+automático; el gauntlet v3.12 exige run verde con número). Último run conocido: `41989830413`
+(success, commit `7ce42da`). **DEMO RUNTIME sigue pendiente de parte del usuario** (ver checklist
+en `docs/gauntlets/GAUNTLET_v3.12.md`).
