@@ -45,6 +45,25 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-11-13] Checkpoint: CLN higiene de release (LICENSE + contador de tests README)
+**Rama:** `master`. **Motivo:** cerrar dos pendientes documentados en `GAUNTLET_CLN.md` que estaban
+en la sección "Estado pendiente conocido" y no requerían código.
+**Cambios:**
+- `LICENSE` (NUEVO): licencia MIT completo. El README declaraba MIT desde agosto pero el archivo no
+  existía; ahora la declaración tiene respaldo legal en el repo.
+- `README.md`: contador de tests corregido de 122/122 a 369/369 (44 archivos), verificado con
+  `npx vitest run`; sección "Estado actual" ampliada con licencia, cierre de Fase J (`ee2a505`),
+  limpieza CLN (`9bc5f70`) y pendiente de push + CI + validación runtime.
+- `docs/gauntlets/GAUNTLET_CLN.md`: pendientes LICENSE y contador marcados como resueltos; FASE L
+  re-documentada como pendiente con su motivo de no-automatización (`.zcode/skills/loxar-continuity`
+  es la skill viva de continuidad).
+**Verificación:** `npx vitest run` 369/369 pasando; `npm run typecheck` 0 errores; `npm run lint` OK.
+Solo se tocó documentación + licencia: no hay riesgo de regresión de código.
+**Próximo bloque ejecutable:** FASE L requiere autorización del usuario; los 17 huérfanos de `src/`
+requieren decisión de producto. Sin tarea automática adicional en este ciclo.
+
+---
+
 ## [2026-08-14] Checkpoint: Extraer `SyntaxBreakdownPanel` de `SyntaxCanvas.tsx`
 **Rama:** `main`. **Motivo:** seguir descomponiendo `SyntaxCanvas.tsx` extrayendo el panel de
 desglose morfológico a un componente dedicado para reducir la superficie del componente.

@@ -40,8 +40,13 @@ artefactos de agentes.
 ## PLAN B (no aplicado; Plan A fue exitoso)
 `git rm --cached` como alternativa si Plan A no hubiera aplicado.
 
-## Estado pendiente conocido (NO se ejecuta aquí, solo se enumera)
-- LICENSE MIT
-- Contador de tests del README desactualizado
-- Fase J de v3.12 sin commit
-- Gauntlet v3.13 (providers) sin ejecutar
+## Estado pendiente conocido
+- ~~LICENSE MIT~~ → resuelto 2026-11-13: `LICENSE` (MIT) creado en la raíz.
+- ~~Contador de tests del README desactualizado~~ → resuelto 2026-11-13: README ahora reporta
+  369/369 tests (44 archivos), verificado con `npx vitest run`.
+- Fase J de v3.12 cerrada y commiteada (`ee2a505` + `ed45653`); pendiente solo `push` + CI.
+- **FASE L (limpieza del disco local) sigue PENDIENTE**: `.zcode/` y `.claude/` locales y
+  `_ARTIFACTS_NO_GIT/` siguen en disco. No es automático: `.zcode/skills/loxar-continuity` es la
+  skill de continuidad viva referenciada en `TASKS.md`; borrarla rompe el workflow. Requiere
+  decisión explícita del usuario sobre qué conservar.
+- Gauntlet v3.13 (providers) sin ejecutar; no existe `GAUNTLET_v3.13.md`, no se inventa spec.

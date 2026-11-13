@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-13T02:20:00.000Z",
+  "lastUpdated": "2026-11-13T03:10:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "canvas",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: auditar huérfanos en src/, borrar componentes muertos sin uso (NeographyModal, GrammarManagerModal, stubs vacíos) y verificar typecheck/lint/build/vitest.",
-    "lastModelUsed": "stepfun/step-3.7-flash",
+    "lastPrompt": "CLN: cerrar pendientes de higiene de release (crear LICENSE MIT, corregir contador de tests del README a 369/369) y actualizar memoria viva.",
+    "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Deuda P1: auditoría de huérfanos sobre src/ (316 archivos) con grafo de imports relativos + verificación por grep. 24 archivos sin importador; se borraron 6 (NeographyModal.tsx 30.2KB, GrammarManagerModal.tsx 43.6KB, AddWordForm.tsx, AnalysisReport.tsx, initialData.ts, electronService.ts — los últimos cuatro de 0 bytes). Quedan 17 huérfanos no borrados por requerir decisión de producto. Hallazgo: jsonWorker.ts está implementado pero nunca importado (D2 del AUTO_PILOT está falsamente marcado como hecho; sqlStorage.ts:149 serializa síncrono) — no se cableó por riesgo de CSP con Worker(blobURL). Validaciones: typecheck 0, lint OK, build OK, vitest 369/369. Pendiente: git push + CI (bloqueado por autorización) y demo runtime del gauntlet."
+  "sessionSummary": "Higiene de release del Gauntlet CLN: creado LICENSE (MIT) en la raíz (el README ya declaraba MIT pero el archivo no existía) y corregido el README a 369/369 tests (44 archivos) verificados con npx vitest run. Se añadió checkpoint en docs/continuity/TASKS.md y se actualizaron GAUNTLET_CLN.md y LOXAR_AUTO_PILOT.md. Validaciones: typecheck 0 errores, lint OK, vitest 369/369. Pendiente por autorización del usuario: (1) git push de 3 commits locales (ee2a505, ed45653, 9bc5f70) + CI con número de run; (2) FASE L de CLN — borrar .zcode/, .claude/ y _ARTIFACTS_NO_GIT/ del disco local, no automatizable porque .zcode/skills/loxar-continuity es la skill viva de continuidad; (3) decidir destino de los 17 huérfanos de src/ que requieren decisión de producto; (4) validación runtime del usuario con npm run tauri dev."
 }

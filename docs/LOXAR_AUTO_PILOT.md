@@ -136,6 +136,11 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — higiene de release (2026-11-13, 2da pasada).** Creado `LICENSE` (MIT) y corregido el
+contador de tests del `README.md` (122 → 369/369, verificado con `npx vitest run`). Pendiente de
+decisión de usuario: FASE L de `GAUNTLET_CLN.md` (borrado de `.zcode/`, `.claude/` y
+`_ARTIFACTS_NO_GIT/` del disco local — requiere decidir qué conservar) y los 17 huérfanos de `src/`.
+
 **[x] CLN — deuda huérfana (2026-11-13).** Borrados 6 archivos sin importadores (`NeographyModal`,
 `GrammarManagerModal`, 4 stubs de 0 bytes). Validaciones en verde. Pendiente de decisión: 17 huérfanos
 más (ver checkpoint en `docs/continuity/TASKS.md`).
