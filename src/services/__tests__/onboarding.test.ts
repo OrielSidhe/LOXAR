@@ -69,7 +69,7 @@ describe('Phase I: Data folder persistence', () => {
   });
 
   it('persists data folder through setDataFolder / getDataFolder round-trip', () => {
-    const folder = 'C:\\Users\\test\\LoxarData';
+    const folder = 'C:/Users/test/LoxarData';
     setDataFolder(folder);
     expect(getDataFolder()).toBe(folder);
     expect(mockLocalStorage.getItem(DATA_FOLDER_KEY)).toBe(folder);

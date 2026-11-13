@@ -48,6 +48,7 @@ import WorkbenchTab from './components/WorkbenchTab';
 import ToolsTab from './components/ToolsTab';
 import AppBatchToolbar from './components/AppBatchToolbar';
 import AppOfflineBannerLayer from './components/AppOfflineBannerLayer';
+import ImportJobBanner from './components/ImportJobBanner';
 import AppAmbientLightsLayer from './components/AppAmbientLightsLayer';
 import AppProjectBootstrapLayer from './components/AppProjectBootstrapLayer';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -534,6 +535,8 @@ const App = () => {
           <AppLoadingLayer isLoading={isLoading} loadingMessage={loadingMessage} />
           <AppOfflineBannerLayer showOfflineBanner={showOfflineBanner} />
 
+          <ImportJobBanner />
+
           <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
             <ModalManager
             activeModal={activeModal}
@@ -838,6 +841,7 @@ const App = () => {
                     activeModule={activeGrammarModule}
                     onModuleChange={setActiveGrammarModule}
                     onBack={() => setActiveTab('dashboard')}
+                    onOpenAiSettings={() => handleOpenModal('ai_settings')}
                   />
                 )}
                 {activeTab === 'translator' && (

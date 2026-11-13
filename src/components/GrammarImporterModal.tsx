@@ -43,9 +43,11 @@ interface GrammarImporterModalProps {
     onClose: () => void;
     showNotification: (message: string, type: 'success' | 'error') => void;
     existingNotes: string;
+    /** J1: abre el modal de Ajustes de IA sin cerrar el importador. */
+    onOpenAiSettings?: () => void;
 }
 
-const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification, existingNotes }: GrammarImporterModalProps) => {
+const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification, existingNotes, onOpenAiSettings }: GrammarImporterModalProps) => {
     // ── Store ──────────────────────────────────────────────────────────
     const job = useImportStore(state => state.job);
     const isModalOpen = useImportStore(state => state.isModalOpen);
@@ -321,12 +323,14 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
         const text = rawText || job?.text || '';
         if (!text.trim()) return;
 
-        // W1: Pre-flight for AI mode
+        // W1/J1: Pre-flight for AI mode — open the AI settings modal (provided by
+        // App through an explicit prop) instead of blocking with a toast.
         if (ai && aiConfigChecked === false) {
-            showNotification('No hay IA configurada. Ve a Ajustes > IA para configurar un proveedor.', 'error');
-            // J1: Open AI settings modal
-            // We need to trigger the app's openAiSettings - but we're in a modal,
-            // so we'll just stop here and let user know
+            if (onOpenAiSettings) {
+                onOpenAiSettings();
+            } else {
+                showNotification('No hay IA configurada. Ve a Ajustes > IA para configurar un proveedor.', 'error');
+            }
             return;
         }
 
@@ -463,6 +467,24 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                                                 </button>
                                             ))}
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* J1: Aviso de IA no configurada con acceso directo a Ajustes */}
+                                {ai && aiConfigChecked === false && (
+                                    <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 flex items-center justify-between gap-3">
+                                        <p className="text-sm text-warning flex items-center gap-2">
+                                            <AlertIcon className="h-4 w-4 flex-shrink-0" />
+                                            <span><strong>IA no configurada:</strong> configura un proveedor para analizar con IA.</span>
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={onOpenAiSettings}
+                                            className="px-3 py-1.5 bg-warning text-white text-xs font-semibold rounded-md hover:opacity-90 transition-opacity flex-shrink-0"
+                                            aria-label="Configurar IA"
+                                        >
+                                            Configurar IA
+                                        </button>
                                     </div>
                                 )}
 
@@ -616,6 +638,9 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                         <div className="text-xs text-text-secondary">
                             {rawText.length} caracteres
                         </div>
+                        {job?.status === 'cancelled' && (
+                            <span className="text-xs text-warning">Análisis cancelado por el usuario.</span>
+                        )}
                         {/* I3: AI mode toggle with provider info */}
                         <button
                             onClick={() => setAi(!ai)}
@@ -632,8 +657,12 @@ const GrammarImporterModal = ({ onSaveFlexibleGrammar, onClose, showNotification
                         </button>
                     </div>
                     <div className="flex gap-3 items-center">
-                        <button onClick={onClose} className="px-4 py-2 bg-subtle text-text-primary font-semibold rounded-md hover:bg-gray-600 transition-colors">
-                            Cancelar
+                        <button
+                            onClick={isProcessing ? handleCancel : onClose}
+                            className="px-4 py-2 bg-subtle text-text-primary font-semibold rounded-md hover:bg-gray-600 transition-colors"
+                            aria-label={isProcessing ? 'Cancelar análisis en curso' : 'Cerrar importador'}
+                        >
+                            {isProcessing ? 'Cancelar análisis' : 'Cancelar'}
                         </button>
                         {!ai && !isProcessing && (
                             <p className="text-xs text-text-secondary">

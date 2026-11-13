@@ -10,7 +10,6 @@ import InflectionGeneratorModal from './InflectionGeneratorModal';
 import CreateLexiconModal from './CreateLexiconModal';
 import AboutModal from './AboutModal';
 import EditEntryModal from './EditEntryModal';
-import AiSettingsModal from './AiSettingsModal';
 import ImportMappingModal from './ImportMappingModal';
 import ImportConflictModal from './ImportConflictModal';
 import ImportSanitizationModal from './ImportSanitizationModal';
@@ -162,8 +161,6 @@ const ModalManager = ({
             {activeModal === 'inflection_generator' && <InflectionGeneratorModal entry={entryToInflect} profile={activeInflectionProfile} onClose={onClose} />}
 
             {activeModal === 'create_lexicon' && <CreateLexiconModal onCreate={onConfirmCreateLexicon} onClose={onClose} />}
-
-            {activeModal === 'ai_settings' && <AiSettingsModal onClose={onClose} />}
 
             {entryToEditInModal && <EditEntryModal
                 entry={entryToEditInModal}

@@ -34,6 +34,8 @@ interface GrammarTabProps {
     onModuleChange?: (module: GrammarModule) => void;
     /** Callback para volver al grafo/canvas */
     onBack?: () => void;
+    /** J1: abre Ajustes de IA desde el importador sin cerrar el importador. */
+    onOpenAiSettings?: () => void;
 }
 
 type GrammarModule = 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'pragmatic' | 'notes';
@@ -49,7 +51,7 @@ interface ProgressMetric {
 // (not localStorage — keeps it simple and resets on reload, exactly as required).
 let wizardAutoOpenedThisSession = false;
 
-const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange, onBack }: GrammarTabProps) => {
+const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange, onBack, onOpenAiSettings, }: GrammarTabProps) => {
     const [internalModule, setInternalModule] = useState<GrammarModule>('syntax');
     const activeModule = activeModuleProp ?? internalModule;
     const setActiveModule = onModuleChange ?? setInternalModule;
@@ -452,6 +454,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
                 onCloseImporter={() => setIsImporterOpen(false)}
                 onApplyWizard={handleWizardApply}
                 onCloseWizard={() => setIsWizardOpen(false)}
+                onOpenAiSettings={onOpenAiSettings}
             />
             <GrammarModuleSidebar
                 activeModule={activeModule}

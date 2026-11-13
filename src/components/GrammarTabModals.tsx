@@ -13,6 +13,8 @@ export interface GrammarTabModalsProps {
   onCloseImporter: () => void;
   onApplyWizard: (newManifest: any) => void;
   onCloseWizard: () => void;
+  /** J1: abre Ajustes de IA desde el importador sin cerrarlo. */
+  onOpenAiSettings?: () => void;
 }
 
 const GrammarTabModals = ({
@@ -24,6 +26,7 @@ const GrammarTabModals = ({
   onCloseImporter,
   onApplyWizard,
   onCloseWizard,
+  onOpenAiSettings,
 }: GrammarTabModalsProps) => {
   return (
     <>
@@ -34,6 +37,7 @@ const GrammarTabModals = ({
                 onClose={onCloseImporter}
                 showNotification={() => {}}
                 existingNotes={existingNotes || ''}
+                onOpenAiSettings={onOpenAiSettings}
             />
         </Suspense>
       )}
