@@ -49,6 +49,10 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   cancelar real del análisis, J3 `ImportJobBanner` en pantalla principal, J4 tests (banner RTL +
   store). Corregido el doble montaje de `AiSettingsModal`. Validaciones: typecheck 0, lint OK,
   build OK, vitest 369/369. Pendiente: push + CI y demo runtime por el usuario.
+- Deuda P1 (2026-11-13): auditoría de huérfanos sobre `src/` (24 archivos sin importador) y borrado de
+  6 (`NeographyModal`, `GrammarManagerModal` y 4 stubs de 0 bytes). Quedan 17 huérfanos no borrados
+  por requerir decisión de producto. `jsonWorker.ts` está implementado pero nunca importado: el
+  punto D2 está falsamente marcado como hecho y `sqlStorage.ts:149` serializa síncrono.
 
 ---
 
@@ -132,6 +136,10 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — deuda huérfana (2026-11-13).** Borrados 6 archivos sin importadores (`NeographyModal`,
+`GrammarManagerModal`, 4 stubs de 0 bytes). Validaciones en verde. Pendiente de decisión: 17 huérfanos
+más (ver checkpoint en `docs/continuity/TASKS.md`).
+
 **[x] Gauntlet v3.12 Fase J (commit `ee2a505`).** J1 botón "Configurar IA", J2 cancelar real, J3
 `ImportJobBanner`, J4 tests. Pendiente: `git push` + CI verde con número de run (el push automático
 está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime del gauntlet

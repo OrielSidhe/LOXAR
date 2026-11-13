@@ -2527,3 +2527,39 @@ slashes); el validador de escapes marcaba `\t` como secuencia ilegal sobre `C:\t
 automático; el gauntlet v3.12 exige run verde con número). Último run conocido: `41989830413`
 (success, commit `7ce42da`). **DEMO RUNTIME sigue pendiente de parte del usuario** (ver checklist
 en `docs/gauntlets/GAUNTLET_v3.12.md`).
+
+---
+
+## [2026-11-13] Checkpoint: CLN — eliminar componentes muertos sin uso (deuda P1)
+
+**Rama:** `master`. **Motivo:** el skill `loxar-refactor-plan` marca como deuda explícita los módulos
+declarados pero nunca cableados. Auditoría de huérfanos sobre `src/` (316 archivos, grafo de imports
+relativos) más verificación palabra por palabra: 6 archivos sin ningún importador real.
+
+**Cambios (borrados):**
+- `src/components/NeographyModal.tsx` (30.206 B) — stub heredado; el flujo activo es
+  `src/components/neography/NeographyView.tsx` montado desde `WritingAndNeographyTab.tsx`.
+- `src/components/GrammarManagerModal.tsx` (43.562 B) — nunca cableado; la vía activa del manifiesto es
+  `GrammarTab` (`onOpenInflection` / `onOpenInflectionWorkshop` abren la tab `grammar`).
+- `src/components/AddWordForm.tsx`, `src/components/AnalysisReport.tsx`, `src/data/initialData.ts`,
+  `src/services/electronService.ts` — archivos de 0 bytes, sin contenido.
+
+**Verificación:** `grep` exhaustivo + script de grafo de imports; 0 referencias externas en `src/`,
+`tests-gui/` y raíz. `graft/` está gitignored, no requiere actualización.
+
+**Auditoría restante (NO borrada, requiere decisión de producto):** 17 archivos más sin importadores
+(`InflectionView`, `InflectionModal`, `SyntaxCanvas`, `WritingWorkshop`, `CategoryManagerModal`,
+`CompletionDashboard`, `LexiconAuditPanel`, `GrammarGuidedTour`, `jsonWorker`, `AiStatusIndicator`,
+`Button`, `commonWords`, `swadeshList`, `TabButton`, `ProgressModal`, `icons/Header`, `icons/HelpIcon`).
+`types/imagetracerjs.d.ts` y `vite-env.d.ts` son ambient y se conservan.
+
+**Hallazgo:** `jsonWorker.ts` está implementado pero nunca importado; el AUTO_PILOT lo da por hecho
+(D2) y `sqlStorage.ts:149` sigue serializando síncrono en el hilo principal. **No se cableó** porque
+`new Worker(blobURL)` queda fuera del CSP de Tauri (`script-src 'self' 'unsafe-inline'
+'wasm-unsafe-eval'`) y requiere smoke-test runtime. Queda como tarea de rendimiento con riesgo de CSP.
+
+**Validaciones:** `npm run typecheck` 0 errores · `npm run lint` OK · `npm run build` OK ·
+`npx vitest run` 369/369 (44 archivos).
+
+**Próximo bloque ejecutable:** `git push` + CI (bloqueado por autorización) o barrer la deuda huérfana
+restante si el usuario lo aprueba.
