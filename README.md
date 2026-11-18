@@ -71,7 +71,7 @@ Esto permite que un agente de coding IA retome el proyecto desde cualquier punto
 ## Estado actual
 
 - **Frontend modularizado:** `App.tsx` reducido mediante extracciones controladas (`AppWelcomeSection`, `AppToastLayer`, `AppOfflineBannerLayer`, `AppSettingsModalLayer`, etc.).
-- **Suite de tests:** 369/369 tests unitarios/integración en Vitest (44 archivos).
+- **Suite de tests:** 374/374 tests unitarios/integración en Vitest (45 archivos).
 - **Build estable:** `npm run typecheck`, `npm run lint` y `npm run build` en verde.
 - **Licencia:** MIT (`LICENSE`).
 - **Continuidad:** Fase J del Gauntlet v3.12 cerrada (commit `ee2a505`) y limpieza CLN aplicada

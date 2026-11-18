@@ -2627,3 +2627,41 @@ tras el primer load o eliminar la capa.
 **Próximo bloque ejecutable:** `git push` de 5 commits locales + CI (bloqueado por autorización del
 skill `loxar-progress-supervisor`), o decisión del usuario sobre el destino de los 21 huérfanos y del
 bug de `isAppLoaded`.
+
+---
+
+## [2026-11-18] Checkpoint: CLN — bootstrap de proyecto cableado (B0)
+
+**Rama:** `master`. **Motivo:** el checkpoint anterior marcó que `isAppLoaded`, `hasLocalData` y
+`showHomePanel` se declaraban en `App.tsx` pero ningún setter se invocaba, así que
+`AppProjectBootstrapLayer` retornaba `null` siempre y el flujo de proyecto (elegir ubicación del
+`.loxar`, listar proyectos encontrados, importar datos locales) estaba muerto en runtime. Era el primer
+ítem accionable sin autorización de la cola.
+
+**Cambios:**
+- `src/App.tsx`: nuevo efecto de arranque (`B0`) que hidrata la sesión antes de activar la capa:
+  `loadSessionCache()` → `setSessionCacheData`, `setProjectPath(cache.projectPath)`,
+  `setBootstrapDismissed(cache.bootstrapDismissed === true)`, `listLexiconNames()` →
+  `setHasLocalData(names.length > 0)`, y recién entonces `setIsAppLoaded(true)`. Si no hay
+  `projectPath` y el usuario no descartó antes, `setShowProjectBootstrap(true)`. Flag `cancelled`
+  para no setear estado tras desmontar.
+- `src/App.tsx` (JSX): la capa se monta solo con `!showWelcome && !showWizard` para no apilar dos
+  overlays de primera ejecución (bienvenida/wizard + bootstrap).
+- `src/services/sessionCache.ts`: `SessionCache.bootstrapDismissed?: boolean` (persiste el descarte;
+  sin eso el modal reaparecería en cada arranque).
+- `src/hooks/useAppHandlers.ts`: `handleBootstrapDismiss` fusiona el cache vigente y persiste
+  `bootstrapDismissed: true` (antes solo seteaba estado en memoria).
+- `src/components/__tests__/appProjectBootstrapLayer.test.tsx` (NUEVO, 5 tests): puerta
+  `isAppLoaded`, modal de ubicación, lista de proyectos + botón de importación local, banner
+  post-descarte y null con proyecto configurado.
+
+**Hallazgo adicional:** `projectPath` nunca se hidrataba desde `sessionCache` al arranque (solo se
+seteaba al crear/abrir proyecto); ahora sí, así que al reabrir la app se recupera la ubicación del
+`.loxar` y el banner de "elegir ubicación" deja de ser la única vía.
+
+**Validaciones:** `npm run typecheck` 0 errores · `npm run lint` OK · `npm run build` OK ·
+`npx vitest run` 374/374 (45 archivos, +5 por el test nuevo) · `npm run audit:orphans` 21 (baseline
+intacto).
+
+**Pendiente:** `git push` (bloquea el cierre de CI del Gauntlet v3.12) y la demo runtime con
+`npm run tauri dev` para confirmar el modal visualmente.

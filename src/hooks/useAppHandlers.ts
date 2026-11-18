@@ -3,7 +3,7 @@ import { useLexicon } from './useLexicon';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, GenerationMode } from '../types';
 import { LoxarProject } from '../services/projectFile';
 import { listLexiconNames, loadLexicon } from '../services/sqlStorage';
-import { saveSessionCache } from '../services/sessionCache';
+import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
 import { createEmptyProject } from '../services/projectFile';
 import { audioService } from '../services/audioService';
 import { open, save } from '@tauri-apps/plugin-dialog';
@@ -279,6 +279,11 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
   const handleBootstrapDismiss = useCallback(() => {
     setShowProjectBootstrap(false);
     setBootstrapDismissed(true);
+    // Persist the dismissal: without it the bootstrap modal would reappear on
+    // every startup for users who chose "Más tarde".
+    loadSessionCache()
+      .then(cache => saveSessionCache({ ...cache, bootstrapDismissed: true }))
+      .catch(console.error);
     showNotification('Tus datos se guardan solo en este equipo. Usá "Nuevo"/"Abrir Proyecto" para fijar una ubicación segura.', 'error');
   }, [setShowProjectBootstrap, setBootstrapDismissed, showNotification]);
 

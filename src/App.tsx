@@ -487,6 +487,40 @@ const App = () => {
     initPragmaticDb().catch(e => console.error('[App] Failed to init pragmatic DB:', e));
   }, []);
 
+  // ── B0: Bootstrap de proyecto — hidratar la sesión y activar la capa de bootstrap ──
+  // `isAppLoaded` solo se elevaba aquí; antes ningún setter se invocaba, así que
+  // `AppProjectBootstrapLayer` retornaba null siempre y el flujo de proyecto
+  // (elegir ubicación del `.loxar`) estaba muerto en runtime.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const cache = await loadSessionCache();
+        if (cancelled) return;
+        setSessionCacheData(cache);
+        setProjectPath(cache.projectPath ?? null);
+        setBootstrapDismissed(cache.bootstrapDismissed === true);
+        try {
+          const names = await listLexiconNames();
+          if (!cancelled) setHasLocalData(names.length > 0);
+        } catch (e) {
+          // En modo no-Tauri (tests) no hay backend SQL: no es un error de usuario.
+          console.error('[App] No se pudo consultar los léxicos locales:', e);
+        }
+        if (cancelled) return;
+        setIsAppLoaded(true);
+        // Sin proyecto configurado y sin descarte previo: ofrecer ubicación segura.
+        if (!cache.projectPath && cache.bootstrapDismissed !== true) {
+          setShowProjectBootstrap(true);
+        }
+      } catch (e) {
+        console.error('[App] No se pudo cargar la sesión:', e);
+        if (!cancelled) setIsAppLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
@@ -912,20 +946,22 @@ const App = () => {
             lastResult={null}
           />
 
-          <AppProjectBootstrapLayer
-            isAppLoaded={isAppLoaded}
-            showProjectBootstrap={showProjectBootstrap}
-            bootstrapDismissed={bootstrapDismissed}
-            projectPath={projectPath}
-            availableProjects={availableProjects}
-            hasLocalData={hasLocalData}
-            onCreate={handleBootstrapCreate}
-            onOpenOther={handleBootstrapOpenOther}
-            onOpenFound={handleBootstrapOpenFound}
-            onImportLocal={handleBootstrapImportLocal}
-            onDismiss={handleBootstrapDismiss}
-            onChooseLocation={() => setShowProjectBootstrap(true)}
-          />
+          {!showWelcome && !showWizard && (
+            <AppProjectBootstrapLayer
+              isAppLoaded={isAppLoaded}
+              showProjectBootstrap={showProjectBootstrap}
+              bootstrapDismissed={bootstrapDismissed}
+              projectPath={projectPath}
+              availableProjects={availableProjects}
+              hasLocalData={hasLocalData}
+              onCreate={handleBootstrapCreate}
+              onOpenOther={handleBootstrapOpenOther}
+              onOpenFound={handleBootstrapOpenFound}
+              onImportLocal={handleBootstrapImportLocal}
+              onDismiss={handleBootstrapDismiss}
+              onChooseLocation={() => setShowProjectBootstrap(true)}
+            />
+          )}
         </div>
       </div>
     </ErrorBoundary>

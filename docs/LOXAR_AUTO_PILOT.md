@@ -53,6 +53,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   6 (`NeographyModal`, `GrammarManagerModal` y 4 stubs de 0 bytes). Quedan 17 huérfanos no borrados
   por requerir decisión de producto. `jsonWorker.ts` está implementado pero nunca importado: el
   punto D2 está falsamente marcado como hecho y `sqlStorage.ts:149` serializa síncrono.
+- Bootstrap de proyecto (B0, 2026-11-18): `AppProjectBootstrapLayer` ya no está muerto. `App.tsx`
+  hidrata `projectPath`/`sessionCacheData`/`hasLocalData` al montar y eleva `isAppLoaded` tras ese
+  load; el descarte del modal persiste en `sessionCache`. `showHomePanel` sigue declarado sin uso.
 
 ---
 
@@ -136,16 +139,19 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
-**[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-Hay **5 commits locales** en `master` que no están en `origin` (`ee2a505`, `ed45653`, `9bc5f70`,
-`2ebb88b`, `aeea62a`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la
-Fase J; el skill `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con
-scopes `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso
-no hay número de run y la fase queda formalmente abierta.
+**[x] CLN — bug de UI: `isAppLoaded` / `hasLocalData` / `showHomePanel` nunca se setean (B0, 2026-11-18).**
+`AppProjectBootstrapLayer` retornaba `null` siempre. Cableado el arranque: `loadSessionCache()` hidrata
+`projectPath`/`sessionCacheData`, `listLexiconNames()` alimenta `hasLocalData`, y `setIsAppLoaded(true)`
+se setea recién tras ese load; sin `projectPath` y sin descarte previo se ofrece la ubicación del `.loxar`.
+El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` sigue sin uso (estado
+muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
-**[ ] CLN — bug de UI: `isAppLoaded` / `hasLocalData` / `showHomePanel` nunca se setean.**
-`AppProjectBootstrapLayer` retorna `null` siempre, así que el bootstrap de proyecto está muerto en
-runtime. Decisión requerida: cablear `setIsAppLoaded(true)` tras el primer load o eliminar la capa.
+**[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
+Hay **7 commits locales** en `master` que no están en `origin` (`b7c73be`, `aeea62a`, `2ebb88b`,
+`9bc5f70`, `ed45653`, `ee2a505`, más el commit B0 de este ciclo). El Gauntlet v3.12 exige `push` + CI
+verde con número de run para cerrar la Fase J; el skill `loxar-progress-supervisor` prohíbe push
+automático. `gh auth` está activo y con scopes `repo`+`workflow`, así que el push es viable de
+inmediato si el usuario lo autoriza. Sin eso no hay número de run y la fase queda formalmente abierta.
 
 **[ ] CLN — decidir destino de los 21 huérfanos de `src/`.** Inventario reproducible con
 `npm run audit:orphans` (creado en `aeea62a`). 9 candidatos a borrado seguro (sin uso ni en tests),

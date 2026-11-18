@@ -9,6 +9,7 @@ export interface SessionCache {
   themeId?: string;
   soundsEnabled?: boolean;
   showWelcomeOnStart?: boolean;
+  bootstrapDismissed?: boolean;
 }
 
 const STORE_KEY = 'loxar-session-cache';
