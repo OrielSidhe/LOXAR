@@ -22,8 +22,6 @@ export interface WorkbenchTabProps {
   onLookup: (significado: string) => void;
   onAddWord: (entry: any) => void;
   onUpdateWord: (id: string, entry: any) => void;
-  findDuplicateSignificados: (sig: string, excludeId?: string) => any[];
-  onDuplicateFound: () => void;
   onAiCompleteEntry: (entry: any) => Promise<any>;
   onAiGenerateRootAndLexeme: (significado: string, categoria: string, modes: GenerationMode[]) => Promise<{ raiz: string; lexema: string } | null>;
   onCorrectSignificado: (significado: string) => Promise<string>;
@@ -82,8 +80,6 @@ const WorkbenchTab = (props: WorkbenchTabProps) => {
             onLookup={props.onLookup}
             onAddWord={props.onAddWord}
             onUpdateWord={props.onUpdateWord}
-            findDuplicateSignificados={props.findDuplicateSignificados}
-            onDuplicateFound={props.onDuplicateFound}
             onAiCompleteEntry={props.onAiCompleteEntry}
             onAiGenerateRootAndLexeme={props.onAiGenerateRootAndLexeme}
             onCorrectSignificado={props.onCorrectSignificado}

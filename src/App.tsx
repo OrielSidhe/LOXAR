@@ -784,8 +784,6 @@ const App = () => {
                     onLookup={handleLookupForCompletion}
                     onAddWord={lexiconHook.addWord}
                     onUpdateWord={lexiconHook.editWord}
-                    findDuplicateSignificados={(sig, excludeId) => lexiconHook.activeLexicon.filter(e => e.Significado.includes(sig) && e.ID !== excludeId)}
-                    onDuplicateFound={() => {}}
                     onAiCompleteEntry={handleAiCompleteEntry}
                     onAiGenerateRootAndLexeme={handleAiGenerate}
                     onCorrectSignificado={handleCorrectSignificado}
