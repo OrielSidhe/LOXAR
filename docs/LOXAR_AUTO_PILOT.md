@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `ad3110a`
+- Git inicializado y con commits; último commit `dad806e`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -85,6 +85,12 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   (484 → 350 líneas) y se eliminó la duplicación del array de participantes entre el preview y el
   `useEffect` que siembra el AST editable. Tests nuevos: `grammarTabModel.test.ts` (18).
   Validaciones: typecheck 0, lint OK, build OK, vitest 412/412 (48 archivos), audit:orphans 20.
+- Modelo de SyntaxCanvas extraído (2026-11-19): la lógica de dominio de `SyntaxCanvas.tsx`
+  (árbol de nodos, conexiones, cámara/zoom, mapeo de coordenadas y bezier de flechas) pasó a
+  `src/utils/syntaxCanvasModel.ts`; el `.tsx` quedó como orquestador de estado UI + render
+  (484 → 459 líneas) y re-exporta los símbolos públicos. Tests nuevos:
+  `syntaxCanvasModel.test.ts` (18). Validaciones: typecheck 0, lint OK, build OK,
+  vitest 430/430 (49 archivos), audit:orphans 20.
 
 ---
 
@@ -168,6 +174,19 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
+(484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos
+(`NodeBounds`, `NodeBoundsMap`, `ConnectionPath`, re-export de `NodeType`/`SyntaxConnection`/
+`SyntaxNode`), constantes (`MIN_ZOOM`, `MAX_ZOOM`, `ZOOM_STEP`, `ZOOM_WHEEL_IN`,
+`ZOOM_WHEEL_OUT`, `DEFAULT_CHILD_NODE`), operadores de árbol (`uid`, `updateNodeDeep`,
+`removeNodeDeep`, `addChildToNode`, `findNodeDeep`, `findAllNodes`), factories (`createNode`,
+`createChildNode`, `createConnection`), cámara (`clampZoom`, `zoomStep`, `zoomByWheel`,
+`toCanvasPoint`, `toNodeBounds`) y geometría de flechas (`buildConnectionPath`). `SyntaxCanvas.tsx`
+quedó en 459 líneas como orquestador de estado UI + render y re-exporta los símbolos públicos.
+Tests nuevos: `syntaxCanvasModel.test.ts` (18). Validaciones: typecheck 0, lint OK,
+build OK, vitest 430/430 (49 archivos), audit:orphans 20.
+
 **[x] CLN — extraer el modelo puro de `GrammarTab.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/grammarTabModel.ts` con tipos
 (`GrammarModule`, `SyntaxSubTab`, `ProgressMetric`, `GrammarProgress`, `GrammarPreview`),
@@ -245,7 +264,7 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 17 commits locales** en `master` que no están en `origin` (`1f34de3`, `ad3110a`, `25dbe93`,
+**Hay 19 commits locales** en `master` que no están en `origin` (`dad806e`, `1f34de3`, `ad3110a`, `25dbe93`,
 `cd7547f`, `f433c22`, `d113bb9`, `6b66129`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`,
 `aeea62a`, `2ebb88b`, `9bc5f70`, `ed45653`, `ee2a505`). El
 Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
@@ -293,7 +312,8 @@ está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
     `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
     `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals`.
-  - Próximo paso real: `GrammarTab` (484), `SyntaxCanvas` (484) y `EntryEditor` (494);
+  - Próximo paso real: `EntryEditor` (494); `GrammarTab` (484) y `SyntaxCanvas` (484) ya fueron
+    extraídos a `src/utils/grammarTabModel.ts` y `src/utils/syntaxCanvasModel.ts`;
     `GraphCanvas.tsx` y `CollectionsManager.tsx` ya fueron extraídos a `src/utils/graphCanvasModel.ts`
     y `src/utils/collectionsManagerModel.ts`.
 

@@ -2905,3 +2905,30 @@ Corregirlo es un cambio de comportamiento: candidato a la próxima pasada atómi
 **Próximo bloque ejecutable:** `SyntaxCanvas` (484) o `EntryEditor` (494); corrección del objeto de
 preview; o decidir destino de los 20 huérfanos. Pendiente por autorización: `git push`
 (17 commits locales) + CI con número de run, FASE L de CLN.
+
+## [2026-11-19] Checkpoint: CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1 God Component)
+
+**Rama:** `master`. **Commit:** `dad806e` (local, NO pusheado). **Motivo:** `SyntaxCanvas.tsx`
+(484 líneas) seguía mezclando dominio (árbol de nodos, conexiones, cámara/zoom, geometría de
+flechas) con estado de UI y render; el checkpoint anterior lo marcaba como "próximo bloque
+ejecutable".
+
+**Cambios:**
+- `src/utils/syntaxCanvasModel.ts` (NUEVO): tipos (`NodeBounds`, `NodeBoundsMap`, `ConnectionPath`,
+  re-export de `NodeType`/`SyntaxConnection`/`SyntaxNode`), constantes (`MIN_ZOOM`, `MAX_ZOOM`,
+  `ZOOM_STEP`, `ZOOM_WHEEL_IN`, `ZOOM_WHEEL_OUT`, `DEFAULT_CHILD_NODE`), operadores de árbol
+  (`uid`, `updateNodeDeep`, `removeNodeDeep`, `addChildToNode`, `findNodeDeep`, `findAllNodes`),
+  factories (`createNode`, `createChildNode`, `createConnection`), cámara (`clampZoom`, `zoomStep`,
+  `zoomByWheel`, `toCanvasPoint`, `toNodeBounds`) y geometría de flechas (`buildConnectionPath`).
+- `src/components/SyntaxCanvas.tsx`: quedó como orquestador de estado UI + render (484 → 459
+  líneas), consume el modelo y re-exporta su superficie pública. Sin cambios de comportamiento.
+- Tests nuevos: `src/utils/__tests__/syntaxCanvasModel.test.ts` (18) cubriendo árbol, factories,
+  zoom, mapeo de coordenadas y bezier.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 430/430 (49 archivos) ·
+audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador; se mantuvo el import de
+`InfoTooltip` que el componente ya arrastraba, para no subir el conteo de huérfanos).
+
+**Próximo bloque ejecutable:** `EntryEditor` (494) o corrección del objeto de preview
+(`src/utils/grammarPreview.ts:30-34`). Pendiente por autorización: `git push` (19 commits locales)
++ CI con número de run, FASE L de CLN.
