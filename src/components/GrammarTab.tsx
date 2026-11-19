@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from 'react';
-import { GrammarManifest, SyntacticRole, MorphosyntacticStrategy, StrategyType, LexiconEntry, GrammarAffix } from '../types';
+import { GrammarManifest, SyntacticRole, MorphosyntacticStrategy, LexiconEntry, GrammarAffix } from '../types';
 const GrammarImporterModal = lazy(() => import('./GrammarImporterModal'));
 import { FlexibleGrammar } from '../types/grammar-flexible';
 import GrammarWizard from './GrammarWizard';
-import { displayOfRole, STRATEGY_TYPE_LABELS as TAX_STRATEGY_LABELS } from '../data/taxonomy';
-import { realizeClause, validatePhonology, buildClauseAST } from '../services/grammar';
-import { cloneClauseAST, realizeEditedTree } from '../services/grammar/ast-view';
 import { isAiAvailable } from '../services/geminiService';
+import { buildClauseAST } from '../services/grammar';
 import { validatePostImport } from '../services/grammar/postImportValidator';
 import ImportReport from './ImportReport';
 import GrammarOverview from './GrammarOverview';
@@ -18,10 +16,14 @@ import GrammarMorphologyPanel from './GrammarMorphologyPanel';
 import GrammarPragmaticPanel from './GrammarPragmaticPanel';
 import GrammarRolesPanel from './GrammarRolesPanel';
 import GrammarSyntaxPanel from './GrammarSyntaxPanel';
-import { normalizeCategory, getEntryForm, getDefaultPreviewEntries, isMeaningfulTypology } from '../utils/grammarPreview';
 import GrammarModuleSidebar from './GrammarModuleSidebar';
 import GrammarTabHeader from './GrammarTabHeader';
 import GrammarTabModals from './GrammarTabModals';
+import { buildClauseParticipants, buildClausePreview, buildLexiconAffixes, calculateGrammarProgress, createAffix, createStrategy, createSyntacticRole, DEFAULT_GRAMMAR_MODULE, DEFAULT_SYNTAX_SUB_TAB, isFirstRunManifest, mergeFlexibleGrammar, mergePreviewConfig, withLastUpdated, withLexiconAffixes } from '../utils/grammarTabModel';
+import type { GrammarModule, SyntaxSubTab } from '../utils/grammarTabModel';
+
+// Re-exported for consumers/tests that imported these symbols from the component.
+export type { GrammarModule, SyntaxSubTab } from '../utils/grammarTabModel';
 
 interface GrammarTabProps {
     manifest: GrammarManifest;
@@ -38,27 +40,18 @@ interface GrammarTabProps {
     onOpenAiSettings?: () => void;
 }
 
-type GrammarModule = 'overview' | 'phonology' | 'typology' | 'morphology' | 'syntax' | 'semantics' | 'roles' | 'strategies' | 'pragmatic' | 'notes';
-
-interface ProgressMetric {
-    category: string;
-    completed: number;
-    total: number;
-    items: string[];
-}
-
 // Module-level guard so the first-run wizard auto-opens at most ONCE per session
 // (not localStorage — keeps it simple and resets on reload, exactly as required).
 let wizardAutoOpenedThisSession = false;
 
 const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange, onBack, onOpenAiSettings, }: GrammarTabProps) => {
-    const [internalModule, setInternalModule] = useState<GrammarModule>('syntax');
+    const [internalModule, setInternalModule] = useState<GrammarModule>(DEFAULT_GRAMMAR_MODULE);
     const activeModule = activeModuleProp ?? internalModule;
     const setActiveModule = onModuleChange ?? setInternalModule;
     const [editedManifest, setEditedManifest] = useState<GrammarManifest>(JSON.parse(JSON.stringify(manifest)));
     const [isDirty, setIsDirty] = useState(false);
     const [isImporterOpen, setIsImporterOpen] = useState(false);
-    const [syntaxSubTab, setSyntaxSubTab] = useState<'canvas' | 'ast' | 'preview'>('canvas');
+    const [syntaxSubTab, setSyntaxSubTab] = useState<SyntaxSubTab>(DEFAULT_SYNTAX_SUB_TAB);
     const [aiAvailable, setAiAvailable] = useState(true);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     // Editable clause AST for the "Árbol AST" editor (seeded from the preview).
@@ -85,7 +78,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
 
     // First-run detection: empty manifest (no paradigms, no phonology, default
     // typology) → auto-open the wizard exactly once per session.
-    const isFirstRun = (manifest.paradigms ?? []).length === 0 && !manifest.phonology && !isMeaningfulTypology(manifest.typology);
+    const isFirstRun = isFirstRunManifest(manifest);
     useEffect(() => {
         if (isFirstRun && !wizardAutoOpenedThisSession) {
             wizardAutoOpenedThisSession = true;
@@ -111,13 +104,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     };
 
     const handleSave = () => {
-        onSave({
-            ...editedManifest,
-            meta: {
-                ...editedManifest.meta,
-                lastUpdated: new Date().toISOString()
-            }
-        });
+        onSave(withLastUpdated(editedManifest));
         setIsDirty(false);
     };
 
@@ -127,31 +114,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     };
 
     const handleSaveFlexibleGrammar = (grammar: FlexibleGrammar) => {
-        const importedManifest: GrammarManifest = grammar.structured?.manifest || {
-            ...editedManifest,
-            notes: grammar.rawText ? [grammar.rawText] : editedManifest.notes,
-        };
-        const nextManifest: GrammarManifest = {
-            ...editedManifest,
-            ...importedManifest,
-            meta: {
-                ...editedManifest.meta,
-                ...importedManifest.meta,
-                sourceFormat: 'markdown',
-                lastUpdated: new Date().toISOString(),
-            },
-            typology: {
-                ...editedManifest.typology,
-                ...(importedManifest.typology || {}),
-            },
-            phonology: importedManifest.phonology || editedManifest.phonology,
-            affixInventory: importedManifest.affixInventory || editedManifest.affixInventory,
-            strategies: importedManifest.strategies || editedManifest.strategies,
-            roles: importedManifest.roles || editedManifest.roles,
-            typologicalProfile: importedManifest.typologicalProfile || editedManifest.typologicalProfile,
-            notes: importedManifest.notes?.length ? importedManifest.notes : (grammar.rawText ? [grammar.rawText] : editedManifest.notes),
-        };
-
+        const nextManifest = mergeFlexibleGrammar(editedManifest, grammar);
         setEditedManifest(nextManifest);
         setImportReport(validatePostImport(nextManifest));
         onSave(nextManifest);
@@ -164,44 +127,10 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
         onExportGrammar();
     }, [onExportGrammar]);
 
-    const calculateProgress = useMemo(() => {
-        const metrics: ProgressMetric[] = [
-            {
-                category: 'Fonología',
-                completed: editedManifest.phonology ? 1 : 0,
-                total: 1,
-                items: editedManifest.phonology ? ['Inventario definido'] : ['Inventario definido']
-            },
-            {
-                category: 'Tipología',
-                completed: Object.values(editedManifest.typology).filter(v => v && v !== '').length,
-                total: 4,
-                items: ['Orden de palabras', 'Alineamiento', 'Morfología', 'Dirección del núcleo']
-            },
-            {
-                category: 'Roles Sintácticos',
-                completed: editedManifest.roles.length,
-                total: Math.max(5, editedManifest.roles.length + 2),
-                items: editedManifest.roles.map(r => r.name)
-            },
-            {
-                category: 'Estrategias',
-                completed: editedManifest.strategies.length,
-                total: Math.max(3, editedManifest.strategies.length + 2),
-                items: editedManifest.strategies.map(s => s.name)
-            }
-        ];
-
-        const totalCompleted = metrics.reduce((sum, m) => sum + m.completed, 0);
-        const totalItems = metrics.reduce((sum, m) => sum + m.total, 0);
-        const overallProgress = totalItems > 0 ? Math.round((totalCompleted / totalItems) * 100) : 0;
-
-        return { metrics, overallProgress };
-    }, [editedManifest]);
+    const calculateProgress = useMemo(() => calculateGrammarProgress(editedManifest), [editedManifest]);
 
     const addRole = () => {
-        const newRole: SyntacticRole = { id: `role_${Date.now()}`, name: 'Nuevo Rol' };
-        updateManifest({ roles: [...editedManifest.roles, newRole] });
+        updateManifest({ roles: [...editedManifest.roles, createSyntacticRole()] });
     };
 
     const removeRole = (id: string) => {
@@ -215,13 +144,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     };
 
     const addStrategy = () => {
-        const newStrat: MorphosyntacticStrategy = {
-            id: `strat_${Date.now()}`,
-            name: 'Nueva Estrategia',
-            type: 'position',
-            appliesTo: []
-        };
-        updateManifest({ strategies: [...editedManifest.strategies, newStrat] });
+        updateManifest({ strategies: [...editedManifest.strategies, createStrategy()] });
     };
 
     const removeStrategy = (id: string) => {
@@ -235,67 +158,20 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     };
 
     const updatePreview = (updates: Partial<NonNullable<GrammarManifest['preview']>>) => {
-        updateManifest({ preview: { useLexiconAffixes: false, ...(editedManifest.preview || {}), ...updates } });
+        updateManifest({ preview: mergePreviewConfig(editedManifest.preview, updates) });
     };
 
-    const lexiconAffixes = useMemo<GrammarAffix[]>(() => lexicon
-        .filter(entry => {
-            const category = normalizeCategory(entry.Categoría);
-            return category.includes('afijo') || category.includes('prefijo') || category.includes('sufijo') || category.includes('infijo');
-        })
-        .map(entry => {
-            const category = normalizeCategory(entry.Categoría);
-            const type: GrammarAffix['type'] = category.includes('prefijo') ? 'prefix' : category.includes('infijo') ? 'infix' : 'suffix';
-            return {
-                id: `lexicon_${entry.ID}`,
-                form: entry.Léxema?.[0] || entry.Raíz,
-                type,
-                meaning: entry.Significado?.[0] || entry.Categoría || '',
-                appliesTo: [],
-                source: 'lexicon' as const,
-                enabled: editedManifest.preview?.useLexiconAffixes ?? false,
-            };
-        })
-        .filter(affix => affix.form), [lexicon, editedManifest.preview?.useLexiconAffixes]);
+    const lexiconAffixes = useMemo(() => buildLexiconAffixes(lexicon, editedManifest.preview?.useLexiconAffixes ?? false), [lexicon, editedManifest.preview?.useLexiconAffixes]);
 
-    const effectiveManifest = useMemo<GrammarManifest>(() => ({
-        ...editedManifest,
-        affixInventory: [
-            ...(editedManifest.affixInventory || []),
-            ...(editedManifest.preview?.useLexiconAffixes ? lexiconAffixes : []),
-        ],
-    }), [editedManifest, lexiconAffixes]);
+    const effectiveManifest = useMemo(() => withLexiconAffixes(editedManifest, lexiconAffixes), [editedManifest, lexiconAffixes]);
 
-    const preview = useMemo(() => {
-        const entries = getDefaultPreviewEntries(lexicon, effectiveManifest.preview);
-        const participants = [
-            { role: 'subject', lexeme: entries.subject, features: {} },
-            { role: 'verb', lexeme: entries.verb, features: {} },
-            { role: 'object', lexeme: entries.object, features: {} },
-        ].filter((p) => p.lexeme) as any;
-
-        // Build a real AST from the flat participants (enables future tree features)
-        let ast: any;
-        try {
-            ast = buildClauseAST(participants);
-        } catch {
-            ast = { participants } as any; // fallback to legacy flat form
-        }
-        const result = realizeClause(ast, effectiveManifest);
-        const violations = validatePhonology(result.sentence.replace(/ /g, ''), effectiveManifest.phonology);
-        return { ...result, gloss: (effectiveManifest.typology.wordOrder || 'SVO').toUpperCase(), entries, violations };
-    }, [effectiveManifest, lexicon]);
+    const preview = useMemo(() => buildClausePreview(lexicon, effectiveManifest), [effectiveManifest, lexicon]);
 
     // Seed the editable AST from the preview participants (only when the
     // underlying clause actually changes, so user edits aren't clobbered).
     useEffect(() => {
-        const participants = [
-            { role: 'subject', lexeme: preview.entries.subject, features: {} },
-            { role: 'verb', lexeme: preview.entries.verb, features: {} },
-            { role: 'object', lexeme: preview.entries.object, features: {} },
-        ].filter((p) => p.lexeme) as any;
         try {
-            setEditableAst(buildClauseAST(participants));
+            setEditableAst(buildClauseAST(buildClauseParticipants(preview.entries)));
         } catch {
             setEditableAst(null);
         }
@@ -303,16 +179,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     }, [preview.entries.subject?.ID, preview.entries.verb?.ID, preview.entries.object?.ID]);
 
     const addAffix = () => {
-        const newAffix: GrammarAffix = {
-            id: `affix_${Date.now()}`,
-            form: '-',
-            type: 'suffix',
-            meaning: 'Nuevo afijo',
-            appliesTo: [],
-            source: 'manual',
-            enabled: true,
-        };
-        updateManifest({ affixInventory: [...(editedManifest.affixInventory || []), newAffix] });
+        updateManifest({ affixInventory: [...(editedManifest.affixInventory || []), createAffix()] });
     };
 
     const updateAffix = (id: string, updates: Partial<GrammarAffix>) => {
