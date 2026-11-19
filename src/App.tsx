@@ -74,6 +74,7 @@ import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSI
 import { listLexiconNames, loadLexicon } from './services/sqlStorage';
 import { initPragmaticDb } from './services/grammarDb';
 import { scanForLoxarProjects } from './services/projectDiscovery';
+import { getGrammarMetrics } from './utils/grammarMetrics';
 
 const ModalManager = lazy(() => import('./components/ModalManager'));
 const AiSettingsModal = lazy(() => import('./components/AiSettingsModal'));
@@ -423,29 +424,27 @@ const App = () => {
     totalIncomplete: incompleteEntries.length,
   }), [activeLexicon.length, incompleteEntries]);
 
+  /** Live grammar metrics derived from the canonical manifest shape. */
+  const grammarMetrics = useMemo(() => getGrammarMetrics(activeGrammar), [activeGrammar]);
+
   /**
    * B2: Derive the live PragmaticEngine summary from activeGrammar.
    * typologyLabel comes from morphologyToTypologyProfile (single source of
-   * truth — never hardcoded). rulesCount is computed the same way as the
-   * stats block below. activeClauseType propagates from the saved manifest.
+   * truth — never hardcoded). rulesCount reuses the shared grammar metrics.
+   * activeClauseType propagates from the saved manifest.
    */
   const pragmaticEngine = useMemo(() => {
     if (!activeGrammar?.typology) return undefined;
-    const g = activeGrammar as any;
-    const label = morphologyToTypologyProfile(g.typology.morphology);
-    const rulesCount =
-      (g.morphology?.rules?.length || 0)
-      + (g.syntax?.rules?.length || 0)
-      + (g.phonology?.rules?.length || 0);
+    const label = morphologyToTypologyProfile(activeGrammar.typology.morphology);
     return {
       typologyLabel: label,
-      rulesCount,
-      alignment: g.typology.alignment || 'nominative',
-      wordOrder: g.typology.wordOrder || '',
-      headDirection: g.typology.headDirection || '',
-      activeClauseType: g.pragmaticEngine?.activeClauseType ?? null,
+      rulesCount: grammarMetrics.rules,
+      alignment: activeGrammar.typology.alignment || 'nominative',
+      wordOrder: activeGrammar.typology.wordOrder || '',
+      headDirection: activeGrammar.typology.headDirection || '',
+      activeClauseType: activeGrammar.pragmaticEngine?.activeClauseType ?? null,
     };
-  }, [activeGrammar]);
+  }, [activeGrammar, grammarMetrics]);
 
   const entryBeingEdited = useMemo(() => (editorMode === 'complete' ? entryToComplete : null), [editorMode, entryToComplete]);
 
@@ -706,20 +705,23 @@ const App = () => {
                       grammar={activeGrammar}
                       stats={{
                         grammar: activeGrammar ? {
-                          rules: (activeGrammar as any)?.morphology?.rules?.length + (activeGrammar as any)?.syntax?.rules?.length + (activeGrammar as any)?.phonology?.rules?.length,
-                          categories: (activeGrammar as any)?.categories?.length,
-                          strategies: (activeGrammar as any)?.strategies?.length,
-                          roles: (activeGrammar as any)?.syntax?.roles?.length,
+                          rules: grammarMetrics.rules,
+                          categories: grammarMetrics.categories,
+                          strategies: grammarMetrics.strategies,
+                          roles: grammarMetrics.roles,
                         } : undefined,
                         phonology: activeGrammar ? {
-                          sounds: (activeGrammar as any)?.phonology?.consonants?.length + (activeGrammar as any)?.phonology?.vowels?.length,
-                          rules: (activeGrammar as any)?.phonology?.rules?.length,
+                          sounds: grammarMetrics.phonologySounds,
+                          rules: grammarMetrics.phonologyRules,
                         } : undefined,
                         syntax: activeGrammar ? {
-                          rules: (activeGrammar as any)?.syntax?.rules?.length,
-                          trees: 0,
+                          rules: grammarMetrics.rules,
+                          trees: grammarMetrics.syntaxTrees,
                         } : undefined,
-                        lexicon: { entries: activeLexicon.length },
+                        lexicon: {
+                          entries: activeLexicon.length,
+                          categories: new Set(activeLexicon.map(e => e.Categoría).filter(Boolean)).size,
+                        },
                         neography: undefined,
                         semantics: { fields: 0, relations: 0 },
                         translator: { translations: 0 },

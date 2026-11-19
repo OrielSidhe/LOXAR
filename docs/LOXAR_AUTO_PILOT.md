@@ -59,6 +59,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Canvas de sintaxis (B1, 2026-11-18): el subtab `canvas` del módulo de sintaxis ahora monta
   `SyntaxCanvas` (antes declarado y sin render, con el componente huérfano). Persiste en el
   manifiesto vía `onUpdateManifest`. Huérfanos: 20.
+- Métricas vivas (2026-11-18): corregido el bug de `NaN` en el dashboard. `getGrammarMetrics`
+  (`src/utils/grammarMetrics.ts`) deriva rules/categories/strategies/roles/sonidos/árboles del
+  manifiesto canónico; `App.tsx` y el resumen pragmático lo consumen. Tests 378/378.
 
 ---
 
@@ -142,6 +145,13 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — métricas vivas del dashboard sin `NaN` (2026-11-18).** El `stats` de
+`LanguageHomeCanvas` y el `rulesCount` pragmático leían campos inexistentes del manifiesto
+(`morphology.rules`, `syntax.rules`, `categories`, `phonology.consonants/rules`) que Zod descarta,
+produciendo `NaN` visible y un contador siempre en 0. Nuevo `src/utils/grammarMetrics.ts` como fuente
+única; `App.tsx` lo consume y se eliminaron los casts `as any` del bloque. Validaciones: typecheck 0,
+lint OK, build OK, vitest 378/378 (46 archivos).
+
 **[x] CLN — canvas de sintaxis cableado (B1, 2026-11-18).** `GrammarSyntaxPanel` declaraba el
 subtab `canvas` (y era el por defecto) pero no renderizaba nada: no había botón y `SyntaxCanvas.tsx`
 estaba huérfano. Ahora el subtab monta `SyntaxCanvas` con `manifest.syntaxCanvas` (fallback vacío),

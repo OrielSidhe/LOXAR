@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-19T00:15:00.000Z",
+  "lastUpdated": "2026-11-19T01:15:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN B1: cablear el canvas de sintaxis (SyntaxCanvas) en el módulo de sintaxis y avanzar hacia beta.",
+    "lastPrompt": "CLN: corregir las métricas vivas del dashboard (bug de NaN) y avanzar hacia beta.",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "B1 (2026-11-18): cableado el canvas de sintaxis. `GrammarSyntaxPanel` declaraba el subtab `canvas` (y era el por defecto) pero no renderizaba nada: no había botón para él y `SyntaxCanvas.tsx` llevaba meses huérfano. Ahora el subtab `canvas` monta `SyntaxCanvas` con `effectiveManifest.syntaxCanvas` (fallback a canvas vacío), `onChange` persiste en el manifiesto vía `onUpdateManifest`, y recibe `conlangName`/`aiAvailable` desde `GrammarTab`. `SyntaxCanvas` pasa de 21 a 20 huérfanos. Validaciones: typecheck 0, lint OK, build OK, vitest 374/374 (45 archivos), audit:orphans 20. Pendiente por autorización: (1) git push de 7 commits locales + CI con número de run (gauntlet v3.12 exige push+CI; el skill loxar-progress-supervisor lo prohíbe); (2) FASE L de CLN (borrado de .zcode/, .claude/ y _ARTIFACTS_NO_GIT/); (3) destino de los 20 huérfanos; (4) `showHomePanel` sigue sin uso; (5) demo runtime con `npm run tauri dev` para validar el canvas visualmente."
+  "sessionSummary": "Métricas vivas (2026-11-18): corregido el bug de NaN del dashboard. El `stats` de `LanguageHomeCanvas` y el `rulesCount` del resumen pragmático leían campos inexistentes en `GrammarManifest` (`morphology.rules`, `syntax.rules`, `categories`, `phonology.consonants/rules`) que `normalizeGrammarManifest` (Zod) descarta, por lo que el canvas mostraba `NaN` en Reglas/Sonidos y el contador de reglas pragmático siempre daba 0. Nuevo `src/utils/grammarMetrics.ts` (`getGrammarMetrics`) como fuente única: rules = mutationRules + strategies + affixInventory, categories = paradigms, roles, sonidos = `phonology.inventory.consonants+vowels`, reglas fonológicas = `syllableStructures`, árboles = `clauseTree`. `App.tsx` consume el memo y se eliminaron los casts `as any`; `lexicon.categories` ahora reporta categorías distintas reales. Tests nuevos: `src/utils/__tests__/grammarMetrics.test.ts` (4). Validaciones: typecheck 0, lint OK, build OK, vitest 378/378 (46 archivos), audit:orphans 20. Pendiente por autorización: (1) git push de los commits locales + CI con número de run; (2) FASE L de CLN (borrado de .zcode/, .claude/ y _ARTIFACTS_NO_GIT/); (3) destino de los 20 huérfanos; (4) demo runtime con `npm run tauri dev`."
 }

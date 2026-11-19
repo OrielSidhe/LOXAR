@@ -45,6 +45,29 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 
 ---
 
+## [2026-11-18] Checkpoint: métricas vivas del dashboard derivadas del manifiesto canónico (bug NaN)
+**Rama:** `master`. **Motivo:** el bloque `stats` de `LanguageHomeCanvas` leía campos que no existen en
+`GrammarManifest` (`morphology.rules`, `syntax.rules`, `categories`, `phonology.consonants/rules`) y el
+`rulesCount` del resumen pragmático hacía lo mismo. `normalizeGrammarManifest` (Zod `z.object`) descarta
+esas claves, así que el dashboard renderizaba `NaN` en "Reglas"/"Sonidos" y el contador de reglas del motor
+pragmático siempre daba 0.
+**Cambios:**
+- `src/utils/grammarMetrics.ts` (NUEVO): `getGrammarMetrics(manifest)` como única fuente de verdad de las
+  métricas (rules = mutationRules + strategies + affixInventory; categories = paradigms; roles; sonidos =
+  `phonology.inventory.consonants+vowels`; reglas fonológicas = `syllableStructures`; árboles = `clauseTree`).
+- `src/App.tsx`: nuevo `grammarMetrics` memo; `pragmaticEngine.rulesCount` lo reuse; el `stats` del dashboard
+  pasa de 7 casts `as any` a los valores tipados; `lexicon.categories` ahora reporta las categorías distintas
+  reales. Se eliminó el `as any` del bloque pragmático.
+- `src/utils/__tests__/grammarMetrics.test.ts` (NUEVO): 4 tests (vacío sin NaN, derivación canónica, campos
+  legacy ignorados sin NaN, manifest nulo).
+- `README.md`: contador de tests 374 → 378 (46 archivos).
+**Verificación:** `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+`npx vitest run` 378/378 (46 archivos).
+**Próximo bloque ejecutable:** decidir destino de los 20 huérfanos (requiere producto) o continuar P1
+(descomposición de `App.tsx` / `SyntaxFlowline` / `GraphCanvas`). Pendiente por autorización: push + CI.
+
+---
+
 ## [2026-11-13] Checkpoint: CLN higiene de release (LICENSE + contador de tests README)
 **Rama:** `master`. **Motivo:** cerrar dos pendientes documentados en `GAUNTLET_CLN.md` que estaban
 en la sección "Estado pendiente conocido" y no requerían código.
