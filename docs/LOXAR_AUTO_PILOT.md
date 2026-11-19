@@ -91,6 +91,12 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   (484 → 459 líneas) y re-exporta los símbolos públicos. Tests nuevos:
   `syntaxCanvasModel.test.ts` (18). Validaciones: typecheck 0, lint OK, build OK,
   vitest 430/430 (49 archivos), audit:orphans 20.
+- Corrección de preview (2026-11-19): `getDefaultPreviewEntries` (`src/utils/grammarPreview.ts`)
+  excluía del objeto `byId(preview?.objectEntryId)` — siempre `undefined` cuando el preview no fija
+  entradas — en vez del sujeto ya resuelto, así que el objeto de la cláusula de preview repetía al
+  sujeto. Ahora `subject` y `verb` se resuelven una sola vez, el objeto excluye ambos y cae a la
+  primera entrada libre. Tests nuevos: `grammarPreview.test.ts` (15). Validaciones: typecheck 0,
+  lint OK, build OK, vitest 445/445 (50 archivos), audit:orphans 20.
 
 ---
 
@@ -174,6 +180,22 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — el objeto del preview ya no repite al sujeto (2026-11-19).** `getDefaultPreviewEntries`
+(`src/utils/grammarPreview.ts`) resolvía el objeto con `entry.ID !== byId(preview?.objectEntryId)?.ID`;
+como `preview.objectEntryId` está vacío en el flujo por defecto, `byId(...)` devolvía `undefined` y
+la comparación era siempre `true`: el objeto de la cláusula quedaba igual al sujeto (el fallback
+`lexicon[2]` confirmaba la intención). Ahora el sujeto y el verbo se resuelven una sola vez y el
+objeto excluye ambas entradas, con fallback a la primera entrada libre. Tests nuevos:
+`src/utils/__tests__/grammarPreview.test.ts` (15). Validaciones: typecheck 0, lint OK, build OK,
+vitest 445/445 (50 archivos), audit:orphans 20.
+
+**[ ] CLN — el schema Zod de `preview` descarta las entradas fijadas.** `GrammarManifestSchema`
+(`src/services/normalize.ts:92`) define `preview` como `z.object({ useLexiconAffixes })` y Zod
+descarta las claves desconocidas: `subjectEntryId`/`verbEntryId`/`objectEntryId`, que escribe
+`GrammarSyntaxPanel.tsx:167` vía `onUpdatePreview`, se pierden al recargar el lexicón
+(`useLexicon.ts:120` normaliza el manifiesto). Fix: añadir los tres campos opcionales al schema +
+test de normalización.
 
 **[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos

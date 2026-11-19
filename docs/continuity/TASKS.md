@@ -2932,3 +2932,29 @@ audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador; se mantuv
 **Próximo bloque ejecutable:** `EntryEditor` (494) o corrección del objeto de preview
 (`src/utils/grammarPreview.ts:30-34`). Pendiente por autorización: `git push` (20 commits locales)
 + CI con número de run, FASE L de CLN.
+
+---
+
+## [2026-11-19] Checkpoint: CLN — el objeto del preview deja de repetir al sujeto
+
+**Rama:** `master`. **Motivo:** `getDefaultPreviewEntries` (`src/utils/grammarPreview.ts`) resolvía
+el objeto con `entry.ID !== byId(preview?.objectEntryId)?.ID`. En el flujo por defecto el preview no
+fija entradas, `byId(undefined)` devuelve `undefined` y la comparación era siempre `true`: el objeto
+de la cláusula de preview repetía al sujeto (el fallback `lexicon[2]` confirmaba la intención).
+
+**Cambios:**
+- `src/utils/grammarPreview.ts`: `subject` y `verb` se resuelven una sola vez y el objeto excluye
+  ambas entradas ya usadas (`isFreeSlot`), con fallback a la primera entrada libre antes que a
+  `lexicon[0]`. Se mantiene la precedencia: entrada fijada por `preview.objectEntryId` > sustantivo
+  libre > primera entrada libre.
+- Tests nuevos: `src/utils/__tests__/grammarPreview.test.ts` (15): resolución por categoría,
+  pronombre como sujeto, objeto distinto de sujeto/verbo, entradas fijadas por preview, fallback sin
+  sustantivos, léxico vacío, `buildPreviewSentence` (SVO/VSO/orden libre/afijos habilitados y
+  deshabilitados), labels y `isMeaningfulTypology`.
+- `README.md`: contador de tests 378/378 (46 archivos) → 445/445 (50 archivos).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 445/445 (50 archivos) · audit:orphans 20.
+
+**Próximo bloque ejecutable:** `EntryEditor` (494) o el schema Zod de `preview` que descarta
+`subjectEntryId`/`verbEntryId`/`objectEntryId`. Pendiente por autorización: `git push` + CI con
+número de run, FASE L de CLN.
