@@ -33,6 +33,9 @@ class AudioService {
 
     private playTone(freq: number, type: OscillatorType, startTime: number, duration: number, vol: number = 0.1) {
         if (!this.ctx || !this.masterGain) return;
+        // A suspended AudioContext reports currentTime === 0, so an absolute
+        // schedule must never go below zero (Web Audio throws RangeError otherwise).
+        startTime = Math.max(0, startTime);
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 
@@ -67,6 +70,7 @@ class AudioService {
 
     private playEtherealTone(freq: number, startTime: number, duration: number = 4.0, vol: number = 0.1) {
         if (!this.ctx || !this.masterGain) return;
+        startTime = Math.max(0, startTime);
 
         const createOsc = (f: number, v: number, detune: number = 0) => {
             const osc = this.ctx!.createOscillator();
@@ -98,6 +102,7 @@ class AudioService {
 
     private playVocalTone(freq: number, startTime: number, duration: number, vol: number, vowel: 'O' | 'A') {
         if (!this.ctx || !this.masterGain) return;
+        startTime = Math.max(0, startTime);
 
         // Oscilador principal (onda triangular para riqueza y calidez)
         const osc = this.ctx.createOscillator();
@@ -145,7 +150,8 @@ class AudioService {
         const gainNode = this.ctx.createGain();
         gainNode.gain.setValueAtTime(0, startTime);
         gainNode.gain.linearRampToValueAtTime(vol, startTime + 0.35); // Ataque suave
-        gainNode.gain.setValueAtTime(vol, startTime + duration - 0.55);
+        // Con duration < 0.55 el punto de sostenimiento caería antes del inicio.
+        gainNode.gain.setValueAtTime(vol, Math.max(startTime, startTime + duration - 0.55));
         gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + duration); // Caída natural
 
         // Conectar osciladores
