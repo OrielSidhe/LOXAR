@@ -3,16 +3,9 @@ import PlusIcon from './icons/PlusIcon';
 import UploadIcon from './icons/UploadIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import TrashIcon from './icons/TrashIcon';
+import type { Collection } from '../utils/collectionsManagerModel';
 
-export interface Collection {
-    id: string;
-    name: string;
-    entryIds: string[];
-    columns?: { id: string; name: string; categoryLink: string }[];
-    drafts?: string[];
-    description?: string;
-    customCells?: Record<string, Record<string, string>>;
-}
+export type { Collection } from '../utils/collectionsManagerModel';
 
 export interface CollectionsSidebarProps {
     collections: Collection[];

@@ -13,26 +13,9 @@ import SaveIcon from './icons/SaveIcon';
 import CancelIcon from './icons/CancelIcon';
 import ParadigmCell from './ParadigmCell';
 import CollectionsDraftsReview from './CollectionsDraftsReview';
+import type { Collection, CollectionColumn } from '../utils/collectionsManagerModel';
 
-export interface CollectionColumn {
-    id: string;
-    name: string;
-    categoryLink: string;
-}
-
-export interface Collection {
-    id: string;
-    name: string;
-    entryIds: string[];
-    columns?: CollectionColumn[];
-    drafts?: string[];
-    description?: string;
-    customCells?: {
-        [rowEntryId: string]: {
-            [columnCategory: string]: string;
-        };
-    };
-}
+export type { Collection, CollectionColumn } from '../utils/collectionsManagerModel';
 
 export interface CollectionsPanelProps {
     activeCollection: Collection | null | undefined;

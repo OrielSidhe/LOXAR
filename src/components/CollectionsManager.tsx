@@ -1,6 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { LexiconEntry, NewLexiconEntry, InflectionProfile } from '../types';
-import { generateInflections, filterParadigmsForFunction } from '../utils/inflectionUtils';
 import FilterIcon from './icons/FilterIcon';
 import PlusIcon from './icons/PlusIcon';
 import TrashIcon from './icons/TrashIcon';
@@ -18,6 +17,25 @@ import * as XLSX from 'xlsx';
 import ParadigmCell from './ParadigmCell';
 import CollectionsSidebar from './CollectionsSidebar';
 import CollectionsPanel from './CollectionsPanel';
+import {
+    ACTIVE_LEXICON_STORAGE_KEY,
+    COLLECTION_SHEET_NAME,
+    Collection,
+    addColumnToCollection,
+    addDraftToCollection,
+    buildCollectionExportData,
+    buildExcelExportRows,
+    buildExcelImportPlan,
+    collectionFromTemplate,
+    createCollection,
+    normalizeText,
+    readStoredCollections,
+    removeDraftFromCollection,
+    renameColumnInCollection,
+    setCollectionCell,
+    toggleEntryInCollection,
+    writeStoredCollections,
+} from '../utils/collectionsManagerModel';
 
 interface CollectionsManagerProps {
     lexicon: LexiconEntry[];
@@ -29,28 +47,6 @@ interface CollectionsManagerProps {
     customCategories: string[];
     onStartTour: () => void;
 }
-
-interface CollectionColumn {
-    id: string;
-    name: string;
-    categoryLink: string;
-}
-
-interface Collection {
-    id: string;
-    name: string;
-    entryIds: string[];
-    columns?: CollectionColumn[];
-    drafts?: string[];
-    description?: string;
-    customCells?: {
-        [rowEntryId: string]: {
-            [columnCategory: string]: string; // Lexema local de la colección
-        }
-    };
-}
-
-const normalize = (text: string) => text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries, customCategories, onStartTour, onDeleteEntry, onUpdateEntry }: CollectionsManagerProps) => {
     const [collections, setCollections] = useState<Collection[]>([]);
@@ -66,37 +62,17 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
     const [newColumnName, setNewColumnName] = useState('');
 
     useEffect(() => {
-        const activeLexiconName = localStorage.getItem('conlang_lexicon_manager_active');
-        if (activeLexiconName) {
-            const stored = localStorage.getItem(`conlang_collections_${activeLexiconName}`);
-            if (stored) {
-                try {
-                    setCollections(JSON.parse(stored));
-                } catch (e) {
-                    console.error("Failed to parse collections", e);
-                }
-            } else {
-                setCollections([]);
-            }
-        }
+        setCollections(readStoredCollections(localStorage.getItem(ACTIVE_LEXICON_STORAGE_KEY)));
     }, []);
 
     const saveCollections = (newCollections: Collection[]) => {
         setCollections(newCollections);
-        const activeLexiconName = localStorage.getItem('conlang_lexicon_manager_active');
-        if (activeLexiconName) {
-            localStorage.setItem(`conlang_collections_${activeLexiconName}`, JSON.stringify(newCollections));
-        }
+        writeStoredCollections(localStorage.getItem(ACTIVE_LEXICON_STORAGE_KEY), newCollections);
     };
 
     const handleCreateCollection = () => {
         if (!newCollectionName.trim()) return;
-        const newCollection: Collection = {
-            id: Date.now().toString(),
-            name: newCollectionName.trim(),
-            entryIds: [],
-            drafts: []
-        };
+        const newCollection = createCollection(newCollectionName);
         saveCollections([...collections, newCollection]);
         setActiveCollectionId(newCollection.id);
         setNewCollectionName('');
@@ -113,80 +89,49 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
 
     const handleToggleEntryInCollection = (entryId: string) => {
         if (!activeCollectionId) return;
-        const updatedCollections = collections.map(c => {
-            if (c.id === activeCollectionId) {
-                const exists = c.entryIds.includes(entryId);
-                return {
-                    ...c,
-                    entryIds: exists
-                        ? c.entryIds.filter(id => id !== entryId)
-                        : [...c.entryIds, entryId]
-                };
-            }
-            return c;
-        });
-        saveCollections(updatedCollections);
+        saveCollections(
+            collections.map(c =>
+                c.id === activeCollectionId ? toggleEntryInCollection(c, entryId) : c,
+            ),
+        );
     };
 
     const handleUpdateCell = (entryId: string, colCategory: string, val: string) => {
         if (!activeCollectionId) return;
-        const updatedCollections = collections.map(c => {
-            if (c.id === activeCollectionId) {
-                const cells = c.customCells || {};
-                const entryCells = cells[entryId] || {};
-                return {
-                    ...c,
-                    customCells: {
-                        ...cells,
-                        [entryId]: {
-                            ...entryCells,
-                            [colCategory]: val
-                        }
-                    }
-                };
-            }
-            return c;
-        });
-        saveCollections(updatedCollections);
+        saveCollections(
+            collections.map(c =>
+                c.id === activeCollectionId
+                    ? setCollectionCell(c, entryId, colCategory, val)
+                    : c,
+            ),
+        );
     };
 
     const handleQuickAddDraft = () => {
         if (!activeCollectionId || !searchTerm.trim()) return;
         const term = searchTerm.trim();
-        const updatedCollections = collections.map(c => {
-            if (c.id === activeCollectionId) {
-                const currentDrafts = c.drafts || [];
-                if (currentDrafts.includes(term)) return c;
-                return { ...c, drafts: [...currentDrafts, term] };
-            }
-            return c;
-        });
-        saveCollections(updatedCollections);
+        saveCollections(
+            collections.map(c =>
+                c.id === activeCollectionId ? addDraftToCollection(c, term) : c,
+            ),
+        );
         setSearchTerm('');
     };
 
     const handleRemoveDraft = (draft: string) => {
         if (!activeCollectionId) return;
-        const updatedCollections = collections.map(c => {
-            if (c.id === activeCollectionId) {
-                return { ...c, drafts: (c.drafts || []).filter(d => d !== draft) };
-            }
-            return c;
-        });
-        saveCollections(updatedCollections);
+        saveCollections(
+            collections.map(c =>
+                c.id === activeCollectionId ? removeDraftFromCollection(c, draft) : c,
+            ),
+        );
     };
 
     const handleExportCollection = (collectionId: string) => {
         const collection = collections.find(c => c.id === collectionId);
         if (!collection) return;
-        
-        const exportData = {
-            name: collection.name,
-            description: collection.description,
-            columns: collection.columns,
-            entries: collection.entryIds.map(id => lexicon.find(e => e.ID === id)).filter(Boolean)
-        };
-        
+
+        const exportData = buildCollectionExportData(collection, lexicon);
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -199,19 +144,17 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
     const handleImportCollection = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const data = JSON.parse(event.target?.result as string);
-                const newCollection: Collection = {
-                    id: Date.now().toString(),
-                    name: data.name || 'Importada',
+                const data = JSON.parse(event.target?.result as string) as Partial<
+                    Pick<Collection, 'name' | 'description' | 'columns'>
+                >;
+                const newCollection = createCollection(data.name || 'Importada', {
                     description: data.description,
                     columns: data.columns,
-                    entryIds: [],
-                    drafts: []
-                };
+                });
                 saveCollections([...collections, newCollection]);
                 setActiveCollectionId(newCollection.id);
             } catch (error) {
@@ -225,56 +168,11 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
     const handleExportCollectionExcel = (collectionId: string) => {
         const collection = collections.find(c => c.id === collectionId);
         if (!collection) return;
-        
-        const cols = collection.columns || [];
-        const entries = collection.entryIds.map(id => lexicon.find(e => e.ID === id)).filter(Boolean) as LexiconEntry[];
 
-        // Crear las filas para la hoja
-        const rows = entries.map(entry => {
-            const rowData: { [key: string]: string } = {
-                'ID': entry.ID,
-                'Palabra Base': entry.Léxema.join(', '),
-                'Categoría Base': entry.Categoría,
-                'Significado': entry.Significado.join(', '),
-            };
-
-            cols.forEach(col => {
-                // Encontrar si hay un valor en el léxico
-                const targetMeaning = entry.Significado[0]?.toLowerCase().trim();
-                const match = targetMeaning ? lexicon.find(e =>
-                    e.Categoría.toLowerCase() === col.categoryLink.toLowerCase() &&
-                    e.Significado.some(s => s.toLowerCase().trim() === targetMeaning)
-                ) : null;
-
-                const localVal = collection.customCells?.[entry.ID]?.[col.categoryLink] || '';
-                
-                let val = '';
-                if (match) {
-                    val = match.Léxema.join(', ');
-                } else if (localVal) {
-                    val = localVal;
-                } else if (inflection) {
-                    // Sugerencia
-                    const relevantParadigms = filterParadigmsForFunction(inflection.paradigms, entry.Categoría);
-                    for (const p of relevantParadigms) {
-                        const forms = generateInflections(entry, p, inflection);
-                        const found = forms.find(f => f.name.toLowerCase() === col.categoryLink.toLowerCase());
-                        if (found) {
-                            val = found.result;
-                            break;
-                        }
-                    }
-                }
-                
-                rowData[col.name] = val;
-            });
-
-            return rowData;
-        });
-
+        const rows = buildExcelExportRows(collection, lexicon, inflection);
         const worksheet = XLSX.utils.json_to_sheet(rows);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Colección");
+        XLSX.utils.book_append_sheet(workbook, worksheet, COLLECTION_SHEET_NAME);
         XLSX.writeFile(workbook, `coleccion_${collection.name.replace(/\s+/g, '_')}.xlsx`);
     };
 
@@ -289,153 +187,34 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
                 const workbook = XLSX.read(data, { type: 'binary' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
-                
-                const jsonData = XLSX.utils.sheet_to_json<any>(worksheet);
-                if (jsonData.length === 0) {
+
+                const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet);
+                const plan = buildExcelImportPlan(jsonData, lexicon, file.name);
+                if (!plan) {
                     alert('El archivo Excel está vacío.');
                     return;
                 }
 
-                const firstRow = jsonData[0];
-                const allKeys = Object.keys(firstRow);
-                const systemKeys = ['ID', 'Palabra Base', 'Categoría Base', 'Significado'];
-                const customColNames = allKeys.filter(k => !systemKeys.includes(k));
-
-                // Crear columnas de la colección
-                const newColumns: CollectionColumn[] = customColNames.map(name => ({
-                    id: Date.now().toString() + '_' + Math.random().toString(36).substr(2, 5),
-                    name: name,
-                    categoryLink: name
-                }));
-
-                const incomingEntries: NewLexiconEntry[] = [];
-                
-                // Mapeo temporal para asociar filas del excel con entradas
-                const excelRowsToProcess: {
-                    row: any;
-                    searchQuery?: { word: string; meaning: string };
-                    isNew: boolean;
-                    tempIndex?: number;
-                    existingEntry?: LexiconEntry;
-                }[] = [];
-
-                jsonData.forEach((row: any) => {
-                    let entry: LexiconEntry | undefined;
-
-                    if (row['ID']) {
-                        entry = lexicon.find(e => e.ID === row['ID'].toString());
-                    }
-
-                    if (!entry && row['Palabra Base']) {
-                        const targetWord = row['Palabra Base'].toString().trim().toLowerCase();
-                        const targetMeaning = row['Significado'] ? row['Significado'].toString().trim().toLowerCase() : '';
-                        
-                        entry = lexicon.find(e => 
-                            e.Léxema.some(l => l.trim().toLowerCase() === targetWord) &&
-                            (targetMeaning ? e.Significado.some(s => s.trim().toLowerCase() === targetMeaning) : true)
-                        );
-                    }
-
-                    if (entry) {
-                        excelRowsToProcess.push({
-                            row,
-                            isNew: false,
-                            existingEntry: entry
-                        });
-                    } else if (row['Palabra Base']) {
-                        const newEntry: NewLexiconEntry = {
-                            Raíz: '',
-                            Léxema: row['Palabra Base'].toString().split(',').map((l: string) => l.trim()),
-                            Categoría: row['Categoría Base'] || 'desconocida',
-                            Significado: row['Significado'] ? row['Significado'].toString().split(',').map((s: string) => s.trim()) : ['Pendiente'],
-                            extraData: { sourceCollection: 'Importación Excel' }
-                        };
-                        
-                        const tempIndex = incomingEntries.length;
-                        incomingEntries.push(newEntry);
-
-                        excelRowsToProcess.push({
-                            row,
-                            isNew: true,
-                            tempIndex,
-                            searchQuery: {
-                                word: newEntry.Léxema[0]?.trim().toLowerCase() || '',
-                                meaning: newEntry.Significado[0]?.trim().toLowerCase() || ''
-                            }
-                        });
-                    }
-                });
-
-                // Simular resultado de fusionar e indexar el léxico
-                const combinedList = [...lexicon, ...incomingEntries];
-                const sortedCombined = [...combinedList].sort((a, b) => (a.Significado[0] || '').localeCompare(b.Significado[0] || ''));
-                const reindexedCombined = sortedCombined.map((entry, index) => ({ ...entry, ID: (index + 1).toString() }));
-
-                const newEntryIds: string[] = [];
-                const customCells: { [rowEntryId: string]: { [columnCategory: string]: string } } = {};
-
-                excelRowsToProcess.forEach(item => {
-                    let finalEntry: any;
-                    
-                    if (!item.isNew && item.existingEntry) {
-                        finalEntry = reindexedCombined.find(e => e.ID === item.existingEntry!.ID || 
-                            (e.Léxema.some(l => item.existingEntry!.Léxema.includes(l)) && 
-                             e.Significado.some(s => item.existingEntry!.Significado.includes(s)))
-                        );
-                    } else if (item.isNew && item.searchQuery) {
-                        finalEntry = reindexedCombined.find(e => 
-                            e.Léxema.some(l => l.trim().toLowerCase() === item.searchQuery!.word) &&
-                            e.Significado.some(s => s.trim().toLowerCase() === item.searchQuery!.meaning)
-                        );
-                    }
-
-                    if (finalEntry) {
-                        const finalId = finalEntry.ID;
-                        newEntryIds.push(finalId);
-
-                        customColNames.forEach(colName => {
-                            const val = item.row[colName];
-                            if (val !== undefined && val !== null && val.toString().trim() !== '') {
-                                const targetMeaning = finalEntry.Significado[0]?.toLowerCase().trim();
-                                const hasLexiconMatch = targetMeaning ? lexicon.some(e =>
-                                    e.Categoría.toLowerCase() === colName.toLowerCase() &&
-                                    e.Significado.some(s => s.toLowerCase().trim() === targetMeaning) &&
-                                    e.Léxema.some(l => l.trim().toLowerCase() === val.toString().trim().toLowerCase())
-                                ) : false;
-
-                                if (!hasLexiconMatch) {
-                                    if (!customCells[finalId]) {
-                                        customCells[finalId] = {};
-                                    }
-                                    customCells[finalId][colName] = val.toString().trim();
-                                }
-                            }
-                        });
-                    }
-                });
-
-                if (incomingEntries.length > 0) {
+                if (plan.incomingEntries.length > 0) {
                     if (onAddBatchEntries) {
-                        onAddBatchEntries(incomingEntries);
+                        onAddBatchEntries(plan.incomingEntries);
                     } else {
-                        incomingEntries.forEach(entry => onAddEntry(entry));
+                        plan.incomingEntries.forEach(entry => onAddEntry(entry));
                     }
                 }
 
-                const newCollectionName = file.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
                 const newCollection: Collection = {
                     id: Date.now().toString(),
-                    name: newCollectionName,
+                    name: plan.name,
                     description: `Importada desde Excel el ${new Date().toLocaleDateString()}`,
-                    columns: newColumns,
-                    entryIds: newEntryIds,
+                    columns: plan.columns,
+                    entryIds: plan.entryIds,
                     drafts: [],
-                    customCells: customCells
+                    customCells: plan.customCells,
                 };
 
                 saveCollections([...collections, newCollection]);
                 setActiveCollectionId(newCollection.id);
-
             } catch (error) {
                 console.error("Error al importar Excel", error);
                 alert('Error al importar el archivo Excel. Verifica el formato.');
@@ -446,49 +225,8 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
     };
 
     const handleCreateTemplate = (templateType: string) => {
-        const templates: { [key: string]: Partial<Collection> } = {
-            pronombres: {
-                name: 'Pronombres',
-                description: 'Colección de pronombres personales, demostrativos, etc.',
-                columns: [
-                    { id: '1sg', name: '1ra Sing', categoryLink: 'pronombre' },
-                    { id: '2sg', name: '2da Sing', categoryLink: 'pronombre' },
-                    { id: '3sg', name: '3ra Sing', categoryLink: 'pronombre' },
-                    { id: '1pl', name: '1ra Plur', categoryLink: 'pronombre' },
-                    { id: '2pl', name: '2da Plur', categoryLink: 'pronombre' },
-                    { id: '3pl', name: '3ra Plur', categoryLink: 'pronombre' }
-                ]
-            },
-            preposiciones: {
-                name: 'Preposiciones',
-                description: 'Colección de preposiciones comunes',
-                columns: []
-            },
-            numeros: {
-                name: 'Números',
-                description: 'Colección de numerales cardinales',
-                columns: [
-                    { id: '1', name: '1', categoryLink: 'sustantivo' },
-                    { id: '2', name: '2', categoryLink: 'sustantivo' },
-                    { id: '3', name: '3', categoryLink: 'sustantivo' },
-                    { id: '4', name: '4', categoryLink: 'sustantivo' },
-                    { id: '5', name: '5', categoryLink: 'sustantivo' },
-                    { id: '10', name: '10', categoryLink: 'sustantivo' }
-                ]
-            }
-        };
-
-        const template = templates[templateType];
-        if (!template) return;
-
-        const newCollection: Collection = {
-            id: Date.now().toString(),
-            name: template.name || 'Nueva Colección',
-            description: template.description,
-            columns: template.columns || [],
-            entryIds: [],
-            drafts: []
-        };
+        const newCollection = collectionFromTemplate(templateType);
+        if (!newCollection) return;
         saveCollections([...collections, newCollection]);
         setActiveCollectionId(newCollection.id);
     };
@@ -528,13 +266,7 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
 
     const handleAddColumn = () => {
         if (!activeCollection || !newColumnName.trim()) return;
-        const newCol: CollectionColumn = {
-            id: Date.now().toString(),
-            name: newColumnName.trim(),
-            categoryLink: newColumnName.trim()
-        };
-        const updatedCols = [...(activeCollection.columns || []), newCol];
-        const updatedColl = { ...activeCollection, columns: updatedCols };
+        const updatedColl = addColumnToCollection(activeCollection, newColumnName);
         saveCollections(collections.map(c => c.id === activeCollection.id ? updatedColl : c));
         setNewColumnName('');
         setIsAddingColumn(false);
@@ -542,8 +274,7 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
 
     const handleRenameColumn = (colId: string, newName: string) => {
         if (!activeCollection) return;
-        const updatedCols = activeCollection.columns?.map(c => c.id === colId ? { ...c, name: newName, categoryLink: newName } : c);
-        const updatedColl = { ...activeCollection, columns: updatedCols };
+        const updatedColl = renameColumnInCollection(activeCollection, colId, newName);
         saveCollections(collections.map(c => c.id === activeCollection.id ? updatedColl : c));
     }
 
@@ -558,11 +289,11 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
 
     const searchResults = useMemo(() => {
         if (!searchTerm.trim()) return lexicon.slice(0, 50);
-        const term = normalize(searchTerm);
+        const term = normalizeText(searchTerm);
         return lexicon.filter(e =>
-            normalize(e.Raíz || '').includes(term) ||
-            e.Léxema.some(l => normalize(l).includes(term)) ||
-            e.Significado.some(s => normalize(s).includes(term))
+            normalizeText(e.Raíz || '').includes(term) ||
+            e.Léxema.some(l => normalizeText(l).includes(term)) ||
+            e.Significado.some(s => normalizeText(s).includes(term))
         ).slice(0, 50);
     }, [lexicon, searchTerm]);
 
@@ -610,11 +341,11 @@ const CollectionsManager = ({ lexicon, inflection, onAddEntry, onAddBatchEntries
                 onConfirmDrafts={handleConfirmDrafts}
                 onAddColumn={handleAddColumn}
                 onRenameColumn={handleRenameColumn}
-                onSetIsSelectingMode={(value) => setIsSelectingMode(value)}
-                onSetSearchTerm={(value) => setSearchTerm(value)}
-                onSetIsAddingColumn={(value) => setIsAddingColumn(value)}
-                onSetNewColumnName={(value) => setNewColumnName(value)}
-                onSetShowDraftsReview={(value) => setShowDraftsReview(value)}
+                onSetIsSelectingMode={(value: boolean) => setIsSelectingMode(value)}
+                onSetSearchTerm={(value: string) => setSearchTerm(value)}
+                onSetIsAddingColumn={(value: boolean) => setIsAddingColumn(value)}
+                onSetNewColumnName={(value: string) => setNewColumnName(value)}
+                onSetShowDraftsReview={(value: boolean) => setShowDraftsReview(value)}
             />
         </div>
     );
