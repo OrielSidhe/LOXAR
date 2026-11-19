@@ -65,6 +65,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Dashboard extraído (2026-11-18): el tab `dashboard` salió de `App.tsx` a
   `src/components/DashboardTab.tsx`, con el enrutado módulo → tab centralizado y la lista de
   sub-módulos de gramática sin duplicar. `App.tsx`: 973 → 947 líneas.
+- Modelo de SyntaxFlowline extraído (2026-11-18): la lógica de dominio de `SyntaxFlowline.tsx`
+  (tipos, constantes, `buildBlocksFromManifest`, `extractMorphologicalProperties`,
+  `getMorphoOptions`, persistencia en `localStorage`, `shuffle`, `handleDropOutside`) pasó a
+  `src/utils/syntaxFlowlineModel.ts`; el `.tsx` quedó como orquestador de estado UI y render
+  (992 → 630 líneas) y re-exporta los helpers que los tests importan desde el componente.
 
 ---
 
@@ -148,6 +153,16 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — extraer el modelo puro de `SyntaxFlowline.tsx` (P1, 2026-11-18).** El componente
+(992 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxFlowlineModel.ts` con tipos
+(`PinValue`, `PinDef`, `FlowlineBlock`, `DefaultBlockDef`), constantes (`STORAGE_KEY`,
+`BLOCK_ICONS`/`BLOCK_COLORS`, `ROLE_TO_*`, `DEFAULT_BLOCK_DEFS`, `ORDER_BLOCK_MAP`,
+`FALLBACK_OPTIONS`), `buildBlocksFromManifest`/`extractMorphologicalProperties`/`getMorphoOptions`,
+persistencia (`saveState`/`loadState` con type guard `isSavedBlockState` en lugar de `any`),
+`shuffle` y `handleDropOutside`. `SyntaxFlowline.tsx` quedó en 630 líneas y re-exporta los
+helpers para no tocar los tests. Validaciones: typecheck 0, lint OK, build OK, vitest 378/378
+(46 archivos), audit:orphans 20.
+
 **[x] CLN — extraer `DashboardTab` de `App.tsx` (P1, 2026-11-18).** El tab `dashboard` era el último
 bloque inline grande del God Component (~70 líneas de JSX + dos closures de navegación que
 duplicaban la lista de sub-módulos de gramática). Nuevo `src/components/DashboardTab.tsx` monta
@@ -178,13 +193,14 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-Hay **7 commits locales** en `master` que no están en `origin` (`b7c73be`, `aeea62a`, `2ebb88b`,
-`9bc5f70`, `ed45653`, `ee2a505`, más el commit B0 de este ciclo). El Gauntlet v3.12 exige `push` + CI
-verde con número de run para cerrar la Fase J; el skill `loxar-progress-supervisor` prohíbe push
-automático. `gh auth` está activo y con scopes `repo`+`workflow`, así que el push es viable de
-inmediato si el usuario lo autoriza. Sin eso no hay número de run y la fase queda formalmente abierta.
+**Hay 11 commits locales** en `master` que no están en `origin` (`6b66129`, `ca191f6`, `20d827a`,
+`795a8fb`, `dc3cd46`, `b7c73be`, `aeea62a`, `2ebb88b`, `9bc5f70`, `ed45653`, `ee2a505`). El
+Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
+`loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
+`repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
+hay número de run y la fase queda formalmente abierta.
 
-**[ ] CLN — decidir destino de los 21 huérfanos de `src/`.** Inventario reproducible con
+**[ ] CLN — decidir destino de los 20 huérfanos de `src/`.** Inventario reproducible con
 `npm run audit:orphans` (creado en `aeea62a`). 9 candidatos a borrado seguro (sin uso ni en tests),
 10 features completas nunca montadas (decisión de producto), 3 con tests propios (no borrar sin
 re-cablear). Ver checkpoint en `docs/continuity/TASKS.md`.
@@ -224,9 +240,8 @@ está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
     `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
     `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals`.
-  - Próximo paso real: `SyntaxFlowline.tsx` (992 líneas) y `GraphCanvas.tsx` (975 líneas), los dos
-    componentes más grandes que quedan; luego `CollectionsManager`, `GrammarTab`, `SyntaxCanvas`
-    y `EntryEditor`.
+  - Próximo paso real: `GraphCanvas.tsx` (975 líneas), el componente más grande que queda; luego
+    `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.

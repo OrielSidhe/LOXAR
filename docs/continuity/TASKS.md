@@ -2735,3 +2735,71 @@ deja de ser huérfano).
 
 **Pendiente:** demo runtime con `npm run tauri dev` para validar el canvas visualmente (pointer
 events, zoom y modales), `git push` + CI, y la demo del bootstrap (B0).
+
+---
+
+## [2026-11-18] Checkpoint: CLN — métricas vivas del dashboard sin `NaN`
+
+**Rama:** `master`. **Commit:** `20d827a` (local, NO pusheado). **Motivo:** el `stats` de
+`LanguageHomeCanvas` y el `rulesCount` del resumen pragmático leían campos inexistentes del
+manifiesto canónico (`morphology.rules`, `syntax.rules`, `categories`,
+`phonology.consonants/rules`), que `normalizeGrammarManifest` (Zod) descarta: el canvas mostraba
+`NaN` en Reglas/Sonidos y el contador de reglas pragmático siempre daba 0.
+
+**Cambios:**
+- `src/utils/grammarMetrics.ts` (NUEVO): `getGrammarMetrics` como fuente única. rules =
+  `mutationRules` + `strategies` + `affixInventory`; categories = `paradigms`; roles = `roles`;
+  sonidos = `phonology.inventory.consonants + vowels`; reglas fonológicas = `syllableStructures`;
+  árboles = `clauseTree`.
+- `src/App.tsx`: consume el memo y se eliminan los casts `as any` del bloque; `lexicon.categories`
+  reporta categorías distintas reales.
+- Tests: `src/utils/__tests__/grammarMetrics.test.ts` (4).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 378/378 (46 archivos) ·
+audit:orphans 20.
+
+---
+
+## [2026-11-18] Checkpoint: CLN — extraer `DashboardTab` de `App.tsx` (P1 God Component)
+
+**Rama:** `master`. **Commit:** `ca191f6` (local, NO pusheado). **Motivo:** el tab `dashboard` era
+el último bloque inline grande del God Component (`App.tsx` 947 líneas), con ~70 líneas de JSX y
+dos closures de navegación que duplicaban la lista de sub-módulos de gramática.
+
+**Cambios:**
+- `src/components/DashboardTab.tsx` (NUEVO): monta `LanguageHomeCanvas` y centraliza el enrutado
+  módulo → tab. `GRAMMAR_SUB_MODULES` queda definida una sola vez (antes duplicada en
+  `onModuleClick` y `onZoomToNode`) y el cast `moduleId as any` pasó a `moduleId as AppTabId`.
+- `src/App.tsx`: aporta `handleOpenGrammarModule` y el objeto `stats` ya calculado.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 378/378 (46 archivos) ·
+audit:orphans 20.
+
+---
+
+## [2026-11-18] Checkpoint: CLN — extraer el modelo puro de `SyntaxFlowline.tsx` (P1 God Component)
+
+**Rama:** `master`. **Commit:** `6b66129` (local, NO pusheado). **Motivo:** `SyntaxFlowline.tsx`
+(992 líneas) era el componente más grande que quedaba y mezclaba lógica de dominio con estado de UI
+y render; el AUTO_PILOT lo marcaba como "próximo paso real".
+
+**Cambios:**
+- `src/utils/syntaxFlowlineModel.ts` (NUEVO): tipos (`PinValue`, `PinDef`, `FlowlineBlock`,
+  `DefaultBlockDef`), constantes de dominio (`STORAGE_KEY`, `PLACEHOLDER_LEXEME`/`PLACEHOLDER_SELECT`,
+  `BLOCK_ICONS`, `BLOCK_COLORS`, `ROLE_TO_LABEL`, `ROLE_TO_FUNCTION`, `DEFAULT_BLOCK_DEFS`,
+  `ORDER_BLOCK_MAP`, `FALLBACK_OPTIONS`), `buildBlocksFromManifest`, `extractMorphologicalProperties`,
+  `getMorphoOptions`, persistencia (`saveState`/`loadState`, con type guard `isSavedBlockState` en
+  lugar de `any`), `shuffle` y `handleDropOutside`.
+- `src/components/SyntaxFlowline.tsx`: quedó como orquestador de estado UI + render (992 → 630
+  líneas). Importa el modelo y **re-exporta** `buildBlocksFromManifest`,
+  `extractMorphologicalProperties`, `getMorphoOptions` y `handleDropOutside` para que los tests y
+  consumidores sigan importándolos desde el módulo del componente.
+- Se elimina el import muerto de `SyntacticRole` (nunca se usó en el archivo).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 378/378 (46 archivos) ·
+audit:orphans 20 (el módulo nuevo sí tiene importador, no suma huérfanos).
+
+**Próximo bloque ejecutable:** extraer `GraphCanvas.tsx` (975 líneas), el componente más grande que
+queda; luego `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`. Pendiente por
+autorización: `git push` (11 commits locales) + CI con número de run, FASE L de CLN y el destino de
+los 20 huérfanos.
