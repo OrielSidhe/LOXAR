@@ -44,6 +44,11 @@ artefactos de agentes.
 - ~~LICENSE MIT~~ → resuelto 2026-11-13: `LICENSE` (MIT) creado en la raíz.
 - ~~Contador de tests del README desactualizado~~ → resuelto 2026-11-13: README ahora reporta
   369/369 tests (44 archivos), verificado con `npx vitest run`.
+- ~~Schema Zod de `preview` que descarta las entradas fijadas~~ → resuelto 2026-11-19 (`5e38fe6`):
+  `GrammarManifestSchema` (`src/services/normalize.ts:92`) declara `subjectEntryId`/`verbEntryId`/
+  `objectEntryId` como `z.string().optional()`; `normalizePreview.test.ts` (4) cubre preservación,
+  default y round-trip por `normalizeLexiconData`. Validaciones: typecheck 0, lint OK, build OK,
+  vitest 449/449 (51 archivos), audit:orphans 20.
 - Fase J de v3.12 cerrada y commiteada (`ee2a505` + `ed45653`); pendiente solo `push` + CI.
 - **FASE L (limpieza del disco local) sigue PENDIENTE**: `.zcode/` y `.claude/` locales y
   `_ARTIFACTS_NO_GIT/` siguen en disco. No es automático: `.zcode/skills/loxar-continuity` es la

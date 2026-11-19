@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `dad806e`
+- Git inicializado y con commits; último commit `5e38fe6`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -97,6 +97,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   sujeto. Ahora `subject` y `verb` se resuelven una sola vez, el objeto excluye ambos y cae a la
   primera entrada libre. Tests nuevos: `grammarPreview.test.ts` (15). Validaciones: typecheck 0,
   lint OK, build OK, vitest 445/445 (50 archivos), audit:orphans 20.
+- Schema de preview (2026-11-19): `GrammarManifestSchema` (`src/services/normalize.ts:92`) ahora
+  declara `subjectEntryId`/`verbEntryId`/`objectEntryId` (`z.string().optional()`); antes Zod los
+  descartaba en cada recarga y el preview caía en resolución automática. Tests nuevos:
+  `normalizePreview.test.ts` (4). Validaciones: typecheck 0, lint OK, build OK, vitest 449/449
+  (51 archivos), audit:orphans 20.
 
 ---
 
@@ -190,12 +195,20 @@ objeto excluye ambas entradas, con fallback a la primera entrada libre. Tests nu
 `src/utils/__tests__/grammarPreview.test.ts` (15). Validaciones: typecheck 0, lint OK, build OK,
 vitest 445/445 (50 archivos), audit:orphans 20.
 
-**[ ] CLN — el schema Zod de `preview` descarta las entradas fijadas.** `GrammarManifestSchema`
-(`src/services/normalize.ts:92`) define `preview` como `z.object({ useLexiconAffixes })` y Zod
-descarta las claves desconocidas: `subjectEntryId`/`verbEntryId`/`objectEntryId`, que escribe
-`GrammarSyntaxPanel.tsx:167` vía `onUpdatePreview`, se pierden al recargar el lexicón
-(`useLexicon.ts:120` normaliza el manifiesto). Fix: añadir los tres campos opcionales al schema +
-test de normalización.
+**[x] CLN — el schema Zod de `preview` conserva las entradas fijadas (2026-11-19).**
+`GrammarManifestSchema` (`src/services/normalize.ts:92`) definía `preview` como
+`z.object({ useLexiconAffixes })` y Zod descartaba las claves desconocidas:
+`subjectEntryId`/`verbEntryId`/`objectEntryId`, que escribe `GrammarSyntaxPanel.tsx:167` vía
+`onUpdatePreview`, se perdían al recargar el lexicón (`useLexicon.ts:120` normaliza el manifiesto).
+Ahora el schema los declara como `z.string().optional()` y `normalizePreview.test.ts` (4) cubre la
+preservación y el round-trip por `normalizeLexiconData`. Validaciones: typecheck 0, lint OK, build OK,
+vitest 449/449 (51 archivos), audit:orphans 20.
+
+**[ ] CLN — extraer el modelo puro de `EntryEditor.tsx` (P1, 494 líneas).** Es el último God Component
+grande pendiente: mezcla dominio (normalización de entradas, modos de edición, acciones de IA,
+validación de duplicados) con estado de UI y render. Mover la lógica pura a
+`src/utils/entryEditorModel.ts` y dejar el `.tsx` como orquestador, re-exportando los símbolos que los
+tests importan. Validar con typecheck + vitest + audit:orphans.
 
 **[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos
@@ -286,9 +299,10 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 20 commits locales** en `master` que no están en `origin` (`dad806e`, `1f34de3`, `ad3110a`, `25dbe93`,
-`cd7547f`, `f433c22`, `d113bb9`, `6b66129`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`,
-`aeea62a`, `2ebb88b`, `9bc5f70`, `ed45653`, `ee2a505`). El
+**Hay 25 commits locales** en `master` que no están en `origin` (`5e38fe6`, `36c781a`, `f521b85`,
+`e6d6c2d`, `76cf42f`, `dad806e`, `cc0f712`, `1f34de3`, `ad3110a`, `25dbe93`, `cd7547f`, `f433c22`,
+`6b66129`, `d113bb9`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`, `aeea62a`, `2ebb88b`,
+`9bc5f70`, `ed45653`, `ee2a505` + este checkpoint de docs). El
 Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no

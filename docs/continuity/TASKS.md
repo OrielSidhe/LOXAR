@@ -2958,3 +2958,28 @@ de la cláusula de preview repetía al sujeto (el fallback `lexicon[2]` confirma
 **Próximo bloque ejecutable:** `EntryEditor` (494) o el schema Zod de `preview` que descarta
 `subjectEntryId`/`verbEntryId`/`objectEntryId`. Pendiente por autorización: `git push` + CI con
 número de run, FASE L de CLN.
+
+
+## [2026-11-19] Checkpoint: CLN — el schema Zod de `preview` conserva las entradas fijadas
+
+**Rama:** `master`. **Commit:** `5e38fe6` (local, NO pusheado). **Motivo:** `GrammarManifestSchema`
+(`src/services/normalize.ts:92`) definía `preview` como `z.object({ useLexiconAffixes })`; Zod descarta
+las claves desconocidas, así que `subjectEntryId`/`verbEntryId`/`objectEntryId` — que escribe
+`GrammarSyntaxPanel.tsx:167` vía `onUpdatePreview` — se perdían en cada recarga del lexicón
+(`useLexicon.ts:120` normaliza el manifiesto) y el preview caía en resolución automática.
+
+**Cambios:**
+- `src/services/normalize.ts`: el schema de `preview` ahora declara `subjectEntryId`, `verbEntryId` y
+  `objectEntryId` como `z.string().optional()`, respetando el contrato "nested `z.object` descarta
+  claves ajenas, nunca tira" y el tipo canónico `GrammarPreviewConfig` (`src/types.ts:235`).
+- Tests nuevos: `src/services/__tests__/normalizePreview.test.ts` (4): preservación de las tres
+  entradas en `normalizeGrammarManifest`, default sin ids, descarte de claves ajenas, y round-trip
+  por `normalizeLexiconData` verificando que `getDefaultPreviewEntries` resuelve contra las entradas
+  fijadas.
+- `README.md`: contador de tests 445/445 (50 archivos) → 449/449 (51 archivos).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 449/449 (51 archivos) · audit:orphans 20.
+
+**Próximo bloque ejecutable:** extraer el modelo puro de `EntryEditor.tsx` (494 líneas, el último God
+Component pendiente del P1) o decidir destino de los 20 huérfanos. Pendiente por autorización:
+`git push` + CI con número de run, FASE L de CLN.
