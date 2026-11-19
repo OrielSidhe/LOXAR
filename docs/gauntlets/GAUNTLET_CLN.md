@@ -54,6 +54,11 @@ artefactos de agentes.
   habilitación de botones) y `EntryEditor.tsx` bajó de 494 a 396 líneas. Tests nuevos:
   `entryEditorModel.test.ts` (25). Validaciones: typecheck 0, lint OK, build OK, vitest 474/474
   (52 archivos), audit:orphans 20.
+- ~~Componente de tabla `LexiconTable` sin descomponer~~ → resuelto 2026-11-19: `src/utils/lexiconTableModel.ts`
+  concentra la lógica pura (filtrado por categoría/vista/búsqueda con intersección FTS, paginación,
+  color por categoría, formato de afijos, cambios del formulario en línea) y `LexiconTable.tsx` bajó
+  de 693 a 603 líneas. Tests nuevos: `lexiconTableModel.test.ts` (20). Validaciones: typecheck 0,
+  lint OK, build OK, vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God Components.
 - Fase J de v3.12 cerrada y commiteada (`ee2a505` + `ed45653`); pendiente solo `push` + CI.
 - **FASE L (limpieza del disco local) sigue PENDIENTE**: `.zcode/` y `.claude/` locales y
   `_ARTIFACTS_NO_GIT/` siguen en disco. No es automático: `.zcode/skills/loxar-continuity` es la

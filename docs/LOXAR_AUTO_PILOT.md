@@ -111,6 +111,16 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   (de `EntryEditor`, `WorkbenchTab` y `App.tsx`) y el estado muerto `duplicateEntries`. Tests nuevos:
   `entryEditorModel.test.ts` (25). Validaciones: typecheck 0, lint OK, build OK, vitest 474/474
   (52 archivos), audit:orphans 20.
+- Modelo de LexiconTable extraído (2026-11-19): la lógica de dominio de `LexiconTable.tsx`
+  (normalización de texto, detección de entradas incompletas, color determinista por categoría,
+  categorías únicas, filtrado por categoría/vista/búsqueda con intersección FTS, paginación,
+  formato de afijos y aplicación de cambios del formulario en línea) pasó a
+  `src/utils/lexiconTableModel.ts`; el `.tsx` quedó como orquestador de estado UI + render
+  (693 → 603 líneas) y re-exporta los símbolos del modelo. Se eliminó el cast
+  `as keyof Omit<LexiconEntry, ...>` a favor de ramas tipadas en `applyEditFormChange`.
+  Tests nuevos: `lexiconTableModel.test.ts` (20). Validaciones: typecheck 0, lint OK, build OK,
+  vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God Components: no queda ningún
+  componente grande pendiente de extracción.
 
 ---
 
@@ -226,10 +236,23 @@ eliminaron los props muertos `findDuplicateSignificados`/`onDuplicateFound` y el
 `duplicateEntries`. Tests nuevos: `entryEditorModel.test.ts` (25). Validaciones: typecheck 0, lint OK,
 build OK, vitest 474/474 (52 archivos), audit:orphans 20.
 
-**[ ] CLN — extraer el modelo puro de `LexiconTable.tsx` (693 líneas).** Último componente de tabla
-grande: mezcla filtrado/ordenamiento/búsqueda, selección múltiple y exportación con render. Mover la
-lógica pura a `src/utils/lexiconTableModel.ts` y dejar el `.tsx` como orquestador. Validar con
-typecheck + vitest + audit:orphans.
+**[x] CLN — extraer el modelo puro de `LexiconTable.tsx` (693 líneas, 2026-11-19).** Último
+componente de tabla grande: mezclaba filtrado/ordenamiento/búsqueda, selección múltiple, paginación,
+formato de afijos y edición en línea con render. Nuevo `src/utils/lexiconTableModel.ts` con
+constantes (`ITEMS_PER_PAGE`, `DEFAULT_VISIBLE_COLUMNS`, `INCOMPLETE_CATEGORY_CANONICAL`,
+`CATEGORY_PALETTE`), lógica pura (`normalizeText`, `isEntryIncomplete`, `getCategoryColor`,
+`getUniqueCategories`, `filterLexiconData`, `getTotalPages`, `paginateEntries`,
+`formatLexemeDisplay`, `splitCommaSeparated`, `applyEditFormChange`) y el tipo
+`LexiconFilterOptions`. `LexiconTable.tsx` quedó en 603 líneas como orquestador de estado UI +
+render y re-exporta los símbolos del modelo; el cast `as keyof Omit<LexiconEntry, ...>` fue
+reemplazado por ramas tipadas. Tests nuevos: `lexiconTableModel.test.ts` (20). Validaciones:
+typecheck 0, lint OK, build OK, vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God
+Components.
+
+**[ ] CLN — frente siguiente: no queda ningún componente grande pendiente de extracción.** Opciones
+binarias: (a) decidir destino de los 20 huérfanos de `src/` (`npm run audit:orphans`), (b) avanzar
+la validación runtime con `npm run tauri dev` (demo de FTS5, canvas de sintaxis y paginación), o
+(c) cerrar el push + CI. Requiere decisión del usuario en (a) y (c); (b) es verificable localmente.
 
 **[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos

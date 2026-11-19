@@ -3016,3 +3016,31 @@ categorías, mapeo de la respuesta de IA, armado de los datos base) con estado d
 **Próximo bloque ejecutable:** extraer el modelo puro de `LexiconTable.tsx` (693 líneas) o decidir
 destino de los 20 huérfanos. Pendiente por autorización: `git push` + CI con número de run, FASE L de
 CLN.
+
+---
+
+## [2026-11-19] Checkpoint: CLN — el modelo puro de `LexiconTable` queda extraído (P1)
+
+**Rama:** `master`. **Motivo:** `LexiconTable.tsx` (693 líneas) era el último componente de tabla
+grande: mezclaba filtrado/ordenamiento/búsqueda, selección múltiple, paginación, formato de afijos y
+edición en línea con el render.
+
+**Cambios:**
+- Nuevo `src/utils/lexiconTableModel.ts`: constantes (`ITEMS_PER_PAGE`, `DEFAULT_VISIBLE_COLUMNS`,
+  `INCOMPLETE_CATEGORY_CANONICAL`, `CATEGORY_PALETTE`), lógica pura (`normalizeText`,
+  `isEntryIncomplete`, `getCategoryColor`, `getUniqueCategories`, `filterLexiconData`,
+  `getTotalPages`, `paginateEntries`, `formatLexemeDisplay`, `splitCommaSeparated`,
+  `applyEditFormChange`) y el tipo `LexiconFilterOptions`.
+- `src/components/LexiconTable.tsx`: 693 → 603 líneas, orquestador de estado UI + render; re-exporta
+  los símbolos del modelo para no tocar consumidores. `applyEditFormChange` reemplaza el cast
+  `as keyof Omit<LexiconEntry, ...>` por ramas tipadas y `formatLexemeDisplay` deja de ser un
+  `useCallback` (ahora es pura y recibe `showAffixFormatting`).
+- Tests nuevos: `src/utils/__tests__/lexiconTableModel.test.ts` (20).
+- `README.md`: contador de tests 474/474 (52 archivos) → 494/494 (53 archivos).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 494/494 (53 archivos) · audit:orphans 20.
+
+**Próximo bloque ejecutable:** no queda ningún componente grande pendiente de extracción; el siguiente
+frente es decidir destino de los 20 huérfanos o avanzar la validación runtime (`npm run tauri dev`).
+Pendiente por autorización: `git push` + CI con número de run, FASE L de CLN.
+
