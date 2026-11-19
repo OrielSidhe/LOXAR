@@ -264,7 +264,7 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 19 commits locales** en `master` que no están en `origin` (`dad806e`, `1f34de3`, `ad3110a`, `25dbe93`,
+**Hay 20 commits locales** en `master` que no están en `origin` (`dad806e`, `1f34de3`, `ad3110a`, `25dbe93`,
 `cd7547f`, `f433c22`, `d113bb9`, `6b66129`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`,
 `aeea62a`, `2ebb88b`, `9bc5f70`, `ed45653`, `ee2a505`). El
 Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill

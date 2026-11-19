@@ -2930,5 +2930,5 @@ audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador; se mantuv
 `InfoTooltip` que el componente ya arrastraba, para no subir el conteo de huérfanos).
 
 **Próximo bloque ejecutable:** `EntryEditor` (494) o corrección del objeto de preview
-(`src/utils/grammarPreview.ts:30-34`). Pendiente por autorización: `git push` (19 commits locales)
+(`src/utils/grammarPreview.ts:30-34`). Pendiente por autorización: `git push` (20 commits locales)
 + CI con número de run, FASE L de CLN.
