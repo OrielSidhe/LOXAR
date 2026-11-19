@@ -14,12 +14,31 @@ import LayoutGridIcon from './icons/LayoutGridIcon';
 import FilterIcon from './icons/FilterIcon';
 import GitMergeIcon from './icons/GitMergeIcon';
 import LoaderIcon from './icons/LoaderIcon';
+import {
+    DEFAULT_VISIBLE_COLUMNS,
+    applyEditFormChange,
+    filterLexiconData,
+    formatLexemeDisplay,
+    getCategoryColor,
+    getTotalPages,
+    getUniqueCategories,
+    isEntryIncomplete,
+    paginateEntries,
+} from '../utils/lexiconTableModel';
 
-const ITEMS_PER_PAGE = 25;
-
-const normalizeText = (text: string) => {
-  return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-};
+export {
+    DEFAULT_VISIBLE_COLUMNS,
+    ITEMS_PER_PAGE,
+    applyEditFormChange,
+    filterLexiconData,
+    formatLexemeDisplay,
+    getCategoryColor,
+    getTotalPages,
+    getUniqueCategories,
+    isEntryIncomplete,
+    normalizeText,
+    paginateEntries,
+} from '../utils/lexiconTableModel';
 
 const HighlightText = ({ text, highlight }: { text: string; highlight?: string }) => {
   if (!highlight || !highlight.trim()) return <>{text}</>;
@@ -37,57 +56,6 @@ const HighlightText = ({ text, highlight }: { text: string; highlight?: string }
       )}
     </>
   );
-};
-
-// Categorías canónicas de "sin clasificar" → la entrada sigue incompleta.
-// Usamos el resolver de taxonomy para normalizar cualquier alias legacy.
-const INCOMPLETE_CATEGORY_CANONICAL = new Set(['desconocida']);
-
-const isEntryIncomplete = (entry: LexiconEntry): boolean => {
-    if (!entry.Raíz?.trim()) return true;
-    if (entry.Léxema.length === 0 || !entry.Léxema[0]?.trim()) return true;
-    const resolved = resolveLexicalCategory(entry.Categoría);
-    if (INCOMPLETE_CATEGORY_CANONICAL.has(resolved)) return true;
-    return false;
-};
-
-// ── Category Color System ─────────────────────────────────────────────────────
-const CATEGORY_PALETTE: [string, string][] = [
-    // [bgClass, textClass] - specific named categories
-    ['bg-blue-500/20 border-blue-500/40', 'text-blue-400'],       // sustantivo
-    ['bg-emerald-500/20 border-emerald-500/40', 'text-emerald-400'],  // verbo
-    ['bg-violet-500/20 border-violet-500/40', 'text-violet-400'],  // adjetivo
-    ['bg-amber-500/20 border-amber-500/40', 'text-amber-400'],     // adverbio
-    ['bg-rose-500/20 border-rose-500/40', 'text-rose-400'],        // pronombre
-    ['bg-cyan-500/20 border-cyan-500/40', 'text-cyan-400'],        // preposición
-    ['bg-fuchsia-500/20 border-fuchsia-500/40', 'text-fuchsia-400'], // conjunción
-    ['bg-orange-500/20 border-orange-500/40', 'text-orange-400'],  // afijo/sufijo/prefijo
-    ['bg-teal-500/20 border-teal-500/40', 'text-teal-400'],        // caso
-    ['bg-indigo-500/20 border-indigo-500/40', 'text-indigo-400'],  // frase verbal
-    ['bg-lime-500/20 border-lime-500/40', 'text-lime-400'],
-    ['bg-pink-500/20 border-pink-500/40', 'text-pink-400'],
-    ['bg-sky-500/20 border-sky-500/40', 'text-sky-400'],
-    ['bg-yellow-500/20 border-yellow-500/40', 'text-yellow-400'],
-    ['bg-red-500/20 border-red-500/40', 'text-red-400'],
-];
-
-const categoryColorCache = new Map<string, [string, string]>();
-
-const getCategoryColor = (category: string): [string, string] => {
-    if (!category) return ['bg-gray-500/20 border-gray-500/40', 'text-gray-400'];
-    const cached = categoryColorCache.get(category);
-    if (cached) return cached;
-    
-    // Deterministic hash → consistent color for same category across renders
-    let hash = 0;
-    for (let i = 0; i < category.length; i++) {
-        hash = ((hash << 5) - hash) + category.charCodeAt(i);
-        hash |= 0;
-    }
-    const index = Math.abs(hash) % CATEGORY_PALETTE.length;
-    const color = CATEGORY_PALETTE[index];
-    categoryColorCache.set(category, color);
-    return color;
 };
 
 const CategoryBadge = ({ category }: { category: string }) => {
@@ -219,7 +187,7 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editFormData, setEditFormData] = useState<LexiconEntry | null>(null);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-    const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(['id', 'raiz', 'lexema', 'categoria', 'significado', 'acciones']));
+    const [visibleColumns, setVisibleColumns] = useState<Set<string>>(() => new Set(DEFAULT_VISIBLE_COLUMNS));
     const [showColumnMenu, setShowColumnMenu] = useState(false);
     const [ftsResults, setFtsResults] = useState<LexiconEntry[] | null>(null);
     const [ftsLoading, setFtsLoading] = useState(false);
@@ -233,50 +201,18 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
         }
     }, [lexiconName]);
 
-    const uniqueCategories = useMemo(() => {
-        if (!data) return [];
-        const categories = new Set(data.map(entry => entry.Categoría).filter(cat => cat && cat.trim() !== ''));
-        return Array.from(categories).sort((a, b) => a.localeCompare(b));
-    }, [data]);
+    const uniqueCategories = useMemo(() => getUniqueCategories(data), [data]);
 
-    const filteredData = useMemo(() => {
-        let results = data;
-
-        if (categoryFilter !== 'all') {
-            results = results.filter(entry => entry.Categoría === categoryFilter);
-        }
-
-        // Filtro de vista (el selector "Ver:" del panel de filtros).
-        if (viewFilter === 'incomplete') {
-            results = results.filter(isEntryIncomplete);
-        } else if (viewFilter === 'complete') {
-            results = results.filter(entry => !isEntryIncomplete(entry));
-        } else if (viewFilter === 'ai-generated') {
-            results = results.filter(entry => !!entry.extraData?.aiGenerated);
-        }
-
-        if (!searchTerm) return results;
-
-        // If FTS5 results are available, use them as the base set.
-        if (ftsResults) {
-            const ftsIds = new Set(ftsResults.map(entry => entry.ID));
-            results = results.filter(entry => ftsIds.has(entry.ID));
-            return results;
-        }
-
-        if (onSearch) return results;
-
-        const lowercasedFilter = normalizeText(searchTerm);
-        return results.filter(entry =>
-            normalizeText(entry.ID).includes(lowercasedFilter) ||
-            (entry.externalID && normalizeText(entry.externalID).includes(lowercasedFilter)) ||
-            normalizeText(entry.Raíz).includes(lowercasedFilter) ||
-            normalizeText(entry.Léxema.join(', ')).includes(lowercasedFilter) ||
-            normalizeText(entry.Categoría).includes(lowercasedFilter) ||
-            normalizeText(entry.Significado.join(', ')).includes(lowercasedFilter) ||
-            (entry.extraData && Object.values(entry.extraData).some(val => normalizeText(String(val)).includes(lowercasedFilter)))
-        );
-    }, [data, searchTerm, categoryFilter, viewFilter, onSearch, ftsResults]);
+    const filteredData = useMemo(
+        () => filterLexiconData(data, {
+            searchTerm,
+            categoryFilter,
+            viewFilter,
+            ftsResults,
+            useExternalSearch: Boolean(onSearch),
+        }),
+        [data, searchTerm, categoryFilter, viewFilter, onSearch, ftsResults]
+    );
 
     useEffect(() => {
         setCurrentPage(1);
@@ -319,12 +255,12 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
         };
     }, [onSearch, searchTerm, lexiconName]);
     
-    const totalPages = Math.ceil(filteredData.length / ITEMS_PER_PAGE);
+    const totalPages = getTotalPages(filteredData.length);
 
-    const paginatedData = useMemo(() => {
-        const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-        return filteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    }, [filteredData, currentPage]);
+    const paginatedData = useMemo(
+        () => paginateEntries(filteredData, currentPage),
+        [filteredData, currentPage]
+    );
 
     const handleNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
     const handlePrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
@@ -357,15 +293,7 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
     const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         if (editFormData) {
-            let newFormState = { ...editFormData };
-            if (name === "Léxema" || name === "Significado") {
-                newFormState[name] = value.split(',').map(s => s.trim()).filter(Boolean);
-            } else if (name === 'externalID') {
-                newFormState.externalID = value;
-            } else {
-                newFormState[name as keyof Omit<LexiconEntry, 'Léxema' | 'Significado' | 'extraData' | 'externalID' | 'exceptions'>] = value;
-            }
-            setEditFormData(newFormState);
+            setEditFormData(applyEditFormChange(editFormData, name, value));
         }
     };
 
@@ -380,24 +308,6 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
             return newSet;
         });
     }, []);
-
-    const formatLexemeDisplay = useCallback((entry: LexiconEntry): string => {
-        let lexemes = entry.Léxema;
-        if (showAffixFormatting) {
-            const cat = entry.Categoría.toLowerCase();
-            if (cat.includes('sufijo') && !cat.includes('prefijo')) {
-                lexemes = lexemes.map(l => l.startsWith('-') ? l : `-${l}`);
-            } else if (cat.includes('prefijo') && !cat.includes('sufijo')) {
-                lexemes = lexemes.map(l => l.endsWith('-') ? l : `${l}-`);
-            } else if (cat.includes('infijo')) {
-                 lexemes = lexemes.map(l => (l.startsWith('-') && l.endsWith('-')) ? l : `-${l}-`);
-            } else if (cat.includes('verbo')) {
-                lexemes = lexemes.map(l => l.endsWith('-') ? l : `${l}-`);
-            }
-        }
-        return lexemes.join(', ');
-    }, [showAffixFormatting]);
-
 
     const toggleColumn = (col: string) => {
         setVisibleColumns(prev => {
@@ -591,7 +501,7 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
                                     )}
                                     {visibleColumns.has('lexema') && (
                                         <td className="p-3 text-sm text-text-primary align-top break-words">
-                                            {isEditing ? <InlineInput value={editFormData!.Léxema.join(', ')} onChange={handleEditFormChange} name="Léxema" /> : <HighlightText text={formatLexemeDisplay(entry)} highlight={ftsResults ? searchTerm : undefined} />}
+                                            {isEditing ? <InlineInput value={editFormData!.Léxema.join(', ')} onChange={handleEditFormChange} name="Léxema" /> : <HighlightText text={formatLexemeDisplay(entry, showAffixFormatting)} highlight={ftsResults ? searchTerm : undefined} />}
                                         </td>
                                     )}
                                     {visibleColumns.has('categoria') && (
