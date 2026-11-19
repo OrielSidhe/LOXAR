@@ -89,7 +89,15 @@ export const GrammarManifestSchema = z.object({
   ui: z.object({ showTone: z.boolean() }).optional(),
   /** NEW: persistent AST representation of the clause, persisted per conlang */
   clauseTree: z.any().optional(),
-  preview: z.object({ useLexiconAffixes: z.boolean().default(false) }).default({ useLexiconAffixes: false }),
+  preview: z.object({
+    useLexiconAffixes: z.boolean().default(false),
+    // Entry IDs fixed by the user in the preview panel. Without these, Zod's
+    // default object-stripping drops them on every reload (useLexicon -> normalizeGrammarManifest)
+    // and the preview silently falls back to auto resolution.
+    subjectEntryId: z.string().optional(),
+    verbEntryId: z.string().optional(),
+    objectEntryId: z.string().optional(),
+  }).default({ useLexiconAffixes: false }),
   paradigms: z.array(z.any()).default([]),
   mutationRules: z.array(z.any()).default([]),
   exceptions: z.array(z.any()).default([]),
