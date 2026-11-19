@@ -1,68 +1,61 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     SyntaxCanvas as SyntaxCanvasType,
-    SyntaxNode,
-    SyntaxConnection,
-    NodeType,
-    GrammarException,
     LexiconEntry,
     GrammarManifest,
-    MorphemeSegment,
 } from '../types';
 import { realizeLexeme } from '../services/grammar';
-import { inductFromText } from '../services/grammar/inductFromText';
 import InfoTooltip from './InfoTooltip';
 import AiMapperModal from './AiMapperModal';
 import SyntaxNodeRenderer from './SyntaxNodeRenderer';
 import SyntaxBreakdownPanel from './SyntaxBreakdownPanel';
+import {
+    addChildToNode,
+    buildConnectionPath,
+    createChildNode,
+    createConnection,
+    createNode,
+    findAllNodes,
+    findNodeDeep,
+    removeNodeDeep,
+    toCanvasPoint,
+    toNodeBounds,
+    uid,
+    updateNodeDeep,
+    zoomByWheel,
+    zoomStep,
+} from '../utils/syntaxCanvasModel';
+import type { NodeType, SyntaxConnection, SyntaxNode } from '../utils/syntaxCanvasModel';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function uid() { return `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`; }
-
-const updateNodeDeep = (nodes: SyntaxNode[], id: string, patch: Partial<SyntaxNode>): SyntaxNode[] => {
-    return nodes.map(n => {
-        if (n.id === id) return { ...n, ...patch };
-        if (n.children && n.children.length > 0) {
-            return { ...n, children: updateNodeDeep(n.children, id, patch) };
-        }
-        return n;
-    });
-};
-
-const removeNodeDeep = (nodes: SyntaxNode[], id: string): SyntaxNode[] => {
-    return nodes.filter(n => n.id !== id).map(n => ({
-        ...n,
-        children: n.children ? removeNodeDeep(n.children, id) : []
-    }));
-};
-
-const addChildToNode = (nodes: SyntaxNode[], parentId: string, child: SyntaxNode): SyntaxNode[] => {
-    return nodes.map(n => {
-        if (n.id === parentId) return { ...n, children: [...(n.children || []), child] };
-        if (n.children) return { ...n, children: addChildToNode(n.children, parentId, child) };
-        return n;
-    });
-};
-
-const findNodeDeep = (nodes: SyntaxNode[], id: string): SyntaxNode | null => {
-    for (const n of nodes) {
-        if (n.id === id) return n;
-        if (n.children) {
-            const found = findNodeDeep(n.children, id);
-            if (found) return found;
-        }
-    }
-    return null;
-};
-
-const findAllNodes = (nodes: SyntaxNode[]): SyntaxNode[] => {
-    let all: SyntaxNode[] = [];
-    for (const n of nodes) {
-        all.push(n);
-        if (n.children) all = all.concat(findAllNodes(n.children));
-    }
-    return all;
-};
+// Public surface re-exported so existing consumers keep importing from the component.
+export {
+    addChildToNode,
+    buildConnectionPath,
+    clampZoom,
+    createChildNode,
+    createConnection,
+    createNode,
+    findAllNodes,
+    findNodeDeep,
+    removeNodeDeep,
+    toCanvasPoint,
+    toNodeBounds,
+    uid,
+    updateNodeDeep,
+    zoomByWheel,
+    zoomStep,
+    MIN_ZOOM,
+    MAX_ZOOM,
+    ZOOM_STEP,
+} from '../utils/syntaxCanvasModel';
+export type {
+    ConnectionPath,
+    NodeBounds,
+    NodeBoundsMap,
+    NodeType,
+    SyntaxConnection,
+    SyntaxNode,
+} from '../utils/syntaxCanvasModel';
 
 // ── Components ───────────────────────────────────────────────────────────────
 
@@ -121,7 +114,12 @@ const AddNodeModal = ({ onAdd, onClose }: { onAdd: (n: SyntaxNode) => void, onCl
                 <div className="flex gap-3 mt-5">
                     <button onClick={onClose} className="flex-1 py-2 bg-surface hover:bg-surface-light text-text-secondary rounded-lg text-sm">Cancelar</button>
                     <button onClick={() => {
-                        onAdd({ id: uid(), type, role, label, color, x: window.innerWidth / 2 - 200, y: window.innerHeight / 2 - 200, children: [], lexiconCategory: cat });
+                        onAdd(createNode({
+                            type, role, label, color,
+                            x: window.innerWidth / 2 - 200,
+                            y: window.innerHeight / 2 - 200,
+                            lexiconCategory: cat,
+                        }));
                         onClose();
                     }} className="flex-1 py-2 bg-primary hover:bg-primary-dark text-white font-bold rounded-lg text-sm">Añadir</button>
                 </div>
@@ -192,7 +190,7 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
     const containerRef = useRef<HTMLDivElement>(null);
     const [pan, setPan] = useState({ x: 0, y: 0 });
     const [zoom, setZoom] = useState(1);
-    
+
     // Drag state
     const [draggingNode, setDraggingNode] = useState<string | null>(null);
     const lastPos = useRef({ x: 0, y: 0 });
@@ -209,7 +207,7 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
     const [showAddModal, setShowAddModal] = useState(false);
     const [showAiModal, setShowAiModal] = useState(false);
     const [showHelpModal, setShowHelpModal] = useState(false);
-    
+
     // Dynamic node bounds tracking for SVG
     const [nodeBounds, setNodeBounds] = useState<Record<string, {x: number, y: number, w: number, h: number}>>({});
 
@@ -220,25 +218,21 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
         const updateBounds = () => {
             if (!containerRef.current) return;
             const cRect = containerRef.current.getBoundingClientRect();
+            const camera = { pan, zoom };
+            const container = { left: cRect.left, top: cRect.top };
             const newBounds: Record<string, {x: number, y: number, w: number, h: number}> = {};
-            
+
             const allNodes = findAllNodes(canvas.nodes);
             allNodes.forEach(n => {
                 const el = document.getElementById(`node-${n.id}`);
                 if (el) {
                     const rect = el.getBoundingClientRect();
-                    // Map to canvas coordinate space!
-                    newBounds[n.id] = {
-                        x: (rect.left - cRect.left - pan.x) / zoom,
-                        y: (rect.top - cRect.top - pan.y) / zoom,
-                        w: rect.width / zoom,
-                        h: rect.height / zoom,
-                    };
+                    newBounds[n.id] = toNodeBounds(rect, container, camera);
                 }
             });
             setNodeBounds(newBounds);
         };
-        
+
         updateBounds();
         // Set up mutation observer or intervals if needed, but listening to mouse move is heavy.
         // We'll update on state changes and dragging.
@@ -247,6 +241,7 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
     }, [canvas.nodes, pan, zoom]);
 
     // ── Free Dragging Logic ──────────────────────────────────────────────────
+
     const handlePointerDown = (e: React.PointerEvent) => {
         if (e.button !== 0) return; // only left click
         isDraggingCanvas.current = true;
@@ -266,19 +261,17 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
         // Track mouse for connection drawing
         if (connectionStartId && containerRef.current) {
             const rect = containerRef.current.getBoundingClientRect();
-            setMousePos({
-                x: (e.clientX - rect.left - pan.x) / zoom,
-                y: (e.clientY - rect.top - pan.y) / zoom
-            });
+            setMousePos(toCanvasPoint(e.clientX, e.clientY, { left: rect.left, top: rect.top }, { pan, zoom }));
         }
 
         if (draggingNode) {
             const dx = (e.clientX - lastPos.current.x) / zoom;
             const dy = (e.clientY - lastPos.current.y) / zoom;
             lastPos.current = { x: e.clientX, y: e.clientY };
-            update({ nodes: updateNodeDeep(canvas.nodes, draggingNode, { 
-                x: (findNodeDeep(canvas.nodes, draggingNode)?.x || 0) + dx, 
-                y: (findNodeDeep(canvas.nodes, draggingNode)?.y || 0) + dy 
+            const current = findNodeDeep(canvas.nodes, draggingNode);
+            update({ nodes: updateNodeDeep(canvas.nodes, draggingNode, {
+                x: (current?.x || 0) + dx,
+                y: (current?.y || 0) + dy
             }) });
         } else if (isDraggingCanvas.current) {
             const dx = e.clientX - lastPos.current.x;
@@ -297,13 +290,12 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
     const handleWheel = (e: React.WheelEvent) => {
         if (e.ctrlKey || e.metaKey) {
             e.preventDefault();
-            const delta = e.deltaY > 0 ? 0.9 : 1.1;
-            setZoom(z => Math.min(Math.max(0.2, z * delta), 3));
+            setZoom(z => zoomByWheel(z, e.deltaY));
         }
     };
 
     // ── Node & Connection Ops ────────────────────────────────────────────────
-    
+
     const startConnection = (id: string) => {
         if (connectionStartId === id) setConnectionStartId(null);
         else setConnectionStartId(id);
@@ -327,13 +319,7 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
 
     const endConnection = (id: string) => {
         if (connectionStartId && connectionStartId !== id) {
-            const newConn: SyntaxConnection = {
-                id: uid(),
-                fromId: connectionStartId,
-                toId: id,
-                connectionType: 'dependency'
-            };
-            update({ connections: [...(canvas.connections || []), newConn] });
+            update({ connections: [...(canvas.connections || []), createConnection(connectionStartId, id)] });
         }
         setConnectionStartId(null);
     };
@@ -355,9 +341,9 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
                     </button>
                 </div>
                 <div className="flex gap-2 pointer-events-auto bg-black/40 backdrop-blur-md p-1 rounded-lg border border-white/10">
-                    <button onClick={() => setZoom(z => Math.max(0.2, z - 0.2))} className="w-8 h-8 flex justify-center items-center hover:bg-white/10 text-white rounded">-</button>
+                    <button onClick={() => setZoom(z => zoomStep(z, 'out'))} className="w-8 h-8 flex justify-center items-center hover:bg-white/10 text-white rounded">-</button>
                     <span className="flex items-center text-xs font-mono text-white/50 px-2">{Math.round(zoom * 100)}%</span>
-                    <button onClick={() => setZoom(z => Math.min(3, z + 0.2))} className="w-8 h-8 flex justify-center items-center hover:bg-white/10 text-white rounded">+</button>
+                    <button onClick={() => setZoom(z => zoomStep(z, 'in'))} className="w-8 h-8 flex justify-center items-center hover:bg-white/10 text-white rounded">+</button>
                     <div className="w-[1px] h-4 bg-white/20 self-center mx-1" />
                     <button onClick={() => { setPan({x: 0, y: 0}); setZoom(1); }} className="px-2 text-xs hover:bg-white/10 text-white rounded">Reset</button>
                 </div>
@@ -370,7 +356,7 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
             )}
 
             {/* Canvas */}
-            <div 
+            <div
                 ref={containerRef}
                 className="flex-1 w-full h-full cursor-grab active:cursor-grabbing overflow-hidden"
                 onPointerDown={handlePointerDown}
@@ -384,7 +370,7 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
                 }}
             >
                 <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: '0 0', width: '100%', height: '100%', position: 'absolute', top: 0, left: 0 }}>
-                    
+
                     {/* SVG Connections Overlay */}
                     <svg className="absolute inset-0 pointer-events-none" style={{ width: '10000px', height: '10000px', overflow: 'visible' }}>
                         <defs>
@@ -392,10 +378,10 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
                                 <polygon points="0 0, 10 3.5, 0 7" fill="#8b5cf6" />
                             </marker>
                         </defs>
-                        
+
                         {/* Active Drag Connection */}
                         {connectionStartId && nodeBounds[connectionStartId] && (
-                            <path 
+                            <path
                                 d={`M ${nodeBounds[connectionStartId].x + nodeBounds[connectionStartId].w / 2} ${nodeBounds[connectionStartId].y + nodeBounds[connectionStartId].h / 2} L ${mousePos.x} ${mousePos.y}`}
                                 stroke="#8b5cf6" strokeWidth="2" strokeDasharray="5,5" fill="none" markerEnd="url(#arrowhead)"
                             />
@@ -406,24 +392,16 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
                             const b1 = nodeBounds[conn.fromId];
                             const b2 = nodeBounds[conn.toId];
                             if (!b1 || !b2) return null;
-                            
-                            // Bezier curve math from center to center
-                            const startX = b1.x + b1.w / 2;
-                            const startY = b1.y + b1.h / 2;
-                            const endX = b2.x + b2.w / 2;
-                            const endY = b2.y + b2.h / 2;
-                            
-                            // simple cubic bezier
-                            const midX = (startX + endX) / 2;
-                            const d = `M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`;
+
+                            const path = buildConnectionPath(b1, b2);
 
                             return (
                                 <g key={conn.id} className="pointer-events-auto">
-                                    <path d={d} stroke="#8b5cf6" strokeWidth="3" fill="none" opacity="0.6" markerEnd="url(#arrowhead)" className="hover:stroke-white hover:opacity-100 transition-all cursor-pointer" 
+                                    <path d={path.d} stroke="#8b5cf6" strokeWidth="3" fill="none" opacity="0.6" markerEnd="url(#arrowhead)" className="hover:stroke-white hover:opacity-100 transition-all cursor-pointer"
                                         onClick={() => update({ connections: canvas.connections.filter(c => c.id !== conn.id) })}
                                     />
                                     {conn.label && (
-                                        <text x={midX} y={(startY + endY) / 2 - 10} fill="#a78bfa" fontSize="10" textAnchor="middle" className="font-bold bg-black/50">{conn.label}</text>
+                                        <text x={path.midX} y={path.midY - 10} fill="#a78bfa" fontSize="10" textAnchor="middle" className="font-bold bg-black/50">{conn.label}</text>
                                     )}
                                 </g>
                             );
@@ -441,9 +419,7 @@ export default function SyntaxCanvas({ canvas, onChange, lexicon, conlangName = 
                             onConnectStart={startConnection}
                             onConnectEnd={endConnection}
                             onAddChild={(parentId) => {
-                                update({ nodes: addChildToNode(canvas.nodes, parentId, {
-                                    id: uid(), type: 'word', role: '...', label: 'Nuevo', color: '#888888', x: 0, y: 0, children: []
-                                }) });
+                                update({ nodes: addChildToNode(canvas.nodes, parentId, createChildNode()) });
                             }}
                             onRemove={(id) => update({ nodes: removeNodeDeep(canvas.nodes, id), connections: (canvas.connections || []).filter(c => c.fromId !== id && c.toId !== id) })}
                             onUpdate={(id, patch) => update({ nodes: updateNodeDeep(canvas.nodes, id, patch) })}
