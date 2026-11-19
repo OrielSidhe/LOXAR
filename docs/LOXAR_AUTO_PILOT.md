@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `cd7547f`
+- Git inicializado y con commits; último commit `ad3110a`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -77,6 +77,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `CollectionsSidebar.tsx` importan `Collection`/`CollectionColumn` del modelo (antes duplicados).
   Tests nuevos: `collectionsManagerModel.test.ts` (16). Validaciones: typecheck 0, lint OK, build OK,
   vitest 394/394 (47 archivos), audit:orphans 20.
+- Modelo de GrammarTab extraído (2026-11-19): la lógica de dominio de `GrammarTab.tsx` (tipos
+  `GrammarModule`/`SyntaxSubTab`, detección de primer arranque, progreso del manifiesto, factories de
+  rol/estrategia/afijo, derivación de afijos del léxico, realización de la cláusula de preview,
+  fusión de gramática flexible, config de preview y sello de guardado) pasó a
+  `src/utils/grammarTabModel.ts`; el `.tsx` quedó como orquestador de estado UI + render
+  (484 → 350 líneas) y se eliminó la duplicación del array de participantes entre el preview y el
+  `useEffect` que siembra el AST editable. Tests nuevos: `grammarTabModel.test.ts` (18).
+  Validaciones: typecheck 0, lint OK, build OK, vitest 412/412 (48 archivos), audit:orphans 20.
 
 ---
 
@@ -160,6 +168,18 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — extraer el modelo puro de `GrammarTab.tsx` (P1, 2026-11-19).** El componente
+(484 líneas) mezclaba dominio y render. Nuevo `src/utils/grammarTabModel.ts` con tipos
+(`GrammarModule`, `SyntaxSubTab`, `ProgressMetric`, `GrammarProgress`, `GrammarPreview`),
+constantes (`DEFAULT_GRAMMAR_MODULE`, `DEFAULT_SYNTAX_SUB_TAB`), `isFirstRunManifest`,
+`calculateGrammarProgress`, factories (`createSyntacticRole`, `createStrategy`, `createAffix`),
+`buildLexiconAffixes`/`withLexiconAffixes`, `buildClauseParticipants`/`buildClausePreview`
+(unifica el array de participantes que antes duplicaban el preview y el `useEffect` del AST
+editable), `mergeFlexibleGrammar`, `mergePreviewConfig` y `withLastUpdated`. `GrammarTab.tsx`
+quedó en 350 líneas como orquestador de estado UI + render y re-exporta `GrammarModule`/
+`SyntaxSubTab`. Tests nuevos: `grammarTabModel.test.ts` (18). Validaciones: typecheck 0, lint OK,
+build OK, vitest 412/412 (48 archivos), audit:orphans 20.
+
 **[x] CLN — extraer el modelo puro de `CollectionsManager.tsx` (P1, 2026-11-18).** El componente
 (623 líneas) mezclaba dominio y render. Nuevo `src/utils/collectionsManagerModel.ts` con tipos
 (`Collection`, `CollectionColumn`, `CollectionCustomCells`, `CollectionTemplate`), constantes
@@ -225,7 +245,7 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 14 commits locales** en `master` que no están en `origin` (`cd7547f`, `f433c22`, `d113bb9`,
+**Hay 15 commits locales** en `master` que no están en `origin` (`ad3110a`, `cd7547f`, `f433c22`, `d113bb9`,
 `6b66129`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`, `aeea62a`, `2ebb88b`,
 `9bc5f70`, `ed45653`, `ee2a505`). El
 Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill

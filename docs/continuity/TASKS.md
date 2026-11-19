@@ -2865,3 +2865,43 @@ audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador).
 **Próximo bloque ejecutable:** `GrammarTab` (484), `SyntaxCanvas` (484) o `EntryEditor` (494).
 Pendiente por autorización: `git push` (14 commits locales) + CI con número de run, FASE L de CLN y
 el destino de los 20 huérfanos.
+
+---
+
+## [2026-11-19] Checkpoint: CLN — extraer el modelo puro de `GrammarTab.tsx` (P1 God Component)
+
+**Rama:** `master`. **Commit:** `ad3110a` (local, NO pusheado). **Motivo:** `GrammarTab.tsx`
+(484 líneas) seguía mezclando dominio (progreso, detección de primer arranque, derivación de afijos
+del léxico, realización de la cláusula de preview, fusión de gramática flexible) con estado de UI y
+render; el checkpoint anterior lo marcaba como "próximo bloque ejecutable".
+
+**Cambios:**
+- `src/utils/grammarTabModel.ts` (NUEVO): tipos (`GrammarModule`, `SyntaxSubTab`, `ProgressMetric`,
+  `GrammarProgress`, `GrammarPreview`), constantes (`DEFAULT_GRAMMAR_MODULE`,
+  `DEFAULT_SYNTAX_SUB_TAB`), detección de primer arranque (`isFirstRunManifest`), progreso
+  (`calculateGrammarProgress`), factories (`createSyntacticRole`, `createStrategy`, `createAffix`),
+  dominio de afijos (`buildLexiconAffixes`, `withLexiconAffixes`), preview de cláusula
+  (`buildClauseParticipants`, `buildClausePreview` — unifica el array de participantes que antes
+  estaba duplicado entre el `useMemo` del preview y el `useEffect` que siembra el AST editable),
+  fusión de gramática flexible (`mergeFlexibleGrammar`), config de preview (`mergePreviewConfig`) y
+  sello de guardado (`withLastUpdated`).
+- `src/components/GrammarTab.tsx`: quedó como orquestador de estado UI + render (484 → 350 líneas).
+  Consume el modelo, re-exporta `GrammarModule`/`SyntaxSubTab` y elimina la duplicación de
+  participantes. Sin cambios de comportamiento.
+- Tests nuevos: `src/utils/__tests__/grammarTabModel.test.ts` (18) cubriendo constantes, primer
+  arranque, progreso, factories, afijos del léxico, participantes, preview (motor real + fallback
+  con léxico vacío), fusión de gramática flexible (estructurada, texto crudo y notas), config de
+  preview y sello de guardado.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 412/412 (48 archivos) ·
+audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador).
+
+**Hallazgo no bloqueante (deuda detectada):** `getDefaultPreviewEntries` (`src/utils/grammarPreview.ts:30-34`)
+excluye del objeto `byId(preview?.objectEntryId)` (siempre `undefined` cuando el preview no fija
+entradas) en vez del sujeto ya resuelto, por lo que el objeto del preview queda igual al sujeto
+(`entry.ID !== undefined` es siempre true). El fallback `|| lexicon[2]` confirma la intención.
+Corregirlo es un cambio de comportamiento: candidato a la próxima pasada atómica con test.
+
+**Próximo bloque ejecutable:** `SyntaxCanvas` (484) o `EntryEditor` (494); corrección del objeto de
+preview; o decidir destino de los 20 huérfanos. Pendiente por autorización: `git push`
+(15 commits locales) + CI con número de run, FASE L de CLN.
