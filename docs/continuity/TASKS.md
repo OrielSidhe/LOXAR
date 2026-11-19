@@ -2904,4 +2904,4 @@ Corregirlo es un cambio de comportamiento: candidato a la próxima pasada atómi
 
 **Próximo bloque ejecutable:** `SyntaxCanvas` (484) o `EntryEditor` (494); corrección del objeto de
 preview; o decidir destino de los 20 huérfanos. Pendiente por autorización: `git push`
-(15 commits locales) + CI con número de run, FASE L de CLN.
+(17 commits locales) + CI con número de run, FASE L de CLN.
