@@ -66,6 +66,11 @@ artefactos de agentes.
   10 features/componentes completos nunca montados (decisión de producto), `strategyBridge`/
   `typologyProfile` (con tests propios), `jsonWorker` (CSP de Tauri) y `TabButton` (muerto tras la
   extracción).
+- ~~Jingle lanzaba `RangeError` a tiempo negativo con el `AudioContext` suspendido~~ → resuelto
+  2026-11-19 (`1f418e3`): `playVocalTone` calculaba el punto de sostenimiento como
+  `startTime + duration - 0.55`; con `currentTime === 0` y duraciones cortas daba `-0.1` y Web Audio
+  abortaba el motivo. `startTime` se normaliza a `>= 0` y el sostenimiento se acota. Test nuevo
+  `audioService.test.ts` (4). Validaciones: typecheck 0, lint OK, build OK, vitest 498/498.
 - **FASE L (limpieza del disco local) sigue PENDIENTE**: `.zcode/` y `.claude/` locales y
   `_ARTIFACTS_NO_GIT/` siguen en disco. No es automático: `.zcode/skills/loxar-continuity` es la
   skill de continuidad viva referenciada en `TASKS.md`; borrarla rompe el workflow. Requiere

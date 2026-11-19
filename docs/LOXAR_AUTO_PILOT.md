@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `e26145c`
+- Git inicializado y con commits; último commit `1f418e3`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -126,8 +126,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `data/swadeshList`, `utils/drawingUtils`); verificados con `audit:orphans` + grep de imports
   relativos y dinámicos. `audit:orphans` bajó de 20 a 13. Quedan 13: 10 features/componentes
   completos nunca montados (decisión de producto), `strategyBridge`/`typologyProfile` (con tests
-  propios), `jsonWorker` (implementado, no cableable por CSP de Tauri) y `TabButton` (muerto tras
-  la extracción a `App.tsx`). Validaciones: typecheck 0, lint OK, build OK, vitest 494/494.
+  propios), `jsonWorker` (implementado, no cableable por CSP de Tauri) y `TabButton` (muerto tras la
+  extracción a `App.tsx`). Validaciones: typecheck 0, lint OK, build OK, vitest 494/494.
+- Validación runtime web (2026-11-19): smoke con `npm run dev` + navegador real. Hallazgo: el jingle
+  lanzaba `RangeError` (tiempo negativo) con el `AudioContext` suspendido; corregido en `1f418e3`
+  con test de regresión. Smoke re-ejecutado en verde (0 errores de consola).
 
 ---
 
@@ -256,11 +259,9 @@ reemplazado por ramas tipadas. Tests nuevos: `lexiconTableModel.test.ts` (20). V
 typecheck 0, lint OK, build OK, vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God
 Components.
 
-**[~] CLN — frente siguiente: no queda ningún componente grande pendiente de extracción.** Opciones
-binarias: (a) decidir destino de los 13 huérfanos restantes de `src/` (`npm run audit:orphans`; los
-triviales ya se borraron en `e26145c`), (b) avanzar la validación runtime con `npm run tauri dev`
-(demo de FTS5, canvas de sintaxis y paginación), o (c) cerrar el push + CI. Requiere decisión del
-usuario en (a) y (c); (b) es verificable localmente.
+**[~] CLN — validación runtime.** Smoke web en verde tras corregir el crash de audio (`1f418e3`).
+Pendiente: recorrer los módulos con un léxico creado (crear léxico → entrada → FTS5 → glosado →
+sound change) y la demo `npm run tauri dev` (GUI nativa).
 
 **[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos

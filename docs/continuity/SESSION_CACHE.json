@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-19T12:15:00.000Z",
+  "lastUpdated": "2026-11-19T13:25:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: borrar huerfanos triviales sin uso y seguir avanzando hacia beta.",
+    "lastPrompt": "CLN: corregir el RangeError del jingle y validar runtime.",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Orphan cleanup (2026-11-19): eliminados 7 archivos triviales sin importador ni uso (`icons/HelpIcon`, `icons/LineIcon`, `icons/Header`, `ProgressModal`, `data/commonWords`, `data/swadeshList`, `utils/drawingUtils`), verificados con `audit:orphans`, grep de stems en src/tests-gui/docs/scripts y sondeo de imports relativos + dinamicos. `audit:orphans` bajo de 20 a 13. Validaciones: typecheck 0, lint OK, build OK, vitest 494/494 (53 archivos). Commit `e26145c`. Pendiente de decision de producto: los 13 huerfanos restantes (8 features nunca montadas, `strategyBridge`/`typologyProfile` con tests, `jsonWorker` por CSP, `TabButton` muerto). Pendiente por autorizacion: push + CI (30 commits locales) y FASE L. -- Prev: LexiconTable model extraction (2026-11-19): extraido el modelo puro de `LexiconTable.tsx` a `src/utils/lexiconTableModel.ts` (P1, ultimo componente de tabla grande). El componente bajo de 693 a 603 lineas y queda como orquestador de estado UI + render, re-exportando los simbolos del modelo. El modulo nuevo concentra constantes (`ITEMS_PER_PAGE`, `DEFAULT_VISIBLE_COLUMNS`, `INCOMPLETE_CATEGORY_CANONICAL`, `CATEGORY_PALETTE`), logica pura (`normalizeText`, `isEntryIncomplete`, `getCategoryColor`, `getUniqueCategories`, `filterLexiconData`, `getTotalPages`, `paginateEntries`, `formatLexemeDisplay`, `splitCommaSeparated`, `applyEditFormChange`) y el tipo `LexiconFilterOptions`. El cast `as keyof Omit<LexiconEntry, ...>` fue reemplazado por ramas tipadas. Tests nuevos: `src/utils/__tests__/lexiconTableModel.test.ts` (20). Validaciones: typecheck 0, lint OK, build OK, vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God Components. Proximo frente: decidir destino de los 20 huerfanos o validacion runtime con `npm run tauri dev`. Pendiente por autorizacion: (1) git push + CI con numero de run; (2) FASE L de CLN."
+  "sessionSummary": "Audio jingle RangeError fix (2026-11-19): la validacion runtime web (npm run dev + navegador real) expuso un crash al pulsar CONTINUAR AL DASHBOARD: Uncaught RangeError en AudioParam.setValueAtTime con tiempo -0.1. playVocalTone calculaba el punto de sostenimiento como startTime + duration - 0.55; con un AudioContext suspendido (currentTime === 0) y duraciones de 0.45/0.40/0.38 el tiempo era negativo y Web Audio abortaba el motivo. Fix: normalizar startTime a >= 0 en playTone/playEtherealTone/playVocalTone y acotar el sostenimiento con Math.max(startTime, ...). Test nuevo src/services/__tests__/audioService.test.ts (4), verificado que falla con el codigo original. Validaciones: typecheck 0, lint OK, build OK, vitest 498/498 (54 archivos), smoke runtime sin errores. Commit 1f418e3. Pendiente: recorrer modulos con un lexico creado, demo tauri:dev, push + CI (32 commits locales) y FASE L. -- Prev: Orphan cleanup (2026-11-19): eliminados 7 archivos triviales sin importador ni uso; audit:orphans 20 -> 13. Commit e26145c."
 }

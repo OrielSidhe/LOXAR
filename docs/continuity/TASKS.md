@@ -3066,3 +3066,30 @@ edición en línea con el render.
 frente es decidir destino de los 20 huérfanos o avanzar la validación runtime (`npm run tauri dev`).
 Pendiente por autorización: `git push` + CI con número de run, FASE L de CLN.
 
+## [2026-11-19] Checkpoint: CLN — el jingle ya no lanza RangeError con AudioContext suspendido
+
+**Rama:** `master`. **Motivo:** la validación runtime web (`npm run dev` + navegador real) expuso un
+crash de audio al pulsar "CONTINUAR AL DASHBOARD": `Uncaught RangeError: Failed to execute
+'setValueAtTime' on 'AudioParam': Time must be a finite non-negative number: -0.1`.
+
+**Diagnóstico:** `playStartup()` agenda el motivo con `playVocalTone` usando `duration` de
+0.45/0.40/0.38, y el punto de sostenimiento se calculaba como `startTime + duration - 0.55`. Con un
+`AudioContext` recién creado (suspendido, `currentTime === 0`) el resultado es `-0.1`; la spec de Web
+Audio rechaza tiempos negativos y el motivo completo abortaba.
+
+**Cambios:**
+- `src/services/audioService.ts`: `startTime = Math.max(0, startTime)` en `playTone`,
+  `playEtherealTone` y `playVocalTone`; el punto de sostenimiento de `playVocalTone` queda acotado
+  con `Math.max(startTime, startTime + duration - 0.55)`.
+- Test de regresión nuevo: `src/services/__tests__/audioService.test.ts` (4) con un `AudioContext`
+  mock que reproduce la spec (lanza `RangeError` ante tiempos negativos). Verificado que el test
+  falla con el código original (3/4) y pasa con el fix.
+- `README.md`: contador 494/494 (53 archivos) → 498/498 (54 archivos).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 498/498 (54 archivos) · smoke runtime web
+sin errores de consola tras el fix (0 errores; antes 2 `RangeError`).
+
+**Próximo bloque ejecutable:** recorrer los módulos con un léxico creado (crear léxico → entrada →
+FTS5 → glosado → sound change) y la demo `npm run tauri dev` (GUI nativa). Pendiente por autorización:
+`git push` + CI con número de run, FASE L de CLN.
+
