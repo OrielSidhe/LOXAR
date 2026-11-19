@@ -49,6 +49,11 @@ artefactos de agentes.
   `objectEntryId` como `z.string().optional()`; `normalizePreview.test.ts` (4) cubre preservación,
   default y round-trip por `normalizeLexiconData`. Validaciones: typecheck 0, lint OK, build OK,
   vitest 449/449 (51 archivos), audit:orphans 20.
+- ~~God Component `EntryEditor` sin descomponer~~ → resuelto 2026-11-19: `src/utils/entryEditorModel.ts`
+  concentra la lógica pura (duplicados, categorías, mapeo de IA, datos base, estado inicial,
+  habilitación de botones) y `EntryEditor.tsx` bajó de 494 a 396 líneas. Tests nuevos:
+  `entryEditorModel.test.ts` (25). Validaciones: typecheck 0, lint OK, build OK, vitest 474/474
+  (52 archivos), audit:orphans 20.
 - Fase J de v3.12 cerrada y commiteada (`ee2a505` + `ed45653`); pendiente solo `push` + CI.
 - **FASE L (limpieza del disco local) sigue PENDIENTE**: `.zcode/` y `.claude/` locales y
   `_ARTIFACTS_NO_GIT/` siguen en disco. No es automático: `.zcode/skills/loxar-continuity` es la

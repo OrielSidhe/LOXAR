@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `5e38fe6`
+- Git inicializado y con commits; último commit `2b57b6d`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -102,6 +102,15 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   descartaba en cada recarga y el preview caía en resolución automática. Tests nuevos:
   `normalizePreview.test.ts` (4). Validaciones: typecheck 0, lint OK, build OK, vitest 449/449
   (51 archivos), audit:orphans 20.
+- Modelo de EntryEditor extraído (2026-11-19): la lógica de dominio de `EntryEditor.tsx`
+  (completion de entrada, descripción de modos, detección de duplicados por significado/raíz/léxema,
+  resolución de categoría nueva, mapeo tolerante de la respuesta de IA, datos base de la entrada con
+  inferencia de raíz, toggle de modos, estado inicial del formulario y habilitación de botones) pasó a
+  `src/utils/entryEditorModel.ts`; el `.tsx` quedó como orquestador de estado UI + render
+  (494 → 396 líneas). Se eliminaron los props muertos `findDuplicateSignificados`/`onDuplicateFound`
+  (de `EntryEditor`, `WorkbenchTab` y `App.tsx`) y el estado muerto `duplicateEntries`. Tests nuevos:
+  `entryEditorModel.test.ts` (25). Validaciones: typecheck 0, lint OK, build OK, vitest 474/474
+  (52 archivos), audit:orphans 20.
 
 ---
 
@@ -204,11 +213,23 @@ Ahora el schema los declara como `z.string().optional()` y `normalizePreview.tes
 preservación y el round-trip por `normalizeLexiconData`. Validaciones: typecheck 0, lint OK, build OK,
 vitest 449/449 (51 archivos), audit:orphans 20.
 
-**[ ] CLN — extraer el modelo puro de `EntryEditor.tsx` (P1, 494 líneas).** Es el último God Component
-grande pendiente: mezcla dominio (normalización de entradas, modos de edición, acciones de IA,
-validación de duplicados) con estado de UI y render. Mover la lógica pura a
-`src/utils/entryEditorModel.ts` y dejar el `.tsx` como orquestador, re-exportando los símbolos que los
-tests importan. Validar con typecheck + vitest + audit:orphans.
+**[x] CLN — extraer el modelo puro de `EntryEditor.tsx` (P1, 2026-11-19).** Era el último God
+Component grande pendiente. Nuevo `src/utils/entryEditorModel.ts` con tipos (`GenerationModeOption`,
+`EntryEditorFormData`, `EntryBaseData`, `AiEntryResult`, `EntryEditorInitialData`, `InitialFormState`,
+`EntryEditorActionState`, `EntryEditorFormPayload`), constantes (`generationModeOptions`,
+`EMPTY_FORM_DATA`) y lógica pura (`isEntryComplete`, `getActiveModeDescription`,
+`findDuplicateSignificados`/`findDuplicateRaices`/`findDuplicateLexemas`, `splitLexemas`,
+`resolveNewCategory`, `pickNormalizedField`, `mapAiEntryResult`, `buildEntryBaseData`,
+`toggleGenerationMode`, `isActionDisabled`, `isAiButtonDisabled`, `buildInitialFormState`,
+`getErrorMessage`). `EntryEditor.tsx` quedó en 396 líneas como orquestador de estado UI + render; se
+eliminaron los props muertos `findDuplicateSignificados`/`onDuplicateFound` y el estado muerto
+`duplicateEntries`. Tests nuevos: `entryEditorModel.test.ts` (25). Validaciones: typecheck 0, lint OK,
+build OK, vitest 474/474 (52 archivos), audit:orphans 20.
+
+**[ ] CLN — extraer el modelo puro de `LexiconTable.tsx` (693 líneas).** Último componente de tabla
+grande: mezcla filtrado/ordenamiento/búsqueda, selección múltiple y exportación con render. Mover la
+lógica pura a `src/utils/lexiconTableModel.ts` y dejar el `.tsx` como orquestador. Validar con
+typecheck + vitest + audit:orphans.
 
 **[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos
@@ -348,10 +369,11 @@ está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
     `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
     `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals`.
-  - Próximo paso real: `EntryEditor` (494); `GrammarTab` (484) y `SyntaxCanvas` (484) ya fueron
-    extraídos a `src/utils/grammarTabModel.ts` y `src/utils/syntaxCanvasModel.ts`;
-    `GraphCanvas.tsx` y `CollectionsManager.tsx` ya fueron extraídos a `src/utils/graphCanvasModel.ts`
-    y `src/utils/collectionsManagerModel.ts`.
+  - Próximo paso real: `LexiconTable` (693); `EntryEditor` (494 → 396), `GrammarTab` (484) y
+    `SyntaxCanvas` (484) ya fueron extraídos a `src/utils/entryEditorModel.ts`,
+    `src/utils/grammarTabModel.ts` y `src/utils/syntaxCanvasModel.ts`; `GraphCanvas.tsx` y
+    `CollectionsManager.tsx` ya fueron extraídos a `src/utils/graphCanvasModel.ts` y
+    `src/utils/collectionsManagerModel.ts`.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.

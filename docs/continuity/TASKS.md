@@ -2983,3 +2983,36 @@ las claves desconocidas, así que `subjectEntryId`/`verbEntryId`/`objectEntryId`
 **Próximo bloque ejecutable:** extraer el modelo puro de `EntryEditor.tsx` (494 líneas, el último God
 Component pendiente del P1) o decidir destino de los 20 huérfanos. Pendiente por autorización:
 `git push` + CI con número de run, FASE L de CLN.
+
+---
+
+## [2026-11-19] Checkpoint: CLN — el modelo puro de `EntryEditor` queda extraído (P1)
+
+**Rama:** `master`. **Motivo:** `EntryEditor.tsx` (494 líneas) era el último God Component grande
+pendiente del P1: mezclaba dominio (completion de entrada, detección de duplicados, resolución de
+categorías, mapeo de la respuesta de IA, armado de los datos base) con estado de UI y render.
+
+**Cambios:**
+- Nuevo `src/utils/entryEditorModel.ts`: tipos (`GenerationModeOption`, `EntryEditorFormData`,
+  `EntryBaseData`, `AiEntryResult`, `EntryEditorInitialData`, `InitialFormState`,
+  `EntryEditorActionState`, `EntryEditorFormPayload`), constantes (`generationModeOptions`,
+  `EMPTY_FORM_DATA`) y lógica pura (`isEntryComplete`, `getActiveModeDescription`,
+  `findDuplicateSignificados`/`findDuplicateRaices`/`findDuplicateLexemas`, `splitLexemas`,
+  `resolveNewCategory`, `pickNormalizedField`, `mapAiEntryResult`, `buildEntryBaseData`,
+  `toggleGenerationMode`, `isActionDisabled`, `isAiButtonDisabled`, `buildInitialFormState`,
+  `getErrorMessage`).
+- `src/components/EntryEditor.tsx`: 494 → 396 líneas, orquestador de estado UI + render. Se
+  reemplazaron los `useMemo` de duplicados, el efecto de sincronización, `handleConfirmNewCategory`,
+  `handleAiComplete` y `handleSubmit` por los helpers del modelo.
+- Deuda muerta eliminada: props `findDuplicateSignificados`/`onDuplicateFound` sin uso en
+  `EntryEditor`, `WorkbenchTab` y `App.tsx`; estado `duplicateEntries` declarado y nunca leído.
+- `catch (e: any)` → `getErrorMessage(e: unknown)`; `displayOf` (import sin uso) retirado de
+  `EntryEditor.tsx`.
+- Tests nuevos: `src/utils/__tests__/entryEditorModel.test.ts` (25).
+- `README.md`: contador de tests 449/449 (51 archivos) → 474/474 (52 archivos).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 474/474 (52 archivos) · audit:orphans 20.
+
+**Próximo bloque ejecutable:** extraer el modelo puro de `LexiconTable.tsx` (693 líneas) o decidir
+destino de los 20 huérfanos. Pendiente por autorización: `git push` + CI con número de run, FASE L de
+CLN.
