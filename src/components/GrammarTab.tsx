@@ -342,6 +342,8 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
           lexicon={lexicon}
           syntaxSubTab={syntaxSubTab}
           editableAst={editableAst}
+          conlangName={conlangName}
+          aiAvailable={aiAvailable}
           preview={preview}
           onSetSyntaxSubTab={setSyntaxSubTab}
           onSetEditableAst={setEditableAst}

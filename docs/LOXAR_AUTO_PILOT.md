@@ -56,6 +56,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Bootstrap de proyecto (B0, 2026-11-18): `AppProjectBootstrapLayer` ya no está muerto. `App.tsx`
   hidrata `projectPath`/`sessionCacheData`/`hasLocalData` al montar y eleva `isAppLoaded` tras ese
   load; el descarte del modal persiste en `sessionCache`. `showHomePanel` sigue declarado sin uso.
+- Canvas de sintaxis (B1, 2026-11-18): el subtab `canvas` del módulo de sintaxis ahora monta
+  `SyntaxCanvas` (antes declarado y sin render, con el componente huérfano). Persiste en el
+  manifiesto vía `onUpdateManifest`. Huérfanos: 20.
 
 ---
 
@@ -139,6 +142,13 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — canvas de sintaxis cableado (B1, 2026-11-18).** `GrammarSyntaxPanel` declaraba el
+subtab `canvas` (y era el por defecto) pero no renderizaba nada: no había botón y `SyntaxCanvas.tsx`
+estaba huérfano. Ahora el subtab monta `SyntaxCanvas` con `manifest.syntaxCanvas` (fallback vacío),
+`onChange` persiste vía `onUpdateManifest`, y recibe `conlangName`/`aiAvailable` de `GrammarTab`.
+Validaciones: typecheck 0, lint OK, build OK, vitest 374/374, audit:orphans 20. Pendiente: demo
+runtime (`npm run tauri dev`) para validar pointer events, zoom y modales.
+
 **[x] CLN — bug de UI: `isAppLoaded` / `hasLocalData` / `showHomePanel` nunca se setean (B0, 2026-11-18).**
 `AppProjectBootstrapLayer` retornaba `null` siempre. Cableado el arranque: `loadSessionCache()` hidrata
 `projectPath`/`sessionCacheData`, `listLexiconNames()` alimenta `hasLocalData`, y `setIsAppLoaded(true)`

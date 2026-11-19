@@ -1,16 +1,28 @@
 import React from 'react';
-import type { GrammarManifest, LexiconEntry } from '../types';
+import type { GrammarManifest, LexiconEntry, SyntaxCanvas as SyntaxCanvasData } from '../types';
 import InfoHint from './InfoHint';
 import ASTEditor from './ASTEditor';
+import SyntaxCanvas from './SyntaxCanvas';
 import { buildClauseAST, validatePhonology } from '../services/grammar';
 import { realizeEditedTree } from '../services/grammar/ast-view';
 import { getEntryLabel, getDefaultPreviewEntries, buildPreviewSentence } from '../utils/grammarPreview';
+
+/** Canvas vacío usado hasta que el motor siembre `manifest.syntaxCanvas`. */
+const EMPTY_SYNTAX_CANVAS: SyntaxCanvasData = {
+  level: 1,
+  typologySelected: true,
+  nodes: [],
+  connections: [],
+  exceptions: [],
+};
 
 export interface GrammarSyntaxPanelProps {
   effectiveManifest: GrammarManifest;
   lexicon: LexiconEntry[];
   syntaxSubTab: 'canvas' | 'ast' | 'preview';
   editableAst: any;
+  conlangName?: string;
+  aiAvailable?: boolean;
   preview: {
     sentence: string;
     gloss: string;
@@ -28,6 +40,8 @@ const GrammarSyntaxPanel = ({
   lexicon,
   syntaxSubTab,
   editableAst,
+  conlangName,
+  aiAvailable,
   preview,
   onSetSyntaxSubTab,
   onSetEditableAst,
@@ -54,6 +68,12 @@ const GrammarSyntaxPanel = ({
       </h3>
       <div className="flex gap-1 mb-4 p-1 bg-surface rounded-xl border border-border-dark w-fit">
         <button
+          onClick={() => onSetSyntaxSubTab('canvas')}
+          className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${syntaxSubTab === 'canvas' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-white'}`}
+        >
+          🎨 Canvas
+        </button>
+        <button
           onClick={() => onSetSyntaxSubTab('ast')}
           className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${syntaxSubTab === 'ast' ? 'bg-primary text-white shadow' : 'text-text-secondary hover:text-white'}`}
         >
@@ -73,6 +93,24 @@ const GrammarSyntaxPanel = ({
           ↻ Regenerar árbol desde gramática
         </button>
       </div>
+
+      {syntaxSubTab === 'canvas' && (
+        <div className="flex-1 min-h-0 flex flex-col gap-3">
+          <div className="text-xs uppercase tracking-widest text-text-secondary">
+            Canvas de sintaxis — arrastra nodos, conecta estructuras, añade nodos o mapea con IA
+          </div>
+          <div className="flex-1 min-h-0 rounded-lg border border-border-dark" style={{ minHeight: 480 }}>
+            <SyntaxCanvas
+              canvas={effectiveManifest.syntaxCanvas ?? EMPTY_SYNTAX_CANVAS}
+              onChange={canvas => onUpdateManifest({ syntaxCanvas: canvas })}
+              lexicon={lexicon}
+              conlangName={conlangName}
+              aiAvailable={aiAvailable}
+              grammar={effectiveManifest}
+            />
+          </div>
+        </div>
+      )}
 
       {syntaxSubTab === 'ast' && editableAst && (
         <div className="flex-1 min-h-0 flex flex-col gap-3">

@@ -2665,3 +2665,28 @@ intacto).
 
 **Pendiente:** `git push` (bloquea el cierre de CI del Gauntlet v3.12) y la demo runtime con
 `npm run tauri dev` para confirmar el modal visualmente.
+
+---
+
+## [2026-11-18] Checkpoint: CLN — canvas de sintaxis cableado (B1)
+
+**Rama:** `master`. **Motivo:** `GrammarSyntaxPanel` declaraba el subtab `canvas` (y era el
+subtab por defecto del módulo de sintaxis) pero nunca renderizaba contenido: no existía botón para
+elegirlo y `SyntaxCanvas.tsx` estaba huérfano. El componente de canvas (27.8 KB, con modales de
+alta de nodo, AI Mapper, desglose morfológico y zoom/pan) no era alcanzable desde la UI.
+
+**Cambios:**
+- `src/components/GrammarSyntaxPanel.tsx`: nuevo subtab `🎨 Canvas` en la barra de subtabs y bloque
+  de render para `syntaxSubTab === 'canvas'` que monta `SyntaxCanvas` con
+  `effectiveManifest.syntaxCanvas` (fallback a `EMPTY_SYNTAX_CANVAS` si el manifiesto aún no lo
+  tiene), `onChange` que persiste vía `onUpdateManifest({ syntaxCanvas })`, `lexicon`,
+  `conlangName` y `aiAvailable` como props nuevas del panel.
+- `src/components/GrammarTab.tsx`: `renderSyntax` ahora pasa `conlangName` y `aiAvailable` a
+  `GrammarSyntaxPanel`.
+
+**Validaciones:** `npm run typecheck` 0 errores · `npm run lint` OK · `npm run build` OK ·
+`npx vitest run` 374/374 (45 archivos) · `npm run audit:orphans` 20 (baja de 21: `SyntaxCanvas`
+deja de ser huérfano).
+
+**Pendiente:** demo runtime con `npm run tauri dev` para validar el canvas visualmente (pointer
+events, zoom y modales), `git push` + CI, y la demo del bootstrap (B0).
