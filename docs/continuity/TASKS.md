@@ -1,5 +1,5 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-08-14 
+**Última actualización:** 2026-11-18 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
@@ -41,7 +41,29 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
   - [x] Extraer handlers de IA/sugerencias de `App.tsx` a `src/hooks/useAiHandlers.ts` (P1-2c).
   - [x] Extraer project operations de `App.tsx` a `src/hooks/useProjectOperations.ts` (P1-2d).
   - [x] Extraer bootstrap/modal/app handlers de `App.tsx` a `src/hooks/useAppHandlers.ts` (P1-2e).
-  - [ ] Descomponer `App.tsx` (God Component, ~930 líneas) y los 4 componentes gigantes.
+  - [ ] Descomponer `App.tsx` (God Component, ~947 líneas) y los 4 componentes gigantes.
+
+---
+
+## [2026-11-18] Checkpoint: extraer `DashboardTab` de `App.tsx` (P1, God Component)
+**Rama:** `master`. **Motivo:** el tab `dashboard` era el último bloque inline grande de `App.tsx`
+(~70 líneas de JSX + dos closures de navegación que duplicaban la lista de sub-módulos de gramática).
+Siguiendo el patrón ya usado con `WorkbenchTab`/`ToolsTab`, se extrajo a un componente dedicado.
+**Cambios:**
+- `src/components/DashboardTab.tsx` (NUEVO): monta `LanguageHomeCanvas` con `activeModule="dashboard"`
+  fijo y centraliza el enrutado módulo → tab. La lista `GRAMMAR_SUB_MODULES` ahora existe una sola vez
+  (antes estaba duplicada en `onModuleClick` y `onZoomToNode`), y el casting `moduleId as any` pasó a
+  `moduleId as AppTabId`.
+- `src/App.tsx`: el bloque inline se reemplazó por `<DashboardTab ... />`; se añadió el callback
+  `handleOpenGrammarModule` (`setActiveTab('grammar')` + `setActiveGrammarModule`) y se eliminó el
+  import directo de `LanguageHomeCanvas`. La lógica de enrutado es verbatim: no cambió ningún
+  comportamiento, solo de archivo.
+- `App.tsx`: 973 → 947 líneas.
+**Verificación:** `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+`npx vitest run` 378/378 (46 archivos), `npm run audit:orphans` 20 (sin huérfanos nuevos).
+**Próximo bloque ejecutable:** continuar P1 con `SyntaxFlowline.tsx` (992 líneas) o `GraphCanvas.tsx`
+(975 líneas), los dos componentes más grandes que quedan; siguen pendientes por autorización el
+`push` + CI y la demo runtime (`npm run tauri dev`).
 
 ---
 

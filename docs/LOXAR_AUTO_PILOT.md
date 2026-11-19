@@ -62,6 +62,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Métricas vivas (2026-11-18): corregido el bug de `NaN` en el dashboard. `getGrammarMetrics`
   (`src/utils/grammarMetrics.ts`) deriva rules/categories/strategies/roles/sonidos/árboles del
   manifiesto canónico; `App.tsx` y el resumen pragmático lo consumen. Tests 378/378.
+- Dashboard extraído (2026-11-18): el tab `dashboard` salió de `App.tsx` a
+  `src/components/DashboardTab.tsx`, con el enrutado módulo → tab centralizado y la lista de
+  sub-módulos de gramática sin duplicar. `App.tsx`: 973 → 947 líneas.
 
 ---
 
@@ -145,6 +148,14 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — extraer `DashboardTab` de `App.tsx` (P1, 2026-11-18).** El tab `dashboard` era el último
+bloque inline grande del God Component (~70 líneas de JSX + dos closures de navegación que
+duplicaban la lista de sub-módulos de gramática). Nuevo `src/components/DashboardTab.tsx` monta
+`LanguageHomeCanvas` y centraliza el enrutado módulo → tab; `App.tsx` aporta `handleOpenGrammarModule`
+y el objeto `stats` ya calculado. `GRAMMAR_SUB_MODULES` quedó definido una sola vez y el
+`moduleId as any` pasó a `moduleId as AppTabId`. Validaciones: typecheck 0, lint OK, build OK,
+vitest 378/378 (46 archivos), audit:orphans 20.
+
 **[x] CLN — métricas vivas del dashboard sin `NaN` (2026-11-18).** El `stats` de
 `LanguageHomeCanvas` y el `rulesCount` pragmático leían campos inexistentes del manifiesto
 (`morphology.rules`, `syntax.rules`, `categories`, `phonology.consonants/rules`) que Zod descarta,
@@ -205,7 +216,7 @@ está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime
 - [ ] **Descomponer `App.tsx` (God Component) y los 4 componentes gigantes.**
   - Estado: P1-2f revertido; se avanza por secciones pequeñas sin reintentar `useProjectShell`.
   - Extraído de `App.tsx`: `ToastContainer`, `OfflineBanner`, `AmbientLights`,
-    `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`, `TabButton`.
+    `ProjectBootstrapBanner`, `AppToolbar`, `AppBatchToolbar`, `TabButton`, `DashboardTab`.
   - Extraído de `EntryEditor`: `SignificadoTagsInput`, `EntryDuplicateWarning`, `EntryEditorAiActions`,
     `EntryEditorCompleteModeNav`, `EntryEditorHeader`, `EntryEditorAiBanner`, `EntryEditorIpaToggle`.
   - Extraído de `CollectionsManager`: `ParadigmCell`.
@@ -213,8 +224,9 @@ está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
     `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
     `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals`.
-  - Próximo paso real: seguir extrayendo subcomponentes de `App.tsx` o avanzar con
-    `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
+  - Próximo paso real: `SyntaxFlowline.tsx` (992 líneas) y `GraphCanvas.tsx` (975 líneas), los dos
+    componentes más grandes que quedan; luego `CollectionsManager`, `GrammarTab`, `SyntaxCanvas`
+    y `EntryEditor`.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.

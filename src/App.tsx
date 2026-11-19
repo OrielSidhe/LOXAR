@@ -57,7 +57,7 @@ import AppSettingsModalLayer from './components/AppSettingsModalLayer';
 import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
-import LanguageHomeCanvas from './components/LanguageHomeCanvas';
+import DashboardTab from './components/DashboardTab';
 import AppWelcomeSection from './components/AppWelcomeSection';
 import AppToastLayer from './components/AppToastLayer';
 
@@ -159,6 +159,13 @@ const App = () => {
   const goHome = useCallback(() => {
     setTabHistory(['dashboard']);
   }, []);
+
+  /** Abre el tab de gramática en un sub-módulo concreto (consume `DashboardTab`). */
+  const handleOpenGrammarModule = useCallback((moduleId: string) => {
+    setActiveTab('grammar');
+    setActiveGrammarModule(moduleId);
+  }, [setActiveTab]);
+
   const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
 
   const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
@@ -695,74 +702,41 @@ const App = () => {
               )}
               <div className="flex-grow h-full flex flex-col">
                 {activeTab === 'dashboard' && (
-                  <div className="h-full w-full">
-                    <LanguageHomeCanvas
-                      conlangName={activeMetadata?.conlangName}
-                      activeModule={activeTab}
-                      conlangNames={lexiconHook.lexiconNames}
-                      onSelectConlang={lexiconHook.setActiveLexicon}
-                      lexicon={activeLexicon}
-                      grammar={activeGrammar}
-                      stats={{
-                        grammar: activeGrammar ? {
-                          rules: grammarMetrics.rules,
-                          categories: grammarMetrics.categories,
-                          strategies: grammarMetrics.strategies,
-                          roles: grammarMetrics.roles,
-                        } : undefined,
-                        phonology: activeGrammar ? {
-                          sounds: grammarMetrics.phonologySounds,
-                          rules: grammarMetrics.phonologyRules,
-                        } : undefined,
-                        syntax: activeGrammar ? {
-                          rules: grammarMetrics.rules,
-                          trees: grammarMetrics.syntaxTrees,
-                        } : undefined,
-                        lexicon: {
-                          entries: activeLexicon.length,
-                          categories: new Set(activeLexicon.map(e => e.Categoría).filter(Boolean)).size,
-                        },
-                        neography: undefined,
-                        semantics: { fields: 0, relations: 0 },
-                        translator: { translations: 0 },
-                        workbench: { pending: incompleteEntries.length, completed: 0 },
-                        collections: { collections: 0 },
-                      }}
-                      onModuleClick={(moduleId) => {
-                        const grammarSubModules = ['overview', 'phonology', 'typology', 'morphology', 'syntax', 'semantics', 'roles', 'strategies', 'pragmatic', 'notes'];
-                        if (grammarSubModules.includes(moduleId as string)) {
-                          setActiveTab('grammar');
-                          setActiveGrammarModule(moduleId);
-                        } else if (moduleId === 'lexicon') {
-                          setActiveTab('table');
-                        } else if (moduleId === 'workbench') {
-                          setActiveTab('workbench');
-                        } else if (moduleId === 'collections') {
-                          setActiveTab('collections');
-                        } else if (moduleId === 'neography') {
-                          setActiveTab('writing');
-                        } else if (moduleId === 'translator') {
-                          setActiveTab('translator');
-                        } else {
-                          setActiveTab(moduleId as any);
-                        }
-                      }}
-                      pragmaticEngine={pragmaticEngine}
-                      onZoomToNode={(moduleId) => {
-                        // Zoom desde un nodo del grafo → abrir el panel correspondiente
-                        const grammarSubModules = ['overview', 'phonology', 'typology', 'morphology', 'syntax', 'semantics', 'roles', 'strategies', 'pragmatic', 'notes'];
-                        if (grammarSubModules.includes(moduleId)) {
-                          setActiveTab('grammar');
-                          setActiveGrammarModule(moduleId);
-                        } else if (moduleId === 'lexicon') {
-                          setActiveTab('table');
-                        } else if (moduleId === 'phonology') {
-                          setActiveTab('grammar');
-                          setActiveGrammarModule('phonology');
-                        }
-                      }}
-                    />
-                  </div>
+                  <DashboardTab
+                    conlangName={activeMetadata?.conlangName}
+                    conlangNames={lexiconHook.lexiconNames}
+                    onSelectConlang={lexiconHook.setActiveLexicon}
+                    lexicon={activeLexicon}
+                    grammar={activeGrammar}
+                    stats={{
+                      grammar: activeGrammar ? {
+                        rules: grammarMetrics.rules,
+                        categories: grammarMetrics.categories,
+                        strategies: grammarMetrics.strategies,
+                        roles: grammarMetrics.roles,
+                      } : undefined,
+                      phonology: activeGrammar ? {
+                        sounds: grammarMetrics.phonologySounds,
+                        rules: grammarMetrics.phonologyRules,
+                      } : undefined,
+                      syntax: activeGrammar ? {
+                        rules: grammarMetrics.rules,
+                        trees: grammarMetrics.syntaxTrees,
+                      } : undefined,
+                      lexicon: {
+                        entries: activeLexicon.length,
+                        categories: new Set(activeLexicon.map(e => e.Categoría).filter(Boolean)).size,
+                      },
+                      neography: undefined,
+                      semantics: { fields: 0, relations: 0 },
+                      translator: { translations: 0 },
+                      workbench: { pending: incompleteEntries.length, completed: 0 },
+                      collections: { collections: 0 },
+                    }}
+                    pragmaticEngine={pragmaticEngine}
+                    onOpenTab={setActiveTab}
+                    onOpenGrammarModule={handleOpenGrammarModule}
+                  />
                 )}
                 {activeTab === 'table' && (
                   <LexiconTable
