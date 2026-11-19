@@ -24,13 +24,17 @@ export const getDefaultPreviewEntries = (
       return terms.some(term => category.includes(term));
     });
 
+  const subject = byId(preview?.subjectEntryId) || findByCategory('sustantivo', 'pronombre') || lexicon[0];
+  const verb = byId(preview?.verbEntryId) || findByCategory('verbo') || lexicon[1] || lexicon[0];
+  const isFreeSlot = (entry: LexiconEntry) => entry.ID !== subject?.ID && entry.ID !== verb?.ID;
+
   return {
-    subject: byId(preview?.subjectEntryId) || findByCategory('sustantivo', 'pronombre') || lexicon[0],
-    verb: byId(preview?.verbEntryId) || findByCategory('verbo') || lexicon[1] || lexicon[0],
+    subject,
+    verb,
     object:
       byId(preview?.objectEntryId) ||
-      lexicon.find(entry => entry.ID !== (byId(preview?.subjectEntryId)?.ID) && normalizeCategory(entry.Categoría).includes('sustantivo')) ||
-      lexicon[2] ||
+      lexicon.find(entry => isFreeSlot(entry) && normalizeCategory(entry.Categoría).includes('sustantivo')) ||
+      lexicon.find(isFreeSlot) ||
       lexicon[0],
   };
 };
