@@ -2803,3 +2803,30 @@ audit:orphans 20 (el módulo nuevo sí tiene importador, no suma huérfanos).
 queda; luego `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`. Pendiente por
 autorización: `git push` (11 commits locales) + CI con número de run, FASE L de CLN y el destino de
 los 20 huérfanos.
+
+---
+
+## [2026-11-18] Checkpoint: CLN — extraer el modelo puro de `GraphCanvas.tsx` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** `GraphCanvas.tsx` (975 líneas) era el componente más grande que
+quedaba y mezclaba modelo de dominio (tipos, grafos de nivel, conversión a React Flow) con estado de
+UI y render; el checkpoint anterior lo marcaba como "próximo bloque ejecutable".
+
+**Cambios:**
+- `src/utils/graphCanvasModel.ts` (NUEVO): tipos (`LevelId`, `NodePort`, `ModuleNodeType`, `GraphNode`,
+  `GraphEdge`, `PragmaticEngineState`, `NodeCallbacks`), grafos de nivel (`ROOT_NODE_ID`, `ROOT_NODES`,
+  `ROOT_EDGES`, `GRAMMAR_NODES`, `GRAMMAR_EDGES`, `LEXICON_NODES`, `LEXICON_EDGES`,
+  `DYNAMIC_NODE_PORTS`), presentación (`STATUS_COLORS`, `STATUS_DOT`, `MODULE_LABELS`) y utilidades
+  (`grammarNodeType`, `toRfNodes`, `withStats`, `toRfEdges`, `safeShortId`).
+- `src/components/GraphCanvas.tsx`: quedó como orquestador de estado UI + render (975 → 831 líneas).
+  Importa el modelo y **re-exporta** todos los símbolos públicos para que `graphCanvasTree.test.ts` y
+  `graphCanvasPorts.test.ts` sigan importándolos desde el componente.
+- `src/components/ModulePalette.tsx`: `ModuleNodeType` pasa a definirse una sola vez en el modelo
+  (antes duplicado); el `.tsx` lo importa y lo re-exporta.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 378/378 (46 archivos) ·
+audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador).
+
+**Próximo bloque ejecutable:** `CollectionsManager` (623 líneas) o `GrammarTab` (484) /
+`SyntaxCanvas` (484) / `EntryEditor` (494). Pendiente por autorización: `git push` (12 commits
+locales) + CI con número de run, FASE L de CLN y el destino de los 20 huérfanos.

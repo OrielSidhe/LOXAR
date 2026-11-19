@@ -11,8 +11,9 @@
  */
 
 import React from 'react';
+import type { ModuleNodeType } from '../utils/graphCanvasModel';
 
-export type ModuleNodeType = 'grammar' | 'syntax' | 'lexicon' | 'phonology' | 'morphology' | 'semantics' | 'neography' | 'translator';
+export type { ModuleNodeType } from '../utils/graphCanvasModel';
 
 interface PaletteItem {
   type: ModuleNodeType;

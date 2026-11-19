@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `b0baca7`
+- Git inicializado y con commits; último commit `d113bb9`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -153,6 +153,17 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — extraer el modelo puro de `GraphCanvas.tsx` (P1, 2026-11-18).** El componente
+(975 líneas) mezclaba dominio y render. Nuevo `src/utils/graphCanvasModel.ts` con tipos
+(`LevelId`, `NodePort`, `ModuleNodeType`, `GraphNode`, `GraphEdge`, `PragmaticEngineState`,
+`NodeCallbacks`), grafos de nivel (`ROOT_NODE_ID`/`ROOT_NODES`/`ROOT_EDGES`, `GRAMMAR_NODES`/`EDGES`,
+`LEXICON_NODES`/`EDGES`, `DYNAMIC_NODE_PORTS`), presentación (`STATUS_COLORS`, `STATUS_DOT`,
+`MODULE_LABELS`) y utilidades (`grammarNodeType`, `toRfNodes`, `withStats`, `toRfEdges`,
+`safeShortId`). `GraphCanvas.tsx` quedó en 831 líneas como orquestador de estado UI + render y
+re-exporta los símbolos públicos; `ModulePalette.tsx` ahora importa `ModuleNodeType` del modelo
+(antes estaba duplicado). Validaciones: typecheck 0, lint OK, build OK, vitest 378/378
+(46 archivos), audit:orphans 20.
+
 **[x] CLN — extraer el modelo puro de `SyntaxFlowline.tsx` (P1, 2026-11-18).** El componente
 (992 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxFlowlineModel.ts` con tipos
 (`PinValue`, `PinDef`, `FlowlineBlock`, `DefaultBlockDef`), constantes (`STORAGE_KEY`,
@@ -240,8 +251,8 @@ está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
     `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
     `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals`.
-  - Próximo paso real: `GraphCanvas.tsx` (975 líneas), el componente más grande que queda; luego
-    `CollectionsManager`, `GrammarTab`, `SyntaxCanvas` y `EntryEditor`.
+  - Próximo paso real: `CollectionsManager` (623 líneas), `GrammarTab` (484), `SyntaxCanvas` (484) y
+    `EntryEditor` (494); `GraphCanvas.tsx` ya fue extraído a `src/utils/graphCanvasModel.ts`.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.
