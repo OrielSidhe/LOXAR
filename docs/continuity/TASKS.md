@@ -1,5 +1,5 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-11-18 
+**Última actualización:** 2026-11-19 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
@@ -41,7 +41,29 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
   - [x] Extraer handlers de IA/sugerencias de `App.tsx` a `src/hooks/useAiHandlers.ts` (P1-2c).
   - [x] Extraer project operations de `App.tsx` a `src/hooks/useProjectOperations.ts` (P1-2d).
   - [x] Extraer bootstrap/modal/app handlers de `App.tsx` a `src/hooks/useAppHandlers.ts` (P1-2e).
-  - [ ] Descomponer `App.tsx` (God Component, ~947 líneas) y los 4 componentes gigantes.
+  - [x] Descomponer `App.tsx` (God Component) y los 4 componentes gigantes. P1 cerrado 2026-11-19:
+        `DashboardTab`, `GraphCanvas`, `SyntaxFlowline`, `CollectionsManager`, `GrammarTab`,
+        `SyntaxCanvas`, `EntryEditor` y `LexiconTable` tienen su modelo puro en `src/utils/`.
+
+---
+
+## [2026-11-19] Checkpoint: borrar huérfanos triviales sin uso (CLN)
+**Rama:** `master`. **Motivo:** el frente (a) de la próxima tarea activa: `audit:orphans` reportaba
+20 huérfanos; 7 eran código trivial del commit inicial, sin importador y sin uso en `src`, `tests-gui`
+ni `scripts`.
+**Cambios:**
+- Borrados `src/components/icons/HelpIcon.tsx`, `src/components/icons/LineIcon.tsx`,
+  `src/components/icons/Header.tsx`, `src/components/ProgressModal.tsx`, `src/data/commonWords.ts`,
+  `src/data/swadeshList.ts` y `src/utils/drawingUtils.ts` (commit `e26145c`).
+- Verificación previa: `npm run audit:orphans` (sin importador entrante), grep de stems en `src`,
+  `tests-gui`, `docs` y `scripts`, y sondeo de imports relativos + `import()` dinámicos: ningún
+  consumidor real. No se tocó `src/components/Header.tsx` (el componente que `App.tsx` sí importa).
+**Verificación:** `npm run typecheck` 0 errores, `npm run lint` OK, `npm run build` OK,
+`npx vitest run` 494/494 (53 archivos), `npm run audit:orphans` 20 → 13.
+**Pendiente de decisión de producto:** los 13 restantes (`InflectionModal`, `InflectionView`,
+`WritingWorkshop`, `CategoryManagerModal`, `LexiconAuditPanel`, `CompletionDashboard`,
+`GrammarGuidedTour`, `AiStatusIndicator`, `Button`, `TabButton`, `strategyBridge`,
+`typologyProfile`, `jsonWorker`). Por autorización: `push` + CI y FASE L.
 
 ---
 

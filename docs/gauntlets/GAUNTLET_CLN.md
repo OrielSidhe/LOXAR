@@ -60,6 +60,12 @@ artefactos de agentes.
   de 693 a 603 líneas. Tests nuevos: `lexiconTableModel.test.ts` (20). Validaciones: typecheck 0,
   lint OK, build OK, vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God Components.
 - Fase J de v3.12 cerrada y commiteada (`ee2a505` + `ed45653`); pendiente solo `push` + CI.
+- ~~Huérfanos triviales sin uso~~ → resuelto 2026-11-19 (`e26145c`): borrados 7 archivos sin
+  importador ni uso (`icons/HelpIcon`, `icons/LineIcon`, `icons/Header`, `ProgressModal`,
+  `data/commonWords`, `data/swadeshList`, `utils/drawingUtils`). `audit:orphans`: 20 → 13. Restantes:
+  10 features/componentes completos nunca montados (decisión de producto), `strategyBridge`/
+  `typologyProfile` (con tests propios), `jsonWorker` (CSP de Tauri) y `TabButton` (muerto tras la
+  extracción).
 - **FASE L (limpieza del disco local) sigue PENDIENTE**: `.zcode/` y `.claude/` locales y
   `_ARTIFACTS_NO_GIT/` siguen en disco. No es automático: `.zcode/skills/loxar-continuity` es la
   skill de continuidad viva referenciada en `TASKS.md`; borrarla rompe el workflow. Requiere

@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `2b57b6d`
+- Git inicializado y con commits; último commit `e26145c`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -121,6 +121,13 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   Tests nuevos: `lexiconTableModel.test.ts` (20). Validaciones: typecheck 0, lint OK, build OK,
   vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God Components: no queda ningún
   componente grande pendiente de extracción.
+- Limpieza de huérfanos (2026-11-19): borrados 7 archivos triviales sin importador y sin uso
+  (`icons/HelpIcon`, `icons/LineIcon`, `icons/Header`, `ProgressModal`, `data/commonWords`,
+  `data/swadeshList`, `utils/drawingUtils`); verificados con `audit:orphans` + grep de imports
+  relativos y dinámicos. `audit:orphans` bajó de 20 a 13. Quedan 13: 10 features/componentes
+  completos nunca montados (decisión de producto), `strategyBridge`/`typologyProfile` (con tests
+  propios), `jsonWorker` (implementado, no cableable por CSP de Tauri) y `TabButton` (muerto tras
+  la extracción a `App.tsx`). Validaciones: typecheck 0, lint OK, build OK, vitest 494/494.
 
 ---
 
@@ -249,10 +256,11 @@ reemplazado por ramas tipadas. Tests nuevos: `lexiconTableModel.test.ts` (20). V
 typecheck 0, lint OK, build OK, vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God
 Components.
 
-**[ ] CLN — frente siguiente: no queda ningún componente grande pendiente de extracción.** Opciones
-binarias: (a) decidir destino de los 20 huérfanos de `src/` (`npm run audit:orphans`), (b) avanzar
-la validación runtime con `npm run tauri dev` (demo de FTS5, canvas de sintaxis y paginación), o
-(c) cerrar el push + CI. Requiere decisión del usuario en (a) y (c); (b) es verificable localmente.
+**[~] CLN — frente siguiente: no queda ningún componente grande pendiente de extracción.** Opciones
+binarias: (a) decidir destino de los 13 huérfanos restantes de `src/` (`npm run audit:orphans`; los
+triviales ya se borraron en `e26145c`), (b) avanzar la validación runtime con `npm run tauri dev`
+(demo de FTS5, canvas de sintaxis y paginación), o (c) cerrar el push + CI. Requiere decisión del
+usuario en (a) y (c); (b) es verificable localmente.
 
 **[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos
@@ -343,7 +351,7 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 25 commits locales** en `master` que no están en `origin` (`5e38fe6`, `36c781a`, `f521b85`,
+**Hay 30 commits locales** en `master` que no están en `origin` (`5e38fe6`, `36c781a`, `f521b85`,
 `e6d6c2d`, `76cf42f`, `dad806e`, `cc0f712`, `1f34de3`, `ad3110a`, `25dbe93`, `cd7547f`, `f433c22`,
 `6b66129`, `d113bb9`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`, `aeea62a`, `2ebb88b`,
 `9bc5f70`, `ed45653`, `ee2a505` + este checkpoint de docs). El
@@ -352,10 +360,14 @@ Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J;
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
 hay número de run y la fase queda formalmente abierta.
 
-**[ ] CLN — decidir destino de los 20 huérfanos de `src/`.** Inventario reproducible con
-`npm run audit:orphans` (creado en `aeea62a`). 9 candidatos a borrado seguro (sin uso ni en tests),
-10 features completas nunca montadas (decisión de producto), 3 con tests propios (no borrar sin
-re-cablear). Ver checkpoint en `docs/continuity/TASKS.md`.
+**[ ] CLN — decidir destino de los 13 huérfanos de `src/`.** Inventario reproducible con
+`npm run audit:orphans` (creado en `aeea62a`; baseline después de `e26145c`). Ya borrados en
+`e26145c`: 7 triviales sin uso. Quedan 13: 8 features completas nunca montadas (`InflectionModal`,
+`InflectionView`, `WritingWorkshop`, `CategoryManagerModal`, `LexiconAuditPanel`,
+`CompletionDashboard`, `GrammarGuidedTour`, `AiStatusIndicator`, `Button`, `TabButton` son los
+candidatos de producto), `strategyBridge`/`typologyProfile` (con tests propios, no borrar sin
+re-cablear), `jsonWorker` (implementado, no cableable por CSP de Tauri). Ver checkpoint en
+`docs/continuity/TASKS.md`.
 
 **[x] CLN — higiene de release (2026-11-13, 2da pasada).** Creado `LICENSE` (MIT) y corregido el
 contador de tests del `README.md` (122 → 369/369, verificado con `npx vitest run`). Pendiente de
