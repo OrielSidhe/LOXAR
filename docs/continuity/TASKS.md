@@ -2830,3 +2830,38 @@ audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador).
 **Próximo bloque ejecutable:** `CollectionsManager` (623 líneas) o `GrammarTab` (484) /
 `SyntaxCanvas` (484) / `EntryEditor` (494). Pendiente por autorización: `git push` (12 commits
 locales) + CI con número de run, FASE L de CLN y el destino de los 20 huérfanos.
+
+---
+
+## [2026-11-18] Checkpoint: CLN — extraer el modelo puro de `CollectionsManager.tsx` (P1 God Component)
+
+**Rama:** `master`. **Commit:** `cd7547f` (local, NO pusheado). **Motivo:** `CollectionsManager.tsx`
+(623 líneas) era el God Component más grande que quedaba; el checkpoint anterior lo marcaba como
+"próximo bloque ejecutable".
+
+**Cambios:**
+- `src/utils/collectionsManagerModel.ts` (NUEVO): tipos (`Collection`, `CollectionColumn`,
+  `CollectionCustomCells`, `CollectionTemplate`), constantes (`ACTIVE_LEXICON_STORAGE_KEY`,
+  `COLLECTIONS_STORAGE_PREFIX`, `COLLECTION_SHEET_NAME`, `EXCEL_SYSTEM_KEYS`,
+  `COLLECTION_TEMPLATES`), persistencia (`readStoredCollections`/`writeStoredCollections`/
+  `parseStoredCollections`, con type guard `isCollectionLike` en lugar de `any`), operaciones de
+  colección (`createCollection`, `collectionFromTemplate`, `toggleEntryInCollection`,
+  `setCollectionCell`, `addDraftToCollection`, `removeDraftFromCollection`,
+  `addColumnToCollection`, `renameColumnInCollection`), búsqueda (`normalizeText`) y Excel
+  (`buildCollectionExportData`, `buildExcelExportRows`, `buildExcelImportPlan`).
+- `src/components/CollectionsManager.tsx`: quedó como orquestador de estado UI + render
+  (623 → 354 líneas). Los handlers de operaciones/Excel delegan en el modelo; se eliminó el
+  `JSON.parse` sin validar (ahora validado) y el `useRef` sin uso.
+- `src/components/CollectionsPanel.tsx` y `src/components/CollectionsSidebar.tsx`: `Collection` y
+  `CollectionColumn` pasan a definirse una sola vez en el modelo (antes duplicados en tres
+  archivos); ambos re-exportan los tipos para no romper consumidores.
+- Tests nuevos: `src/utils/__tests__/collectionsManagerModel.test.ts` (16 tests) cubriendo
+  normalización, type guard de storage, operaciones de colección, export JSON/Excel e import Excel
+  (emparejo por ID, reindexación y `customCells`).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 394/394 (47 archivos) ·
+audit:orphans 20 (baseline intacto: el módulo nuevo tiene importador).
+
+**Próximo bloque ejecutable:** `GrammarTab` (484), `SyntaxCanvas` (484) o `EntryEditor` (494).
+Pendiente por autorización: `git push` (14 commits locales) + CI con número de run, FASE L de CLN y
+el destino de los 20 huérfanos.

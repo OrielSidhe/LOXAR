@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `d113bb9`
+- Git inicializado y con commits; último commit `cd7547f`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -70,6 +70,13 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `getMorphoOptions`, persistencia en `localStorage`, `shuffle`, `handleDropOutside`) pasó a
   `src/utils/syntaxFlowlineModel.ts`; el `.tsx` quedó como orquestador de estado UI y render
   (992 → 630 líneas) y re-exporta los helpers que los tests importan desde el componente.
+- Modelo de CollectionsManager extraído (2026-11-18): la lógica de dominio de
+  `CollectionsManager.tsx` (tipos, storage de colecciones, operaciones de colección, normalización
+  de búsqueda y export/import Excel) pasó a `src/utils/collectionsManagerModel.ts`; el `.tsx` quedó
+  como orquestador de estado UI y render (623 → 354 líneas). `CollectionsPanel.tsx` y
+  `CollectionsSidebar.tsx` importan `Collection`/`CollectionColumn` del modelo (antes duplicados).
+  Tests nuevos: `collectionsManagerModel.test.ts` (16). Validaciones: typecheck 0, lint OK, build OK,
+  vitest 394/394 (47 archivos), audit:orphans 20.
 
 ---
 
@@ -153,6 +160,20 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] CLN — extraer el modelo puro de `CollectionsManager.tsx` (P1, 2026-11-18).** El componente
+(623 líneas) mezclaba dominio y render. Nuevo `src/utils/collectionsManagerModel.ts` con tipos
+(`Collection`, `CollectionColumn`, `CollectionCustomCells`, `CollectionTemplate`), constantes
+(`ACTIVE_LEXICON_STORAGE_KEY`, `COLLECTIONS_STORAGE_PREFIX`, `COLLECTION_SHEET_NAME`,
+`EXCEL_SYSTEM_KEYS`, `COLLECTION_TEMPLATES`), persistencia (`readStoredCollections`/
+`writeStoredCollections`/`parseStoredCollections` con type guard `isCollectionLike`), operaciones
+de colección (`createCollection`, `collectionFromTemplate`, `toggleEntryInCollection`,
+`setCollectionCell`, `addDraftToCollection`, `removeDraftFromCollection`, `addColumnToCollection`,
+`renameColumnInCollection`), búsqueda (`normalizeText`) y Excel (`buildCollectionExportData`,
+`buildExcelExportRows`, `buildExcelImportPlan`). `CollectionsManager.tsx` quedó en 354 líneas como
+orquestador de estado UI + render; `CollectionsPanel.tsx` y `CollectionsSidebar.tsx` importan los
+tipos del modelo (antes duplicados en tres archivos). Tests nuevos: `collectionsManagerModel.test.ts`
+(16). Validaciones: typecheck 0, lint OK, build OK, vitest 394/394 (47 archivos), audit:orphans 20.
+
 **[x] CLN — extraer el modelo puro de `GraphCanvas.tsx` (P1, 2026-11-18).** El componente
 (975 líneas) mezclaba dominio y render. Nuevo `src/utils/graphCanvasModel.ts` con tipos
 (`LevelId`, `NodePort`, `ModuleNodeType`, `GraphNode`, `GraphEdge`, `PragmaticEngineState`,
@@ -204,8 +225,9 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 11 commits locales** en `master` que no están en `origin` (`6b66129`, `ca191f6`, `20d827a`,
-`795a8fb`, `dc3cd46`, `b7c73be`, `aeea62a`, `2ebb88b`, `9bc5f70`, `ed45653`, `ee2a505`). El
+**Hay 14 commits locales** en `master` que no están en `origin` (`cd7547f`, `f433c22`, `d113bb9`,
+`6b66129`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`, `aeea62a`, `2ebb88b`,
+`9bc5f70`, `ed45653`, `ee2a505`). El
 Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
@@ -251,8 +273,9 @@ está deshabilitado por el skill `loxar-progress-supervisor`), y la demo runtime
     `GrammarOverview`, `GrammarPhonologyPanel`, `GrammarTypologyPanel`, `GrammarNotesPanel`,
     `GrammarStrategiesPanel`, `GrammarMorphologyPanel`, `GrammarRolesPanel`, `GrammarSyntaxPanel`,
     `GrammarModuleSidebar`, `GrammarTabHeader` y `GrammarTabModals`.
-  - Próximo paso real: `CollectionsManager` (623 líneas), `GrammarTab` (484), `SyntaxCanvas` (484) y
-    `EntryEditor` (494); `GraphCanvas.tsx` ya fue extraído a `src/utils/graphCanvasModel.ts`.
+  - Próximo paso real: `GrammarTab` (484), `SyntaxCanvas` (484) y `EntryEditor` (494);
+    `GraphCanvas.tsx` y `CollectionsManager.tsx` ya fueron extraídos a `src/utils/graphCanvasModel.ts`
+    y `src/utils/collectionsManagerModel.ts`.
 
 **[x] Ampliación del importador de gramática a texto libre multilingüe (2026-08-14).** Completado:
 - `textParser.ts` ahora reconoce encabezados libres con `:` en inglés, español, esperanto y japonés/CJK.
