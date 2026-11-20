@@ -18,5 +18,6 @@ jobs:
           cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run typecheck
+      - run: npm run lint
       - run: npx vitest run
       - run: npm run tauri:build
