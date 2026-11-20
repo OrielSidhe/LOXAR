@@ -3295,3 +3295,56 @@ duplicados (el `createNewLexicon` lanza y el error se tragaba) y no daba feedbac
 `npm run tauri dev` (GUI nativa). Pendiente por autorización: `git push`, FASE L de CLN y destino de
 los 13 huérfanos.
 
+## [2026-11-20] Checkpoint: FASE EX v3.14 — exportador real de léxico + dropdown unido a Settings
+
+**Rama:** `master`. **Motivo:** el gauntlet v3.14 detectó que `SettingsModal` ofrecía `xlsx`/`docx`
+sin exportador, que `md` tampoco tenía exportador, que el dropdown de `FileControls` estaba
+hardcodeado a CSV/JSON y que `handleFileExport` construía el contenido inline.
+
+**Cambios (commit `919fee1`):**
+- `src/utils/lexiconExport.ts`: núcleo puro con `EXPORT_FORMATS` (`json`, `csv`, `md`, `txt`),
+  `DEFAULT_EXPORT_FORMATS`, etiquetas/descripciones, `normalizeExportFormats`, `buildCsvContent`
+  (BOM UTF-8 + escape), `buildTxtContent` (cabecera con léxico/idioma/fecha y campos no vacíos),
+  `buildMdContent` (tabla markdown con escape de tuberías), `buildJsonContent` y
+  `buildLexiconExport` (descriptor `fileName`/`content`, cierre exhaustivo `never`). Incluye la
+  clave de comparación D5 (`lexiconEntryKey`: `NFC + casefold + trim`) y `compareLexicons`/
+  `mergeLexicons`.
+- `src/hooks/useProjectOperations.ts`: `handleFileExport` delega en `buildLexiconExport` y recibe
+  `activeMetadata` para la cabecera.
+- `src/components/FileControls.tsx` y `src/components/AppToolbar.tsx`: el dropdown se alimenta de
+  `exportFormats` (antes CSV/JSON hardcodeado).
+- `src/components/SettingsModal.tsx`: los toggles usan `EXPORT_FORMATS` (xlsx/docx fuera), persiste
+  `exportFormats` y fusiona con el cache previo.
+- `src/services/sessionCache.ts`: `saveSessionCache` fusiona con el cache previo (antes pisaba
+  `activeTab`/`projectPath`).
+- `src/App.tsx`: hidrata `exportPath` y `exportFormats` del cache y los pasa a Settings y Toolbar.
+- Tests: `src/utils/__tests__/lexiconExport.test.ts` (12).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 522/522 (58 archivos) · audit:orphans 13.
+
+## [2026-11-20] Checkpoint: FASE CMP v3.14 — comparación y merge de léxicos
+
+**Rama:** `master`. **Motivo:** el gauntlet v3.14 pedía comparar dos léxicos (léxico activo vs otro
+guardado o vs un archivo) con diferencias campo a campo y fusionar las entradas faltantes.
+
+**Cambios (commit `db9587d`):**
+- `src/utils/lexiconCompareFile.ts`: mapeo automático de columnas (`buildAutoMapping`,
+  `normalizeHeader`) en español e inglés y `parseLexiconCompareFile`, que acepta el backup
+  completo de LOXAR, un array/objetos JSON o un CSV con cabecera.
+- `src/components/LexiconCompareModal.tsx`: compara el léxico activo contra otro léxico guardado
+  (`onLoadLexicon`) o un archivo (`parseLexiconCompareFile`), muestra faltantes en cada lado y
+  diferencias campo a campo, y fusiona "todas las faltantes" o solo las seleccionadas.
+- Cableado: `ModalManager` monta el modal (`activeModal === 'lexicon_compare'`), `LexiconToolsModal`
+  ofrece la acción, `App.tsx` provee `handleLoadLexiconEntries` (`loadLexicon`) y
+  `handleMergeLexiconEntries`.
+- `src/hooks/useLexicon.ts`: se expone `updateActiveLexiconEntries` (antes solo interno); el merge
+  reusa `sortAndReindex` y el contador de palabras.
+- `src/hooks/useAppHandlers.ts` y `src/App.tsx`: la unión de `activeModal` incluye `lexicon_compare`.
+- Tests: `lexiconCompareFile.test.ts` (7) y `lexiconCompareModal.test.tsx` (5).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 534/534 (60 archivos) · audit:orphans 13.
+
+**Próximo bloque ejecutable (gauntlet v3.14):** NAV (paso rápido Workbench ↔ Léxico), luego FX
+(extracción fonológica del léxico), MY (extracción morfológica) y FLU (léxico/gramática primero).
+Pendiente por autorización: `git push` + CI.
+

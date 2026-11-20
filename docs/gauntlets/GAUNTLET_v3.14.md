@@ -152,9 +152,9 @@ definirlas antes de tener datos.
 
 | Fase | Objetivo | Commit | Run CI | Estado |
 |---|---|---|---|---|
-| 0 | Spec + auditoría de terreno | (pendiente) | — | EN CURSO |
-| EX | Export real TXT + dropdown unido a Settings | — | — | PENDIENTE |
-| CMP | Comparación y merge de léxicos | — | — | PENDIENTE |
+| 0 | Spec + auditoría de terreno | `9047973` | — | CERRADA |
+| EX | Export real TXT + dropdown unido a Settings | `919fee1` | pendiente push | CERRADA |
+| CMP | Comparación y merge de léxicos | `db9587d` | pendiente push | CERRADA |
 | NAV | Paso rápido Workbench ↔ Léxico | — | — | PENDIENTE |
 | FX | Extracción fonológica del léxico | — | — | PENDIENTE |
 | MY | Extracción morfológica | — | — | PENDIENTE |

@@ -250,6 +250,28 @@ léxico activo y entradas incompletas) con el render. Nuevo `src/utils/dashboard
 `App.tsx` 925 → 906 líneas. Validaciones: typecheck 0, lint OK, build OK, vitest 510/510 (57 archivos),
 audit:orphans 13. Commit `357744d`.
 
+**[x] v3.14 FASE EX — exportador real de léxico + dropdown unido a Settings (2026-11-20).** El
+gauntlet v3.14 detectó que `SettingsModal` ofrecía `xlsx`/`docx` sin exportador, que `md` tampoco
+tenía exportador, que el dropdown de `FileControls` estaba hardcodeado a CSV/JSON y que
+`handleFileExport` construía el contenido inline. Nuevo `src/utils/lexiconExport.ts` con los cuatro
+formatos reales (`json`/`csv`/`md`/`txt`), TXT con cabecera (léxico/idioma/fecha) y MD con tabla;
+`FileControls`/`AppToolbar` reciben `exportFormats`; `SettingsModal` persiste los formatos y
+`saveSessionCache` fusiona con el cache previo (antes pisaba `activeTab`/`projectPath`). `App.tsx`
+hidrata `exportPath`/`exportFormats` del cache. Tests `lexiconExport.test.ts` (12). Validaciones:
+typecheck 0, lint OK, build OK, vitest 522/522 (58 archivos), audit:orphans 13. Commit `919fee1`.
+
+**[x] v3.14 FASE CMP — comparación y merge de léxicos (2026-11-20).** Nuevo
+`src/components/LexiconCompareModal.tsx` + `src/utils/lexiconCompareFile.ts`: compara el léxico activo
+contra otro léxico guardado o contra un archivo (backup JSON, JSON de filas o CSV con mapeo
+automático de columnas), muestra faltantes en cada lado y diferencias campo a campo, y fusiona
+"todas las faltantes" o solo las seleccionadas. Cableado desde `LexiconToolsModal` → `ModalManager`;
+`useLexicon` expone `updateActiveLexiconEntries` para el merge. Tests: `lexiconCompareFile.test.ts`
+(7) y `lexiconCompareModal.test.tsx` (5). Validaciones: typecheck 0, lint OK, build OK, vitest
+534/534 (60 archivos), audit:orphans 13. Commit `db9587d`.
+
+**[ ] v3.14 FASE NAV — paso rápido Workbench ↔ Léxico.** Salto directo entre el workbench y el
+módulo de léxico sin pérdida de estado (checklist demo ítem 5 del gauntlet).
+
 **[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 906 líneas; el siguiente
 bloque extraíble es la extracción de los handlers del wizard de primer arranque
 (`handleWizardConfigureAi`/`handleAiSettingsModalClose`/`handleWizardSkip`/`handleWizardComplete`/
