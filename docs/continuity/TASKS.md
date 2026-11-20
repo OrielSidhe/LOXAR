@@ -5,7 +5,39 @@
 
 ---
 
+## [2026-11-20] Checkpoint: CLN — el Sound Change Workbench ya persiste el lote en el léxico
+
+**Rama:** `master`. **Motivo:** el botón "Aplicar al léxico" del Sound Change Workbench ejecutaba
+las reglas sobre un snapshot interno y descartaba el resultado: `onApplyBatch` era opcional y
+`ToolsTab` no lo cableaba (la prop ni siquiera existía en `ToolsTabProps`). El trabajo del usuario
+se perdía, contra el principio rector del gauntlet ("nada se pierde en el camino").
+
+**Cambios:**
+- `src/components/SoundChangeWorkbench.tsx`: `onApplyBatch` pasa de opcional a **requerida** (si es
+  opcional, el olvido de cablearla compila y el lote se descarta silenciosamente).
+- `src/components/ToolsTab.tsx`: nueva prop requerida `onApplySoundChangeBatch`, propagada al
+  workbench.
+- `src/hooks/useAppHandlers.ts`: nuevo `handleApplySoundChangeBatch` que persiste las entradas en
+  el lexicón activo vía `lexiconHook.updateActiveLexicon({ entries })` (marca dirty) y notifica
+  `Cambios de sonido aplicados a N entradas.`
+- `src/App.tsx`: destructura y pasa el handler.
+- `tests-gui/sound-change.spec.ts` (NUEVO): crear léxico → registrar `pata` → previsualizar
+  (`phada`) → aplicar → la tabla del léxico muestra el lexema transformado.
+- `tests-gui/helpers.ts`: `disableGuidedTour` y `registerWord` centralizados; `flow.spec.ts` y
+  `grammar-import.spec.ts` los importan (antes cada spec duplicaba `disableGuidedTour`).
+- `tests-gui/grammar-import.spec.ts`: el importador es un chunk lazy de 348 kB; su aparición pasa
+  a `timeout: 30000` (con 4 workers caía en el timeout por defecto de 10s).
+
+**Verificación:** `npm run typecheck` 0 · `npm run lint` OK · `npx vitest run` 503/503 (55
+archivos) · `npm run audit:orphans` 13 (baseline) · `npm run test:gui` **7/7**.
+
+**Pendiente de decisión de producto:** destino de los 13 huérfanos, `push` + CI (40 commits
+locales) y la demo `npm run tauri dev`.
+
+---
+
 ## [2026-11-20] Checkpoint: E2E del importador de gramática + notificaciones reales
+
 **Rama:** `master`. **Motivo:** el trabajo de una sesión previa (spec `grammar-import.spec.ts` +
 helper compartido `createLexiconFromSelector`) estaba cortado y en rojo: el importador nunca
 mostraba el toast de éxito.

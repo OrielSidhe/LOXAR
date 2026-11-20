@@ -339,6 +339,7 @@ const App = () => {
     onTourEnd,
     handleOpenInterlinearGloss,
     handleOpenSoundChangeWorkbench,
+    handleApplySoundChangeBatch,
     handleBackToToolDashboard,
     handleCanvasChange,
     handleBootstrapCreate,
@@ -874,6 +875,7 @@ const App = () => {
                     onBackToToolDashboard={handleBackToToolDashboard}
                     onOpenInterlinearGloss={handleOpenInterlinearGloss}
                     onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
+                    onApplySoundChangeBatch={handleApplySoundChangeBatch}
                     onCompleteFunctions={handleAiCompleteFunctions}
                     onFillMissing={handleAiFillMissing}
                     onAnalyzeForSuggestions={handleAnalyzeForSuggestions}

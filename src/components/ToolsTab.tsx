@@ -4,7 +4,8 @@ import SuggestionsWorkbench from './SuggestionsWorkbench';
 import ToolsDashboard from './ToolsDashboard';
 import InterlinearGlossViewer from './InterlinearGlossViewer';
 import SoundChangeWorkbench from './SoundChangeWorkbench';
-import { LexiconData } from '../types';
+import { LexiconData, LexiconEntry } from '../types';
+import type { SoundChangeBatchResult } from '../services/soundChanger';
 
 export interface ToolsTabProps {
   activeTab: string;
@@ -19,6 +20,8 @@ export interface ToolsTabProps {
   onBackToToolDashboard: () => void;
   onOpenInterlinearGloss: () => void;
   onOpenSoundChangeWorkbench: () => void;
+  /** Persiste el lote de sound change en el lexicón activo. */
+  onApplySoundChangeBatch: (entries: LexiconEntry[], result: SoundChangeBatchResult) => void;
   onCompleteFunctions: (listName: string) => Promise<void>;
   onFillMissing: (listName: string) => Promise<void>;
   onAnalyzeForSuggestions: (listName: string) => void;
@@ -79,7 +82,7 @@ const ToolsTab = (props: ToolsTabProps) => {
           {props.activeToolView === 'sound-change' && (
             <div className="space-y-3">
               <button type="button" onClick={props.onBackToToolDashboard} className="text-sm text-text-secondary hover:text-white">&larr; Volver a Herramientas</button>
-              <SoundChangeWorkbench lexicon={props.lexicon} />
+              <SoundChangeWorkbench lexicon={props.lexicon} onApplyBatch={props.onApplySoundChangeBatch} />
             </div>
           )}
         </>

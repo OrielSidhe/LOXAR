@@ -26,7 +26,8 @@ import RedoIcon from './icons/RedoIcon';
 
 export interface SoundChangeWorkbenchProps {
   lexicon: LexiconData;
-  onApplyBatch?: (entries: LexiconEntry[], result: SoundChangeBatchResult) => void;
+  /** Requerida: si es opcional, el olvido de cablearla compila y el lote se descarta. */
+  onApplyBatch: (entries: LexiconEntry[], result: SoundChangeBatchResult) => void;
 }
 
 const PRESET_RULES: SoundChangeRule[] = [
@@ -83,7 +84,7 @@ const SoundChangeWorkbench: React.FC<SoundChangeWorkbenchProps> = ({ lexicon, on
 
     setHistory(nextHistory);
     setLastBatchResult(result);
-    onApplyBatch?.(result.entries, result);
+    onApplyBatch(result.entries, result);
   };
 
   const handleUndo = () => {

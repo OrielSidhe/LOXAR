@@ -135,6 +135,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   y el importador tragaba todos sus toasts; ahora recibe la del `App` (`d10e3e6`). Nuevo E2E
   `tests-gui/grammar-import.spec.ts` (parser offline → SOV → guardar) y helper compartido
   `createLexiconFromSelector` (`8c4fc07`). `npm run test:gui` 6/6.
+- Sound change persistente (2026-11-20): el botón "Aplicar al léxico" corría el lote sobre un
+  snapshot interno y lo descartaba (`onApplyBatch` opcional, nunca cableado). Ahora
+  `handleApplySoundChangeBatch` (`useAppHandlers.ts`) persiste las entradas vía
+  `updateActiveLexicon` y el workbench exige la prop. Nuevo E2E
+  `tests-gui/sound-change.spec.ts`. `npm run test:gui` 7/7.
 
 ---
 
@@ -218,6 +223,16 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — el Sound Change Workbench persiste el lote en el léxico (2026-11-20).** El botón
+"Aplicar al léxico" ejecutaba las reglas sobre un snapshot interno y descartaba el resultado:
+`onApplyBatch` era opcional y `ToolsTab` no lo cableaba (la prop no existía en `ToolsTabProps`).
+Ahora es requerida de punta a punta, `useAppHandlers.handleApplySoundChangeBatch` persiste las
+entradas en el léxico activo vía `updateActiveLexicon` (marca dirty) y notifica el conteo. Nuevo
+E2E `tests-gui/sound-change.spec.ts` (crear léxico → registrar `pata` → previsualizar `phada` →
+aplicar → el lexema transformado aparece en la tabla). Validaciones: typecheck 0, lint OK, vitest
+503/503, audit:orphans 13, `test:gui` 7/7. Ojo: el importador es un chunk lazy de 348 kB y con 4
+workers su aparición supera los 10s por defecto; el spec ya usa `timeout: 30000`.
 
 **[x] CLN — E2E del importador de gramática + notificaciones reales (2026-11-20).** El spec
 `grammar-import.spec.ts` (trabajo cortado de una sesión previa) fallaba en el toast de guardado:

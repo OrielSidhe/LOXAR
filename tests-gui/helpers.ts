@@ -63,6 +63,36 @@ export async function enterDashboard(page: Page): Promise<void> {
 }
 
 /**
+ * El tour guiado se dispara al crear el primer léxico y su overlay intercepta
+ * los clics del dashboard. Los E2E lo desactivan una sola vez por spec.
+ */
+export async function disableGuidedTour(page: Page): Promise<void> {
+  await page.goto('/');
+  await page.evaluate(() => {
+    const raw = localStorage.getItem('conlang_session_cache');
+    const cache: Record<string, unknown> = raw
+      ? (JSON.parse(raw) as Record<string, unknown>)
+      : {};
+    cache.tourCompleted = true;
+    localStorage.setItem('conlang_session_cache', JSON.stringify(cache));
+  });
+  await page.reload();
+}
+
+/** Registra una palabra en el Workbench por el formulario real (modo "añadir"). */
+export async function registerWord(
+  page: Page,
+  word: { significado: string; raiz: string; lexema: string; categoria: string },
+): Promise<void> {
+  await sidebarButton(page, 'Workbench').click();
+  await page.locator('#Significado').fill(word.significado);
+  await page.locator('#Raíz').fill(word.raiz);
+  await page.locator('#Léxema').fill(word.lexema);
+  await page.locator('#Categoría').selectOption({ label: word.categoria });
+  await page.getByRole('button', { name: /registrar palabra/i }).click();
+}
+
+/**
  * Crea un léxico por la vía real del dashboard: el botón "+" del selector de
  * léxico abre el modal de creación (nombre + idioma). Antes existía un
  * formulario inline encadenado que sólo pedía el nombre y perdía el idioma

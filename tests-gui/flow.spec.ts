@@ -1,8 +1,10 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
+  disableGuidedTour,
   enterDashboard,
   sidebarButton,
   createLexiconFromSelector,
+  registerWord,
 } from './helpers';
 
 /**
@@ -12,32 +14,6 @@ import {
  * Cubre el hallazgo CLN: un lexema derivado (raíz "bask" → lexema "boskel")
  * debe glosarse con la categoría de la entrada ("SUSTANTIVO") y no con "?".
  */
-
-/** El tour guiado se dispara al crear el primer léxico; este flujo no lo valida. */
-async function disableGuidedTour(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.evaluate(() => {
-    const raw = localStorage.getItem('conlang_session_cache');
-    const cache: Record<string, unknown> = raw
-      ? (JSON.parse(raw) as Record<string, unknown>)
-      : {};
-    cache.tourCompleted = true;
-    localStorage.setItem('conlang_session_cache', JSON.stringify(cache));
-  });
-  await page.reload();
-}
-
-async function registerWord(
-  page: Page,
-  word: { significado: string; raiz: string; lexema: string; categoria: string },
-): Promise<void> {
-  await sidebarButton(page, 'Workbench').click();
-  await page.locator('#Significado').fill(word.significado);
-  await page.locator('#Raíz').fill(word.raiz);
-  await page.locator('#Léxema').fill(word.lexema);
-  await page.locator('#Categoría').selectOption({ label: word.categoria });
-  await page.getByRole('button', { name: /registrar palabra/i }).click();
-}
 
 test('flujo completo: crear léxico, registrar, buscar y glosar', async ({ page }) => {
   const pageErrors: string[] = [];

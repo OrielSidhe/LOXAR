@@ -9,6 +9,7 @@ import { audioService } from '../services/audioService';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { MAIN_TOUR_STEPS, COLLECTIONS_TOUR_STEPS, WRITING_TOUR_STEPS, TOOLS_TOUR_STEPS } from '../data/tourSteps';
 import { normalizeText } from '../services/geminiService';
+import type { SoundChangeBatchResult } from '../services/soundChanger';
 import { filterParadigmsForFunction, generateInflectedForms } from '../services/inflectionService';
 
 export interface UseAppHandlersOptions {
@@ -75,6 +76,7 @@ export interface UseAppHandlersResult {
   onTourEnd: () => void;
   handleOpenInterlinearGloss: () => void;
   handleOpenSoundChangeWorkbench: () => void;
+  handleApplySoundChangeBatch: (entries: LexiconEntry[], result: SoundChangeBatchResult) => void;
   handleBackToToolDashboard: () => void;
   handleCanvasChange: (nodes: any[], edges: any[]) => void;
   handleBootstrapOpenFound: (p: string) => Promise<void>;
@@ -250,6 +252,25 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
   const handleOpenSoundChangeWorkbench = useCallback(() => {
     setActiveToolView('sound-change');
   }, [setActiveToolView]);
+
+  /**
+   * Persiste el resultado del lote de sound change en el lexicón activo.
+   * Antes el workbench descartaba el lote (onApplyBatch no se cableaba).
+   */
+  const handleApplySoundChangeBatch = useCallback((entries: LexiconEntry[], result: SoundChangeBatchResult) => {
+    if (!entries.length) {
+      showNotification('No hay entradas en el léxico para aplicar cambios de sonido.', 'error');
+      return;
+    }
+    lexiconHook.updateActiveLexicon({ entries });
+    const changed = result.changedEntryIds.length;
+    showNotification(
+      changed > 0
+        ? `Cambios de sonido aplicados a ${changed} ${changed === 1 ? 'entrada' : 'entradas'}.`
+        : 'Las reglas no produjeron cambios en el léxico.',
+      changed > 0 ? 'success' : 'error',
+    );
+  }, [lexiconHook, showNotification]);
 
   const handleBackToToolDashboard = useCallback(() => {
     setActiveToolView('dashboard');
@@ -495,6 +516,7 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     onTourEnd,
     handleOpenInterlinearGloss,
     handleOpenSoundChangeWorkbench,
+    handleApplySoundChangeBatch,
     handleBackToToolDashboard,
     handleCanvasChange,
     handleBootstrapOpenFound,

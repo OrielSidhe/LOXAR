@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
+  disableGuidedTour,
   enterDashboard,
   sidebarButton,
   createLexiconFromSelector,
@@ -14,20 +15,6 @@ import {
  * motor debe inferir el orden SOV y las reglas de inflexión, y el resultado
  * debe persistirse en el manifiesto del léxico.
  */
-
-/** El tour guiado se dispara al crear el primer léxico; este flujo no lo valida. */
-async function disableGuidedTour(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.evaluate(() => {
-    const raw = localStorage.getItem('conlang_session_cache');
-    const cache: Record<string, unknown> = raw
-      ? (JSON.parse(raw) as Record<string, unknown>)
-      : {};
-    cache.tourCompleted = true;
-    localStorage.setItem('conlang_session_cache', JSON.stringify(cache));
-  });
-  await page.reload();
-}
 
 /**
  * Fuerza el modo offline del importador. El modal arranca con `ai = true` y
@@ -68,8 +55,10 @@ test('gramática: importar texto local, analizar offline y guardar el manifiesto
   await page.getByRole('button', { name: 'Importar', exact: true }).click();
 
   const importer = page.getByRole('dialog', { name: 'Importador de Gramática Inteligente' });
-  await expect(importer).toBeVisible();
-  await expect(page.locator('#grammar-input')).toBeVisible();
+  // El importador es un chunk lazy (348 kB): con 4 workers puede tardar más
+  // que el timeout por defecto de 10s en montarse.
+  await expect(importer).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('#grammar-input')).toBeVisible({ timeout: 30000 });
 
   await forceOfflineMode(page);
   await page.getByRole('button', { name: 'Analizar (offline)', exact: true }).click();
