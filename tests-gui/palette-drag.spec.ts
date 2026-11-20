@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { enterDashboard } from './helpers';
 
 /**
  * A2: E2E test — palette drag & drop onto the React Flow canvas.
@@ -24,19 +25,9 @@ test.describe('A2: Palette drag → canvas drop (React Flow)', () => {
     page.on('pageerror', (e) => pageErrors.push(e.message));
   });
 
-  /** Dismiss the project-location modal and welcome screen so the dashboard is live. */
-  async function enterDashboard(page: Page) {
-    const laterBtn = page.getByRole('button', { name: /Más tarde/i });
-    if (await laterBtn.isVisible().catch(() => false)) {
-      await laterBtn.click();
-    }
-    const continueBtn = page.getByRole('button', { name: /CONTINUAR AL DASHBOARD/i });
-    if (await continueBtn.isVisible().catch(() => false)) {
-      await continueBtn.click();
-    }
-  }
-
-  /** Keep only Tauri-bridge related errors (filter pre-existing AudioParam noise). */
+  /**
+   * Keep only Tauri-bridge related errors (filter pre-existing AudioParam noise).
+   */
   function tauriBridgeErrors(): string[] {
     return pageErrors.filter(
       (e) =>
