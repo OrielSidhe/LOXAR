@@ -143,6 +143,8 @@ const CategoryDropdown = ({ value, onChange, options, disabled }: CategoryDropdo
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface LexiconTableProps {
+    /** Tab visible: la tabla permanece montada (y con su estado) al saltar a otro tab. */
+    active: boolean;
     data: LexiconEntry[];
     lexiconName: string | null;
     conlangName?: string | null;
@@ -177,6 +179,7 @@ const InlineInput = ({ value, onChange, name }: { value: string, onChange: (e: R
 
 const LexiconTable = React.memo((props: LexiconTableProps) => {
     const { 
+        active,
         data, lexiconName, conlangName, mainLanguage, onEditWord, onDeleteWord, showNotification,
         searchTerm, onSearchTermChange, categoryFilter, onCategoryFilterChange, viewFilter, onViewFilterChange,
         showAffixFormatting, onShowAffixFormattingChange, selectedIds, onToggleSelection, onToggleSelectAll, onGenerateInflections,
@@ -196,10 +199,10 @@ const LexiconTable = React.memo((props: LexiconTableProps) => {
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        if (lexiconName && searchInputRef.current) {
+        if (active && lexiconName && searchInputRef.current) {
             searchInputRef.current.focus();
         }
-    }, [lexiconName]);
+    }, [active, lexiconName]);
 
     const uniqueCategories = useMemo(() => getUniqueCategories(data), [data]);
 

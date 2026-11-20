@@ -167,6 +167,15 @@ const App = () => {
     setActiveGrammarModule(moduleId);
   }, [setActiveTab]);
 
+  /**
+   * Salto rapido Workbench <-> Léxico (FASE NAV del gauntlet v3.14). Ambos tabs
+   * permanecen montados en el arbol (solo se ocultan), asi que el borrador del
+   * editor y los filtros/pagina de la tabla sobreviven al salto.
+   */
+  const handleQuickNav = useCallback((target: 'table' | 'workbench') => {
+    setActiveTab(target);
+  }, [setActiveTab]);
+
   const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
 
   const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
@@ -711,7 +720,14 @@ const App = () => {
             />
 
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
-              {activeTab !== 'dashboard' && <AppNavigationBar onBack={goBack} onHome={goHome} />}
+              {activeTab !== 'dashboard' && (
+                <AppNavigationBar
+                  onBack={goBack}
+                  onHome={goHome}
+                  activeTab={activeTab}
+                  onQuickNav={handleQuickNav}
+                />
+              )}
               <div className="flex-grow h-full flex flex-col">
                 {activeTab === 'dashboard' && (
                   <DashboardTab
@@ -730,8 +746,12 @@ const App = () => {
                     onOpenGrammarModule={handleOpenGrammarModule}
                   />
                 )}
-                {activeTab === 'table' && (
+                <div
+                  aria-hidden={activeTab === 'table' ? undefined : true}
+                  className={`flex-grow h-full flex flex-col ${activeTab === 'table' ? '' : 'hidden'}`}
+                >
                   <LexiconTable
+                    active={activeTab === 'table'}
                     data={activeLexicon}
                     lexiconName={activeLexiconName}
                     conlangName={activeMetadata?.conlangName}
@@ -756,8 +776,11 @@ const App = () => {
                     }}
                     onSearch={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
                   />
-                )}
-                {activeTab === 'workbench' && (
+                </div>
+                <div
+                  aria-hidden={activeTab === 'workbench' ? undefined : true}
+                  className={`flex-grow h-full flex flex-col ${activeTab === 'workbench' ? '' : 'hidden'}`}
+                >
                   <WorkbenchTab
                     queueActive={queueActive}
                     workQueue={workQueue}
@@ -807,7 +830,7 @@ const App = () => {
                     manifest={activeGrammar}
                     onSyncPhonology={p => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
                   />
-                )}
+                </div>
                 {activeTab === 'collections' && (
                   <CollectionsManager
                     lexicon={activeLexicon}
