@@ -5,6 +5,32 @@
 
 ---
 
+## [2026-11-20] Checkpoint: E2E del importador de gramática + notificaciones reales
+**Rama:** `master`. **Motivo:** el trabajo de una sesión previa (spec `grammar-import.spec.ts` +
+helper compartido `createLexiconFromSelector`) estaba cortado y en rojo: el importador nunca
+mostraba el toast de éxito.
+**Diagnóstico:** `GrammarTabModals.tsx` pasaba `showNotification={() => {}}` al
+`GrammarImporterModal`, así que `handleSave` llamaba a un no-op y el E2E no encontraba
+`Gramática estructurada guardada correctamente.` (el modal se cerraba igual). Era un bug real de
+producto: el importador tragaba todas sus notificaciones (éxito, error, "análisis completado").
+**Cambios:**
+- `src/App.tsx` → `src/components/GrammarTab.tsx` → `src/components/GrammarTabModals.tsx`: se
+  propaga la `showNotification` real del `App` hasta el importador (prop requerida, sin no-op).
+  Commit `d10e3e6`.
+- `tests-gui/helpers.ts`: `createLexiconFromSelector` exportado y compartido (el spec lo duplicaba).
+- `tests-gui/flow.spec.ts`: usa el helper compartido. Commit `8c4fc07`.
+- `tests-gui/grammar-import.spec.ts` (NUEVO): crear léxico → Gramática → importador → analizar
+  offline con el texto demo → tipología SOV + reglas computables → guardar → toast + cierre.
+**Verificación:** `npm run typecheck` 0 errores, `npm run lint` OK, `npx vitest run` 503/503
+(55 archivos), `npm run audit:orphans` 13 (baseline), `npm run test:gui` 6/6.
+**Pitfall E2E:** con el servidor Vite frío y 4 workers, los primeros specs caen en timeout de 60s
+(lazy chunk del importador queda en "Cargando importador..."). Reutilizar un `npm run dev` ya
+caliente da 6/6; no confundir con regresión de código.
+**Pendiente de decisión de producto:** destino de los 13 huérfanos, `push` + CI (39 commits
+locales) y la demo `npm run tauri dev`.
+
+---
+
 ## 🎯 Objetivo General
 Estabilizar el flujo de desarrollo mediante un sistema de continuidad que cualquier agente pueda
 retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta la sesión a mitad.

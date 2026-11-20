@@ -131,6 +131,10 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Validación runtime web (2026-11-19): smoke con `npm run dev` + navegador real. Hallazgo: el jingle
   lanzaba `RangeError` (tiempo negativo) con el `AudioContext` suspendido; corregido en `1f418e3`
   con test de regresión. Smoke re-ejecutado en verde (0 errores de consola).
+- Notificaciones del importador (2026-11-20): `GrammarTabModals` dejaba un `showNotification` no-op
+  y el importador tragaba todos sus toasts; ahora recibe la del `App` (`d10e3e6`). Nuevo E2E
+  `tests-gui/grammar-import.spec.ts` (parser offline → SOV → guardar) y helper compartido
+  `createLexiconFromSelector` (`8c4fc07`). `npm run test:gui` 6/6.
 
 ---
 
@@ -214,6 +218,16 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — E2E del importador de gramática + notificaciones reales (2026-11-20).** El spec
+`grammar-import.spec.ts` (trabajo cortado de una sesión previa) fallaba en el toast de guardado:
+`GrammarTabModals.tsx` pasó `showNotification={() => {}}` al importador, un no-op que tragaba
+éxito/errores/"análisis completado". Se propagó la `showNotification` real de `App` → `GrammarTab`
+→ `GrammarTabModals` → `GrammarImporterModal` (`d10e3e6`); `createLexiconFromSelector` pasó a
+`tests-gui/helpers.ts` y el nuevo spec cubre crear léxico → importador → analizar offline → SOV →
+guardar (`8c4fc07`). Validaciones: typecheck 0, lint OK, vitest 503/503, audit:orphans 13,
+test:gui 6/6. Ojo: con Vite frío los specs pueden dar timeout de 60s en el lazy chunk; con el
+servidor caliente son 6/6.
 
 **[x] CLN — suite E2E Playwright en verde (2026-11-20).** El wizard de onboarding
 (`FirstRunWizard`, overlay `fixed inset-0 z-[100]`) dejó al arranque de la app distinto al que
@@ -363,9 +377,8 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 35 commits locales** en `master` que no están en `origin` (`git rev-list --count
-origin/master..master`; el más reciente es `bfc6018`; el commit de este checkpoint de docs lo deja
-en 36). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
+**Hay 39 commits locales** en `master` que no están en `origin` (`git rev-list --count
+origin/master..master`; el más reciente es `8c4fc07`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
 hay número de run y la fase queda formalmente abierta.
