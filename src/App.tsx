@@ -74,6 +74,7 @@ import { listLexiconNames, loadLexicon } from './services/sqlStorage';
 import { initPragmaticDb } from './services/grammarDb';
 import { scanForLoxarProjects } from './services/projectDiscovery';
 import { getGrammarMetrics } from './utils/grammarMetrics';
+import { buildDashboardStats } from './utils/dashboardStats';
 
 const ModalManager = lazy(() => import('./components/ModalManager'));
 const AiSettingsModal = lazy(() => import('./components/AiSettingsModal'));
@@ -686,31 +687,11 @@ const App = () => {
                     onSelectConlang={lexiconHook.setActiveLexicon}
                     lexicon={activeLexicon}
                     grammar={activeGrammar}
-                    stats={{
-                      grammar: activeGrammar ? {
-                        rules: grammarMetrics.rules,
-                        categories: grammarMetrics.categories,
-                        strategies: grammarMetrics.strategies,
-                        roles: grammarMetrics.roles,
-                      } : undefined,
-                      phonology: activeGrammar ? {
-                        sounds: grammarMetrics.phonologySounds,
-                        rules: grammarMetrics.phonologyRules,
-                      } : undefined,
-                      syntax: activeGrammar ? {
-                        rules: grammarMetrics.rules,
-                        trees: grammarMetrics.syntaxTrees,
-                      } : undefined,
-                      lexicon: {
-                        entries: activeLexicon.length,
-                        categories: new Set(activeLexicon.map(e => e.Categoría).filter(Boolean)).size,
-                      },
-                      neography: undefined,
-                      semantics: { fields: 0, relations: 0 },
-                      translator: { translations: 0 },
-                      workbench: { pending: incompleteEntries.length, completed: 0 },
-                      collections: { collections: 0 },
-                    }}
+                    stats={buildDashboardStats({
+                      grammar: activeGrammar,
+                      lexicon: activeLexicon,
+                      incompleteCount: incompleteEntries.length,
+                    })}
                     pragmaticEngine={pragmaticEngine}
                     onOpenTab={setActiveTab}
                     onOpenGrammarModule={handleOpenGrammarModule}

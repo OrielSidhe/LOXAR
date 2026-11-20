@@ -7,22 +7,13 @@
 
 import React, { useCallback } from 'react';
 import type { GrammarManifest, LexiconEntry } from '../types';
+import type { DashboardStats } from '../utils/dashboardStats';
 import GraphCanvas from './GraphCanvas';
 
 type LanguageHomeCanvasProps = {
   conlangName?: string | null;
   activeModule?: string;
-  stats?: {
-    grammar?: { rules?: number; categories?: number; strategies?: number; roles?: number };
-    phonology?: { sounds?: number; rules?: number };
-    syntax?: { rules?: number; trees?: number };
-    lexicon?: { entries?: number; categories?: number };
-    neography?: { glyphs?: number; rules?: number };
-    semantics?: { fields?: number; relations?: number };
-    translator?: { translations?: number };
-    workbench?: { pending?: number; completed?: number };
-    collections?: { collections?: number };
-  };
+  stats?: DashboardStats;
   onModuleClick?: (moduleId: string) => void;
   conlangNames?: string[];
   onSelectConlang?: (name: string) => void;
