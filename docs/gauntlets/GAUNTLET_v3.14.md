@@ -155,7 +155,7 @@ definirlas antes de tener datos.
 | 0 | Spec + auditoría de terreno | `9047973` | — | CERRADA |
 | EX | Export real TXT + dropdown unido a Settings | `919fee1` | pendiente push | CERRADA |
 | CMP | Comparación y merge de léxicos | `db9587d` | pendiente push | CERRADA |
-| NAV | Paso rápido Workbench ↔ Léxico | — | — | PENDIENTE |
+| NAV | Paso rápido Workbench ↔ Léxico | `719a33c` | pendiente push | CERRADA |
 | FX | Extracción fonológica del léxico | — | — | PENDIENTE |
 | MY | Extracción morfológica | — | — | PENDIENTE |
 | FLU | Léxico/gramática primero | — | — | PENDIENTE |
@@ -170,7 +170,7 @@ definirlas antes de tener datos.
 - [ ] 3. Cargo léxico A (1000 pal) vs archivo B (1022 pal): veo las 22 y las
       diferencias campo a campo.
 - [ ] 4. Añado "todas las faltantes" y luego añado una por descarte.
-- [ ] 5. Salto directo Workbench→Léxico→Workbench sin pérdida de estado.
+- [x] 5. Salto directo Workbench→Léxico→Workbench sin pérdida de estado.
 - [ ] 6. Botón "Extraer del léxico" genera fonología plausible y editable;
       corro dos veces y no duplica.
 - [ ] 7. Morfología extraída muestra evidencia por regla.

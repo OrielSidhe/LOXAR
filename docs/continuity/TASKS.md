@@ -3347,4 +3347,40 @@ guardado o vs un archivo) con diferencias campo a campo y fusionar las entradas 
 **Próximo bloque ejecutable (gauntlet v3.14):** NAV (paso rápido Workbench ↔ Léxico), luego FX
 (extracción fonológica del léxico), MY (extracción morfológica) y FLU (léxico/gramática primero).
 Pendiente por autorización: `git push` + CI.
+## [2026-11-20] Checkpoint: FASE NAV v3.14 — salto rapido Workbench <-> Lexico
+
+**Rama:** `master`. **Motivo:** el gauntlet v3.14 (item 5 de su checklist demo) pide un salto
+directo Workbench -> Lexico -> Workbench sin perdida de estado. Antes, `activeTab === 'workbench'`
+desmontaba la tabla y `activeTab === 'table'` desmontaba el `WorkbenchTab`: el borrador del
+`EntryEditor` (estado local del componente) se perdia en cada salto.
+
+**Diagnostico:** el E2E quedo a medias en el arbol de trabajo (App.tsx + AppNavigationBar +
+LexiconTable + spec nuevo `tests-gui/workbench-lexicon-jump.spec.ts`). Verificado sobre ese arbol:
+typecheck 0, vitest 537/537 (60 archivos). El spec nuevo fallaba en `toHaveValue('borrador salto')`
+sobre `#Significado`: el borrador real se confirma como **etiqueta** al salir del campo
+(`SignificadoTagsInput.onBlur -> addTag`), no como valor del input. La captura del fallo confirma
+que la etiqueta "borrador salto" sobrevive al salto ida y vuelta.
+
+**Cambios (commit `719a33c`):**
+- `src/App.tsx`: `LexiconTable` y `WorkbenchTab` quedan **siempre montados** y solo se ocultan con
+  la clase `hidden`; nuevo `handleQuickNav` alterna `table`/`workbench`. Los wrappers llevan
+  `aria-hidden` cuando el tab esta inactivo.
+- `src/components/AppNavigationBar.tsx`: nuevo boton "Ir al Lexico" / "Ir al Workbench" (FASE NAV).
+- `src/components/LexiconTable.tsx`: prop `active` para no robar el foco del buscador mientras la
+  tabla esta oculta.
+- `tests-gui/workbench-lexicon-jump.spec.ts`: E2E del salto (borrador + termino de busqueda).
+- `tests-gui/flow.spec.ts`: el locator del glosado se ancla al `<pre>` con `filter({ hasText })`.
+  Con la tabla siempre montada, los `<option>` de categoria ("Sustantivo", "Verboide (sustantivo)")
+  quedan en el DOM aunque ocultos y `getByText('SUSTANTIVO')` resolia a 3 elementos (strict-mode).
+- `README.md`: 534 -> 537 tests, `test:gui` 7/7 -> 8/8.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 537/537 (60 archivos) · audit:orphans 13
+· `npm run test:gui` **8/8**.
+
+**Proximo bloque ejecutable (gauntlet v3.14):** FX (extraccion fonologica del lexico: boton
+"Extraer del lexico" que genere fonologia plausible y editable, sin duplicar al reintentar), luego
+MY (extraccion morfologica con evidencia por regla) y FLU (lexico/gramatica primero).
+Pendiente por autorizacion: `git push` + CI con numero de run.
+
+
 
