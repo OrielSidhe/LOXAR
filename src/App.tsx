@@ -31,8 +31,6 @@ import TableIcon from './components/icons/TableIcon';
 import PenToolIcon from './components/icons/PenToolIcon';
 import SettingsIcon from './components/icons/SettingsIcon';
 import SparkleIcon from './components/icons/SparkleIcon';
-import ArrowLeftIcon from './components/icons/ArrowLeftIcon';
-import HomeIcon from './components/icons/HomeIcon';
 
 // Components
 import AppLoadingLayer from './components/AppLoadingLayer';
@@ -60,6 +58,7 @@ import ModulePanel from './components/ModulePanel';
 import DashboardTab from './components/DashboardTab';
 import AppWelcomeSection from './components/AppWelcomeSection';
 import AppToastLayer from './components/AppToastLayer';
+import AppNavigationBar from './components/AppNavigationBar';
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -678,26 +677,7 @@ const App = () => {
             />
 
             <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
-              {activeTab !== 'dashboard' && (
-                <div className="flex items-center gap-2 mb-4">
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    className="flex items-center gap-1 text-xs text-text-secondary hover:text-white bg-white/5 hover:bg-white/10 rounded-lg px-2 py-1 transition-colors"
-                  >
-                    <ArrowLeftIcon className="w-3.5 h-3.5" />
-                    Volver
-                  </button>
-                  <button
-                    type="button"
-                    onClick={goHome}
-                    className="flex items-center gap-1 text-xs text-text-secondary hover:text-accent bg-white/5 hover:bg-accent/10 rounded-lg px-2 py-1 transition-colors"
-                  >
-                    <HomeIcon className="w-3.5 h-3.5" />
-                    Panel
-                  </button>
-                </div>
-              )}
+              {activeTab !== 'dashboard' && <AppNavigationBar onBack={goBack} onHome={goHome} />}
               <div className="flex-grow h-full flex flex-col">
                 {activeTab === 'dashboard' && (
                   <DashboardTab
