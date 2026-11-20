@@ -215,7 +215,6 @@ const App = () => {
   const [availableProjects, setAvailableProjects] = useState<string[]>([]);
   const [hasLocalData, setHasLocalData] = useState(false);
   const [bootstrapDismissed, setBootstrapDismissed] = useState(false);
-  const [showHomePanel, setShowHomePanel] = useState(false);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
