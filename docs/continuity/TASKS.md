@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-11-20] Checkpoint: CLN — `buildDashboardStats` extraído del dashboard (P1 God Component)
+
+**Rama:** `master`. **Motivo:** continuar la descomposición del God Component (`App.tsx`, 925 líneas).
+El objeto `stats` del dashboard era el siguiente bloque inline: ~24 líneas que mezclaban tres fuentes
+(manifiesto de gramática, léxico activo y entradas incompletas) con el render del tab.
+
+**Cambios:**
+- `src/utils/dashboardStats.ts` (NUEVO): `DashboardStats` (tipo único del objeto que consume
+  `LanguageHomeCanvas`), `DashboardStatsInput` y `buildDashboardStats({ grammar, lexicon,
+  incompleteCount })`. Sin gramática activa los bloques `grammar`/`phonology`/`syntax` quedan en
+  `undefined`; las métricas se derivan de `getGrammarMetrics` (forma canónica, nunca `NaN`).
+- `src/components/LanguageHomeCanvas.tsx`: la forma inline del `stats` fue reemplazada por el tipo
+  importado (`DashboardStats`), eliminando la duplicación.
+- `src/App.tsx`: el objeto inline se reemplaza por `buildDashboardStats({...})`. 925 → 906 líneas.
+- `src/utils/__tests__/dashboardStats.test.ts` (NUEVO): 4 tests (sin gramática, derivación canónica,
+  categorías únicas ignorando vacías, léxico vacío).
+- `README.md`: contador de tests 506 → 510 (57 archivos).
+
+**Verificación:** `npm run typecheck` 0 · `npm run lint` OK · `npx vitest run` 510/510 (57 archivos) ·
+`npm run build` OK · `npm run audit:orphans` 13 (baseline, sin huérfanos nuevos).
+
+**Commit:** `357744d`.
+
+**Próximo bloque ejecutable:** `App.tsx` sigue en 906 líneas; el siguiente bloque extraíble son los
+handlers del wizard de primer arranque (`handleWizardConfigureAi`/`handleAiSettingsModalClose`/
+`handleWizardSkip`/`handleWizardComplete`/`handleChooseDataFolder`) a un hook dedicado. Pendiente por
+autorización: `git push` (47 commits locales), FASE L de CLN y destino de los 13 huérfanos.
+
+---
+
 ## [2026-11-20] Checkpoint: CLN — `AppNavigationBar` extraído de `App.tsx` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** continuar la descomposición del God Component (`App.tsx`, 945 líneas)

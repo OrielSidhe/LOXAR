@@ -145,9 +145,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `npm run lint` además de typecheck/vitest/build (`a03e57a`).
 - Smoke runtime web (2026-11-20): `npm run dev` + navegador real, 0 `error`/`unhandledrejection`;
   la bienvenida renderiza completa tras la recarga.
-- God Component (2026-11-20): `App.tsx` 945 → 925 líneas al extraer `AppNavigationBar` (barra
-  "Volver / Panel" del área principal) con props tipadas y tests propios. `audit:orphans` se mantiene
-  en 13.
+- God Component (2026-11-20): `App.tsx` 925 → 906 líneas al extraer `buildDashboardStats`
+  (`src/utils/dashboardStats.ts`) con el tipo `DashboardStats` compartido con `LanguageHomeCanvas`;
+  tests propios (4). `audit:orphans` se mantiene en 13.
 
 ---
 
@@ -241,11 +241,19 @@ del área principal era el último bloque inline de navegación del God Componen
 (`appNavigationBar.test.tsx`, 3) y `App.tsx` 945 → 925 líneas. Validaciones: typecheck 0, lint OK,
 build OK, vitest 506/506 (56 archivos), audit:orphans 13. Commit `e4d5dee`.
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 925 líneas; el siguiente
-bloque extraíble es el `stats` del dashboard (objeto inline de ~24 líneas con `grammarMetrics` y
-`activeLexicon`) como modelo puro `buildDashboardStats` en `src/utils/` con tests, o la extracción de
-los handlers del wizard de primer arranque (`handleWizardConfigureAi`/`handleAiSettingsModalClose`/
-`handleWizardSkip`/`handleWizardComplete`/`handleChooseDataFolder`) a un hook dedicado.
+**[x] CLN — `buildDashboardStats` extraído del dashboard (P1, 2026-11-20).** El objeto `stats` del
+tab `dashboard` era un bloque inline de ~24 líneas que mezclaba tres fuentes (manifiesto de gramática,
+léxico activo y entradas incompletas) con el render. Nuevo `src/utils/dashboardStats.ts` con el tipo
+`DashboardStats` (importado por `LanguageHomeCanvas`, antes duplicado inline), `DashboardStatsInput` y
+`buildDashboardStats({ grammar, lexicon, incompleteCount })`; las métricas derivan de
+`getGrammarMetrics` (canon canónico, nunca `NaN`). Tests nuevos: `dashboardStats.test.ts` (4).
+`App.tsx` 925 → 906 líneas. Validaciones: typecheck 0, lint OK, build OK, vitest 510/510 (57 archivos),
+audit:orphans 13. Commit `357744d`.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 906 líneas; el siguiente
+bloque extraíble es la extracción de los handlers del wizard de primer arranque
+(`handleWizardConfigureAi`/`handleAiSettingsModalClose`/`handleWizardSkip`/`handleWizardComplete`/
+`handleChooseDataFolder`) a un hook dedicado (`src/hooks/`), con tests propios.
 
 **[x] CLN — higiene de código muerto y puerta de calidad (2026-11-20).** Cerrado el árbol de
 trabajo sucio: `tests-gui/flow.spec.ts` arrastraba un `type Page` sin uso y `App.tsx` conservaba

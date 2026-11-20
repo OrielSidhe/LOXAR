@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-20T14:20:00.000Z",
+  "lastUpdated": "2026-11-20T16:10:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: extraer la barra Volver/Panel de App.tsx a AppNavigationBar (P1 God Component).",
+    "lastPrompt": "CLN: extraer el objeto stats del dashboard a buildDashboardStats (P1 God Component).",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Barra de navegacion extraida (2026-11-20): App.tsx bajo de 945 a 925 lineas al sacar la barra 'Volver / Panel' del area principal a src/components/AppNavigationBar.tsx con props tipadas (onBack/onHome) y tests propios (appNavigationBar.test.tsx, 3). README: contador 503 -> 506 (56 archivos). Validaciones: typecheck 0, lint OK, build OK, vitest 506/506 (56 archivos), audit:orphans 13 (baseline). Commit e4d5dee. Pendiente: push + CI (44 commits locales), demo tauri:dev, FASE L y destino de los 13 huerfanos. -- Prev: Higiene y puerta de calidad (2026-11-20): cerrado el arbol de trabajo sucio con el import type Page sin uso en tests-gui/flow.spec.ts y eliminado el estado muerto showHomePanel de App.tsx; el CI ahora corre npm run lint entre typecheck y vitest."
+  "sessionSummary": "Stats del dashboard extraidos (2026-11-20): el objeto inline de ~24 lineas del tab dashboard paso a src/utils/dashboardStats.ts (buildDashboardStats + tipo DashboardStats compartido con LanguageHomeCanvas). App.tsx 925 -> 906 lineas. README: contador 506 -> 510 (57 archivos). Validaciones: typecheck 0, lint OK, build OK, vitest 510/510 (57 archivos), audit:orphans 13 (baseline). Commit 357744d. Pendiente: push + CI (47 commits locales), demo tauri:dev, FASE L y destino de los 13 huerfanos. -- Prev: Barra de navegacion extraida (2026-11-20): App.tsx bajo de 945 a 925 lineas al sacar la barra 'Volver / Panel' del area principal a src/components/AppNavigationBar.tsx con props tipadas (onBack/onHome) y tests propios (appNavigationBar.test.tsx, 3)."
 }
