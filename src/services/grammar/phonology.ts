@@ -2,7 +2,7 @@ import type { PhonologyConfig } from '../../types';
 
 // Longest-match segmentation: given a set of inventory strings (possibly multi-char),
 // greedily match the longest entry at each position. Falls back to single char if no match.
-const segmentGraphemes = (word: string, inventory: Set<string>): string[] => {
+export const segmentWordGraphemes = (word: string, inventory: Set<string>): string[] => {
   const sorted = [...inventory].sort((a, b) => b.length - a.length);
   const segments: string[] = [];
   let i = 0;
@@ -37,12 +37,12 @@ export const validate = (word: string, p?: PhonologyConfig): string[] => {
     if (!inv.has(ch)) violations.push(`Segmento fuera de inventario: "${ch}"`);
   }
   // syllable check: use longest-match segmentation, then classify each grapheme as V or C
-  const graphemes = segmentGraphemes(cleaned, inv);
+  const graphemes = segmentWordGraphemes(cleaned, inv);
   const isVowel = (g: string) => vowelsSet.has(g.toLowerCase());
   const vowelsSet = new Set([...p.inventory.vowels.map(v => v.toLowerCase())]);
-  const syl = groupIntoSyllables(graphemes, isVowel);
+  const syl = syllabifyGraphemes(graphemes, isVowel);
   for (const s of syl) {
-    const struct = s.map(g => isVowel(g) ? 'V' : 'C').join('');
+    const struct = syllableStructureOf(s, isVowel);
     if (!p.phonotactics.syllableStructures.includes(struct)) {
       violations.push(`Estructura silábica no permitida: "${struct}" en "${s.join('')}"`);
     }
@@ -50,10 +50,14 @@ export const validate = (word: string, p?: PhonologyConfig): string[] => {
   return violations;
 };
 
+/** Estructura V/C de una sílaba (p.ej. ['ka','la'] -> 'CV.CV' por sílaba: 'CV'). */
+export const syllableStructureOf = (syllable: string[], isVowel: (g: string) => boolean): string =>
+  syllable.map(g => (isVowel(g) ? 'V' : 'C')).join('');
+
 // Group grapheme array into syllables: each syllable gets one nucleus vowel.
 // Consonants between two vowels belong to the FOLLOWING syllable (onset).
 // Only trailing consonants after the LAST vowel are coda.
-const groupIntoSyllables = (graphemes: string[], isVowel: (g: string) => boolean): string[][] => {
+export const syllabifyGraphemes = (graphemes: string[], isVowel: (g: string) => boolean): string[][] => {
   const syllables: string[][] = [];
   let lastVowelIdx = -1;
 

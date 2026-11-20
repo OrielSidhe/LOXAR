@@ -260,6 +260,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     const renderPhonology = () => (
         <GrammarPhonologyPanel
             manifest={editedManifest}
+            lexicon={lexicon}
             onChange={(updates) => updateManifest(updates)}
         />
     );
