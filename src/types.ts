@@ -222,6 +222,23 @@ export interface MorphosyntacticStrategy {
 // ── Tipos avanzados de tipología (re-export desde pragmaticTypes canónico) ──
 import type { TypologicalProfile, PragmaticEngineState } from './types/pragmaticTypes';
 export type { MarkingStrategy, TypologicalProfile, PragmaticEngineState } from './types/pragmaticTypes';
+/**
+ * Evidencia de extracción morfológica (FASE MY del gauntlet v3.14): los pares
+ * léxicos observados que respaldan una regla inferida. `base` es la raíz
+ * registrada y `form` la forma superficial que la extiende.
+ */
+export interface MorphologyPairEvidence {
+  base: string;
+  form: string;
+  meaning: string;
+  category: string;
+}
+
+export interface MorphologyRuleEvidence {
+  count: number;
+  pairs: MorphologyPairEvidence[];
+}
+
 export interface GrammarAffix {
   id: string;
   form: string;
@@ -230,6 +247,8 @@ export interface GrammarAffix {
   appliesTo: string[];
   source: 'manual' | 'lexicon';
   enabled: boolean;
+  /** Presente cuando el afijo se infirió del léxico: prueba por regla. */
+  evidence?: MorphologyRuleEvidence;
 }
 
 export interface GrammarPreviewConfig {
