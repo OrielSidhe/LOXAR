@@ -5,6 +5,31 @@
 
 ---
 
+## [2026-11-20] Checkpoint: CLN — `AppNavigationBar` extraído de `App.tsx` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** continuar la descomposición del God Component (`App.tsx`, 945 líneas)
+con una sección chica y de bajo riesgo: la barra "Volver / Panel" del área principal, que era el
+único bloque inline de navegación que quedaba en el componente raíz.
+
+**Cambios:**
+- `src/components/AppNavigationBar.tsx` (NUEVO): componente presenteacional con props tipadas
+  (`onBack`/`onHome`) y los dos botones; `App.tsx` queda como orquestador.
+- `src/App.tsx`: el bloque JSX inline se reemplaza por `<AppNavigationBar ... />` y se eliminan los
+  imports `ArrowLeftIcon`/`HomeIcon` (ya no se usaban en el archivo). 945 → 925 líneas.
+- `src/components/__tests__/appNavigationBar.test.tsx` (NUEVO): 3 tests (render de ambos botones,
+  `onBack` al pulsar "Volver", `onHome` al pulsar "Panel").
+- `README.md`: contador de tests 503 → 506 (56 archivos).
+
+**Verificación:** `npm run typecheck` 0 · `npm run lint` OK · `npx vitest run` 506/506 (56 archivos) ·
+`npm run build` OK · `npm run audit:orphans` 13 (baseline, sin huérfanos nuevos).
+
+**Commit:** `e4d5dee`.
+
+**Pendiente de decisión de producto:** destino de los 13 huérfanos, `push` + CI (46 commits
+locales) y la demo `npm run tauri dev`.
+
+---
+
 ## [2026-11-20] Checkpoint: CLN — higiene de código muerto y puerta de calidad
 
 **Rama:** `master`. **Motivo:** cerrar el árbol de trabajo sucio (un import sin uso en

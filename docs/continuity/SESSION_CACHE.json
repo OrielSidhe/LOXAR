@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-20T13:20:00.000Z",
+  "lastUpdated": "2026-11-20T14:20:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: higiene de codigo muerto (showHomePanel en App.tsx + import type Page en flow.spec.ts) y npm run lint en CI.",
+    "lastPrompt": "CLN: extraer la barra Volver/Panel de App.tsx a AppNavigationBar (P1 God Component).",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Higiene y puerta de calidad (2026-11-20): cerrado el arbol de trabajo sucio con el import type Page sin uso en tests-gui/flow.spec.ts y eliminado el estado muerto showHomePanel de App.tsx (ni el valor ni el setter se referencian en src/). El CI no corria npm run lint pese a exigirlo el Bloque G2; el workflow ahora lo ejecuta entre typecheck y vitest. Validaciones: typecheck 0, lint OK, build OK, vitest 503/503 (55 archivos), audit:orphans 13 (baseline), smoke runtime web con npm run dev y navegador real: 0 errores de error/unhandledrejection y la bienvenida renderiza completa. Commits be22301 y a03e57a. Pendiente: push + CI (43 commits locales), demo tauri:dev, FASE L y destino de los 13 huerfanos. -- Prev: Sound change persistente (2026-11-20): el boton 'Aplicar al lexico' del Sound Change Workbench corria las reglas sobre un snapshot interno y descartaba el resultado; onApplyBatch era opcional y ToolsTab no lo cableaba. Fix: onApplyBatch requerida, prop onApplySoundChangeBatch en ToolsTab y handler handleApplySoundChangeBatch en useAppHandlers.ts que persiste las entradas via lexiconHook.updateActiveLexicon({ entries })."
+  "sessionSummary": "Barra de navegacion extraida (2026-11-20): App.tsx bajo de 945 a 925 lineas al sacar la barra 'Volver / Panel' del area principal a src/components/AppNavigationBar.tsx con props tipadas (onBack/onHome) y tests propios (appNavigationBar.test.tsx, 3). README: contador 503 -> 506 (56 archivos). Validaciones: typecheck 0, lint OK, build OK, vitest 506/506 (56 archivos), audit:orphans 13 (baseline). Commit e4d5dee. Pendiente: push + CI (44 commits locales), demo tauri:dev, FASE L y destino de los 13 huerfanos. -- Prev: Higiene y puerta de calidad (2026-11-20): cerrado el arbol de trabajo sucio con el import type Page sin uso en tests-gui/flow.spec.ts y eliminado el estado muerto showHomePanel de App.tsx; el CI ahora corre npm run lint entre typecheck y vitest."
 }

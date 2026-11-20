@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `a03e57a`
+- Git inicializado y con commits; último commit `e4d5dee`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -145,6 +145,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `npm run lint` además de typecheck/vitest/build (`a03e57a`).
 - Smoke runtime web (2026-11-20): `npm run dev` + navegador real, 0 `error`/`unhandledrejection`;
   la bienvenida renderiza completa tras la recarga.
+- God Component (2026-11-20): `App.tsx` 945 → 925 líneas al extraer `AppNavigationBar` (barra
+  "Volver / Panel" del área principal) con props tipadas y tests propios. `audit:orphans` se mantiene
+  en 13.
 
 ---
 
@@ -231,6 +234,18 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — `AppNavigationBar` extraído de `App.tsx` (P1, 2026-11-20).** La barra "Volver / Panel"
+del área principal era el último bloque inline de navegación del God Component. Nuevo
+`src/components/AppNavigationBar.tsx` con props tipadas (`onBack`/`onHome`), tests propios
+(`appNavigationBar.test.tsx`, 3) y `App.tsx` 945 → 925 líneas. Validaciones: typecheck 0, lint OK,
+build OK, vitest 506/506 (56 archivos), audit:orphans 13. Commit `e4d5dee`.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 925 líneas; el siguiente
+bloque extraíble es el `stats` del dashboard (objeto inline de ~24 líneas con `grammarMetrics` y
+`activeLexicon`) como modelo puro `buildDashboardStats` en `src/utils/` con tests, o la extracción de
+los handlers del wizard de primer arranque (`handleWizardConfigureAi`/`handleAiSettingsModalClose`/
+`handleWizardSkip`/`handleWizardComplete`/`handleChooseDataFolder`) a un hook dedicado.
 
 **[x] CLN — higiene de código muerto y puerta de calidad (2026-11-20).** Cerrado el árbol de
 trabajo sucio: `tests-gui/flow.spec.ts` arrastraba un `type Page` sin uso y `App.tsx` conservaba
@@ -408,8 +423,8 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 43 commits locales** en `master` que no están en `origin` (`git rev-list --count
-origin/master..master`; el más reciente es `a03e57a`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
+**Hay 46 commits locales** en `master` que no están en `origin` (`git rev-list --count
+origin/master..master`; el más reciente es `e4d5dee`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
 hay número de run y la fase queda formalmente abierta.
