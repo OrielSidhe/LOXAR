@@ -327,6 +327,7 @@ const App = () => {
     handleOpenModal,
     handleCloseModal,
     handleCreateNewLexicon,
+    handleContinueToDashboard,
     handleConfirmCreateLexicon,
     handleRenameLexicon,
     handleDeleteLexicon,
@@ -535,10 +536,7 @@ const App = () => {
           onSplashFinish={() => setSplashFinished(true)}
           showWelcome={showWelcome}
           onCreateLexicon={handleCreateNewLexicon}
-          onContinue={() => {
-            audioService.playStartup();
-            setShowWelcome(false);
-          }}
+          onContinue={handleContinueToDashboard}
           onImport={content => {
             audioService.playStartup();
             setShowWelcome(false);

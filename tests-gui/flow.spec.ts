@@ -1,7 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import {
-  enterWelcome,
-  dismissProjectBootstrap,
+  enterDashboard,
   sidebarButton,
 } from './helpers';
 
@@ -28,11 +27,13 @@ async function disableGuidedTour(page: Page): Promise<void> {
 }
 
 /**
- * Crea un léxico desde la pantalla de bienvenida, que abre el modal de
- * creación (nombre + idioma) en lugar del formulario inline del selector.
+ * Crea un léxico por la vía real del dashboard: el botón "+" del selector de
+ * léxico abre el modal de creación (nombre + idioma). Antes existía un formulario
+ * inline encadenado que sólo pedía el nombre y perdía el idioma principal.
  */
-async function createLexicon(page: Page, name: string, language: string): Promise<void> {
-  await page.getByRole('button', { name: 'Crear Nuevo Léxico', exact: true }).click();
+async function createLexiconFromSelector(page: Page, name: string, language: string): Promise<void> {
+  await page.getByRole('button', { name: 'Crear nuevo léxico', exact: true }).click();
+  await expect(page.locator('#lexicon-name')).toBeVisible();
   await page.locator('#lexicon-name').fill(name);
   await page.locator('#main-language').fill(language);
   // El modal es un <form>: Enter en el último campo dispara el submit.
@@ -59,9 +60,8 @@ test('flujo completo: crear léxico, registrar, buscar y glosar', async ({ page 
   page.on('pageerror', (e) => pageErrors.push(e.message));
 
   await disableGuidedTour(page);
-  await enterWelcome(page);
-  await createLexicon(page, 'Loxar E2E', 'Español');
-  await dismissProjectBootstrap(page);
+  await enterDashboard(page);
+  await createLexiconFromSelector(page, 'Loxar E2E', 'Español');
 
   await registerWord(page, {
     significado: 'caballo',

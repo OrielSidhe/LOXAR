@@ -3125,6 +3125,33 @@ z-[100]`) y el flujo real de creación de léxico cambian el arranque de la app;
 **Hallazgo no bloqueante:** el botón "+" del selector de léxico y el modal de creación son dos
 formularios encadenados para la misma acción (inline → modal). Requiere decisión de producto.
 
+## [2026-11-20] Checkpoint: CLN — creación de léxico unificada en el modal (una sola vía de alta)
+
+**Rama:** `master`. **Motivo:** la suite E2E expuso que el botón "+" del selector de léxico abría
+un formulario inline (`#new-lexicon-name`) cuyo `onCreate` era `handleCreateNewLexicon`, que a su vez
+abría el modal de creación (`#lexicon-name`/`#main-language`): dos formularios encadenados para la
+misma acción. El inline solo pedía el nombre, así que se perdía el idioma principal, no validaba
+duplicados (el `createNewLexicon` lanza y el error se tragaba) y no daba feedback.
+
+**Cambios:**
+- `src/components/LexiconSelector.tsx`: eliminado el estado `isCreating`, el bloque de render inline,
+  `handleStartCreating`/`handleCancelCreating`/`handleConfirmCreate` y el import muerto `SaveIcon`
+  del flujo de alta. La prop `onCreate: (name: string) => void` pasa a `onCreateLexicon: () => void`,
+  y el botón "+" abre directamente el modal.
+- `src/components/AppToolbar.tsx`: prop `onCreateLexicon` tipada `() => void` y wiring
+  `onCreateLexicon={onCreateLexicon}`.
+- `src/components/WelcomeScreen.tsx`: el overlay baja de `z-50` a `z-40`. Estaba al mismo nivel que
+  los modales (`z-50`), así que un modal abierto desde el dashboard quedaba debajo de la bienvenida
+  (el dashboard se monta con la bienvenida aun visible).
+- `src/hooks/useAppHandlers.ts`: nuevo `handleContinueToDashboard` que apaga la bienvenida y dispara
+  el jingle; antes era un closure inline en `App.tsx`.
+- `src/App.tsx`: consume `handleContinueToDashboard`.
+- `tests-gui/flow.spec.ts`: el flujo crea el léxico por la vía real del dashboard
+  (`enterDashboard` + `#lexicon-name`/`#main-language`), no por la bienvenida ni por el inline.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 503/503 (55 archivos) · audit:orphans 13
+· `npm run test:gui` 5/5.
+
 **Próximo bloque ejecutable:** cerrar el `push` + CI (34 commits locales) y la demo
 `npm run tauri dev` (GUI nativa). Pendiente por autorización: `git push`, FASE L de CLN y destino de
 los 13 huérfanos.

@@ -63,6 +63,7 @@ export interface UseAppHandlersResult {
   handleOpenModal: (modal: any) => void;
   handleCloseModal: () => void;
   handleCreateNewLexicon: () => void;
+  handleContinueToDashboard: () => void;
   handleConfirmCreateLexicon: (name: string, language: string) => void;
   handleRenameLexicon: (oldName: string, newName: string) => void;
   handleDeleteLexicon: (name: string) => void;
@@ -151,6 +152,13 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     setShowWelcome(false);
     setActiveModal('create_lexicon');
   }, [setActiveModal, setShowWelcome]);
+
+  const handleContinueToDashboard = useCallback(() => {
+    // La bienvenida es un overlay `fixed inset-0 z-50`: debe desmontarse antes de
+    // ofrecer el dashboard, si no queda apilada sobre modales del mismo nivel.
+    setShowWelcome(false);
+    audioService.playStartup();
+  }, [setShowWelcome]);
 
   const handleConfirmCreateLexicon = useCallback((name: string, language: string) => {
     try {
@@ -475,6 +483,7 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     handleOpenModal,
     handleCloseModal,
     handleCreateNewLexicon,
+    handleContinueToDashboard,
     handleConfirmCreateLexicon,
     handleRenameLexicon,
     handleDeleteLexicon,

@@ -11,14 +11,14 @@ interface LexiconSelectorProps {
     lexiconNames: string[];
     activeLexiconName: string | null;
     onSelect: (name: string) => void;
-    onCreate: (name: string) => void;
+    /** Abre el modal de creación (nombre + idioma principal). Es la única vía de alta. */
+    onCreateLexicon: () => void;
     onDelete: (name: string) => void;
     onRename: (oldName: string, newName: string) => void;
 }
 
-const LexiconSelector = ({ lexiconNames, activeLexiconName, onSelect, onCreate, onDelete, onRename }: LexiconSelectorProps) => {
+const LexiconSelector = ({ lexiconNames, activeLexiconName, onSelect, onCreateLexicon, onDelete, onRename }: LexiconSelectorProps) => {
     const [isRenaming, setIsRenaming] = useState(false);
-    const [isCreating, setIsCreating] = useState(false);
     const [nameInput, setNameInput] = useState('');
 
     useEffect(() => {
@@ -26,23 +26,6 @@ const LexiconSelector = ({ lexiconNames, activeLexiconName, onSelect, onCreate, 
             setNameInput(activeLexiconName);
         }
     }, [activeLexiconName, isRenaming]);
-
-    const handleStartCreating = () => {
-        setIsCreating(true);
-        setNameInput('');
-    };
-
-    const handleCancelCreating = () => {
-        setIsCreating(false);
-        setNameInput('');
-    };
-
-    const handleConfirmCreate = () => {
-        if (nameInput.trim()) {
-            onCreate(nameInput.trim());
-        }
-        handleCancelCreating();
-    };
 
     const handleDeleteClick = () => {
         if (activeLexiconName) {
@@ -72,31 +55,6 @@ const LexiconSelector = ({ lexiconNames, activeLexiconName, onSelect, onCreate, 
     };
 
     const renderContent = () => {
-        if (isCreating) {
-            return (
-                 <>
-                    <input
-                        id="new-lexicon-name"
-                        name="newLexiconName"
-                        type="text"
-                        value={nameInput}
-                        onChange={(e) => setNameInput(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleConfirmCreate();
-                            if (e.key === 'Escape') handleCancelCreating();
-                        }}
-                        placeholder="Nombre del nuevo léxico..."
-                        autoFocus
-                        className="w-full sm:w-auto flex-grow bg-background border border-accent rounded-md shadow-sm py-2 px-3 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent"
-                    />
-                    <div className="flex gap-2">
-                        <button onClick={handleConfirmCreate} className="p-2 bg-success text-white rounded-md hover:bg-green-400" title="Guardar"><SaveIcon className="h-5 w-5" /></button>
-                        <button onClick={handleCancelCreating} className="p-2 bg-subtle text-white rounded-md hover:bg-gray-600" title="Cancelar"><CancelIcon className="h-5 w-5" /></button>
-                    </div>
-                </>
-            );
-        }
-
         if (isRenaming && activeLexiconName) {
              return (
                  <>
@@ -145,9 +103,9 @@ const LexiconSelector = ({ lexiconNames, activeLexiconName, onSelect, onCreate, 
                             <EditIcon className="h-5 w-5" />
                         </button>
                     </Tooltip>
-                     <Tooltip text="Crear un nuevo léxico vacío.">
+                     <Tooltip text="Crear un nuevo léxico (nombre e idioma principal).">
                         <button
-                            onClick={handleStartCreating}
+                            onClick={onCreateLexicon}
                             className="p-2 bg-background text-text-secondary font-semibold rounded-md shadow-sm hover:bg-subtle border border-subtle focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent transition-colors"
                             aria-label="Crear nuevo léxico"
                         >

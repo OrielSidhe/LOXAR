@@ -7,7 +7,7 @@ export interface AppToolbarProps {
   lexiconNames: string[];
   activeLexiconName: string | null;
   onSelectLexicon: (name: string) => void;
-  onCreateLexicon: (name: string) => void;
+  onCreateLexicon: () => void;
   onDeleteLexicon: (name: string) => void;
   onRenameLexicon: (oldName: string, newName: string) => void;
   onImport: (content: string) => void;
@@ -61,7 +61,7 @@ const AppToolbar: React.FC<AppToolbarProps> = ({
       lexiconNames={lexiconNames}
       activeLexiconName={activeLexiconName}
       onSelect={onSelectLexicon}
-      onCreate={onCreateLexicon}
+      onCreateLexicon={onCreateLexicon}
       onDelete={onDeleteLexicon}
       onRename={onRenameLexicon}
     />
