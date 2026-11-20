@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-19T13:25:00.000Z",
+  "lastUpdated": "2026-11-20T02:55:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: corregir el RangeError del jingle y validar runtime.",
+    "lastPrompt": "CLN: alinear la suite E2E Playwright al arranque real y dejarla en verde.",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Audio jingle RangeError fix (2026-11-19): la validacion runtime web (npm run dev + navegador real) expuso un crash al pulsar CONTINUAR AL DASHBOARD: Uncaught RangeError en AudioParam.setValueAtTime con tiempo -0.1. playVocalTone calculaba el punto de sostenimiento como startTime + duration - 0.55; con un AudioContext suspendido (currentTime === 0) y duraciones de 0.45/0.40/0.38 el tiempo era negativo y Web Audio abortaba el motivo. Fix: normalizar startTime a >= 0 en playTone/playEtherealTone/playVocalTone y acotar el sostenimiento con Math.max(startTime, ...). Test nuevo src/services/__tests__/audioService.test.ts (4), verificado que falla con el codigo original. Validaciones: typecheck 0, lint OK, build OK, vitest 498/498 (54 archivos), smoke runtime sin errores. Commit 1f418e3. Pendiente: recorrer modulos con un lexico creado, demo tauri:dev, push + CI (32 commits locales) y FASE L. -- Prev: Orphan cleanup (2026-11-19): eliminados 7 archivos triviales sin importador ni uso; audit:orphans 20 -> 13. Commit e26145c."
+  "sessionSummary": "E2E Playwright en verde (2026-11-20): la suite tests-gui estaba 5/5 en rojo porque el wizard de onboarding (FirstRunWizard, overlay z-[100]) y el flujo real de creacion de lexico cambian el arranque. palette-drag tenia un enterDashboard local que no descartaba el wizard y el overlay interceptaba los clics; smoke resolvía 'Crear Nuevo Léxico' a dos botones (strict-mode); flow creaba el lexico por una via inexistente (el selector abre un inline cuyo onCreate es handleCreateNewLexicon, que a su vez abre el modal). Nuevo helper unico tests-gui/helpers.ts (enterWelcome/dismissProjectBootstrap/enterDashboard/sidebarButton) y specs alineados; flow cubre crear lexico -> registrar bask/boskel -> buscar -> glosar (SUSTANTIVO). Validaciones: typecheck 0, lint OK, build OK, vitest 503/503 (55 archivos), audit:orphans 13, test:gui 5/5. Commit bfc6018. Hallazgo no bloqueante: el '+' del selector de lexico y el modal de creacion son dos formularios encadenados. Pendiente: demo tauri:dev, push + CI (35 commits locales) y FASE L. -- Prev: Audio jingle RangeError fix (2026-11-19): la validacion runtime web (npm run dev + navegador real) expuso un crash al pulsar CONTINUAR AL DASHBOARD: Uncaught RangeError en AudioParam.setValueAtTime con tiempo -0.1. playVocalTone calculaba el punto de sostenimiento como startTime + duration - 0.55; con un AudioContext suspendido (currentTime === 0) y duraciones de 0.45/0.40/0.38 el tiempo era negativo y Web Audio abortaba el motivo. Fix: normalizar startTime a >= 0 en playTone/playEtherealTone/playVocalTone y acotar el sostenimiento con Math.max(startTime, ...). Test nuevo src/services/__tests__/audioService.test.ts (4), verificado que falla con el codigo original. Validaciones: typecheck 0, lint OK, build OK, vitest 498/498 (54 archivos), smoke runtime sin errores. Commit 1f418e3. Pendiente: recorrer modulos con un lexico creado, demo tauri:dev, push + CI (32 commits locales) y FASE L. -- Prev: Orphan cleanup (2026-11-19): eliminados 7 archivos triviales sin importador ni uso; audit:orphans 20 -> 13. Commit e26145c."
 }

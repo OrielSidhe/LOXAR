@@ -1,5 +1,5 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-11-19 
+**Última actualización:** 2026-11-20 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
@@ -3092,4 +3092,40 @@ sin errores de consola tras el fix (0 errores; antes 2 `RangeError`).
 **Próximo bloque ejecutable:** recorrer los módulos con un léxico creado (crear léxico → entrada →
 FTS5 → glosado → sound change) y la demo `npm run tauri dev` (GUI nativa). Pendiente por autorización:
 `git push` + CI con número de run, FASE L de CLN.
+
+## [2026-11-20] Checkpoint: CLN — suite E2E Playwright en verde (validación runtime web)
+
+**Rama:** `master`. **Motivo:** el wizard de onboarding (`FirstRunWizard`, overlay `fixed inset-0
+z-[100]`) y el flujo real de creación de léxico cambian el arranque de la app; los tres specs de
+`tests-gui/` quedaron desalineados y la suite Playwright estaba 5/5 en rojo.
+
+**Diagnóstico:**
+- `palette-drag.spec.ts` tenía un `enterDashboard` local que no descartaba el wizard: el overlay
+  interceptaba el clic en "CONTINUAR AL DASHBOARD" y el test colgaba hasta el timeout (3 tests).
+- `smoke.spec.ts` usaba `getByRole('button', { name: /Crear Nuevo Léxico/i })`, que resuelve a dos
+  elementos (bienvenida + `aria-label` del selector de léxico) → strict-mode violation.
+- `flow.spec.ts` creaba el léxico por una vía inexistente: el selector de léxico de la barra abre un
+  formulario inline (`#new-lexicon-name`) cuyo `onCreate` es `handleCreateNewLexicon`, que a su vez
+  abre el modal (`#lexicon-name`/`#main-language`). Y el botón "Glosar" tiene
+  `aria-label="Analizar oración"`, así que su nombre accesible no es "Glosar".
+
+**Cambios (commit `bfc6018`):**
+- `tests-gui/helpers.ts`: helper único con `enterWelcome`, `dismissProjectBootstrap`,
+  `enterDashboard` y `sidebarButton` (anclado a `aside`).
+- `tests-gui/palette-drag.spec.ts`: usa el helper compartido en vez de su función local.
+- `tests-gui/smoke.spec.ts`: `exact: true` en los botones de la bienvenida.
+- `tests-gui/flow.spec.ts`: crea el léxico por la bienvenida (modal con nombre + idioma), desactiva
+  el tour guiado (`conlang_session_cache.tourCompleted`) y pulsa el botón accesible "Analizar
+  oración". Cubre el glosado del lexema derivado `bask → boskel ⇒ SUSTANTIVO`.
+- `README.md`: contador 498/498 (54 archivos) → 503/503 (55 archivos).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 503/503 (55 archivos) · audit:orphans 13
+· `npm run test:gui` 5/5 (smoke, flujo completo de usuario, 3 de canvas).
+
+**Hallazgo no bloqueante:** el botón "+" del selector de léxico y el modal de creación son dos
+formularios encadenados para la misma acción (inline → modal). Requiere decisión de producto.
+
+**Próximo bloque ejecutable:** cerrar el `push` + CI (34 commits locales) y la demo
+`npm run tauri dev` (GUI nativa). Pendiente por autorización: `git push`, FASE L de CLN y destino de
+los 13 huérfanos.
 

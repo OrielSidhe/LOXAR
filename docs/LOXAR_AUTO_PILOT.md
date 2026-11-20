@@ -215,6 +215,15 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — suite E2E Playwright en verde (2026-11-20).** El wizard de onboarding
+(`FirstRunWizard`, overlay `fixed inset-0 z-[100]`) dejó al arranque de la app distinto al que
+asumían los specs: `palette-drag.spec.ts` tenía un `enterDashboard` local que no lo descartaba y el
+overlay interceptaba los clics; `smoke.spec.ts` resolvía "Crear Nuevo Léxico" a dos botones; y
+`flow.spec.ts` creaba el léxico por una vía inexistente (el selector de léxico abre un inline cuyo
+`onCreate` es `handleCreateNewLexicon`, que a su vez abre el modal). Nuevo helper único en
+`tests-gui/helpers.ts` (`enterWelcome`/`dismissProjectBootstrap`/`enterDashboard`/`sidebarButton`)
+y los tres specs alineados. `npm run test:gui` 5/5. Commit `bfc6018`.
+
 **[x] CLN — el objeto del preview ya no repite al sujeto (2026-11-19).** `getDefaultPreviewEntries`
 (`src/utils/grammarPreview.ts`) resolvía el objeto con `entry.ID !== byId(preview?.objectEntryId)?.ID`;
 como `preview.objectEntryId` está vacío en el flujo por defecto, `byId(...)` devolvía `undefined` y
@@ -259,9 +268,11 @@ reemplazado por ramas tipadas. Tests nuevos: `lexiconTableModel.test.ts` (20). V
 typecheck 0, lint OK, build OK, vitest 494/494 (53 archivos), audit:orphans 20. Cierra el P1 de God
 Components.
 
-**[~] CLN — validación runtime.** Smoke web en verde tras corregir el crash de audio (`1f418e3`).
-Pendiente: recorrer los módulos con un léxico creado (crear léxico → entrada → FTS5 → glosado →
-sound change) y la demo `npm run tauri dev` (GUI nativa).
+**[x] CLN — validación runtime web (2026-11-20).** La suite Playwright (`npm run test:gui`) quedó
+5/5 en verde tras alinear los tres specs al arranque real (wizard de onboarding → bienvenida → capa
+de ubicación de proyecto). `flow.spec.ts` cubre el flujo completo con un léxico creado: crear
+léxico → registrar `bask/boskel` → buscarlo en FTS → glosarlo (`SUSTANTIVO`), sin errores de
+consola. Commit `bfc6018`. Pendiente: la demo `npm run tauri dev` (GUI nativa) y el push + CI.
 
 **[x] CLN — extraer el modelo puro de `SyntaxCanvas.tsx` (P1, 2026-11-19).** El componente
 (484 líneas) mezclaba dominio y render. Nuevo `src/utils/syntaxCanvasModel.ts` con tipos
@@ -352,11 +363,9 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 30 commits locales** en `master` que no están en `origin` (`5e38fe6`, `36c781a`, `f521b85`,
-`e6d6c2d`, `76cf42f`, `dad806e`, `cc0f712`, `1f34de3`, `ad3110a`, `25dbe93`, `cd7547f`, `f433c22`,
-`6b66129`, `d113bb9`, `ca191f6`, `20d827a`, `795a8fb`, `dc3cd46`, `b7c73be`, `aeea62a`, `2ebb88b`,
-`9bc5f70`, `ed45653`, `ee2a505` + este checkpoint de docs). El
-Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
+**Hay 35 commits locales** en `master` que no están en `origin` (`git rev-list --count
+origin/master..master`; el más reciente es `bfc6018`; el commit de este checkpoint de docs lo deja
+en 36). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
 hay número de run y la fase queda formalmente abierta.
