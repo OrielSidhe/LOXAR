@@ -2,6 +2,7 @@ import { memo } from 'react';
 import RestorBackupModalComponent from './RestoreBackupModal';
 import AiAssistantModal from './AiAssistantModal';
 import LexiconToolsModal from './LexiconToolsModal';
+import LexiconCompareModal from './LexiconCompareModal';
 import GenerativeProfileModal from './GenerativeProfileModal';
 import AnalysisReportModal from './AnalysisReportModal';
 import FunctionManagerModal from './FunctionManagerModal';
@@ -17,7 +18,7 @@ import { LexiconEntry, LexiconMetadata, GenerativeProfile, HyphenOperation, Func
 
 const RestoreBackupModal = memo(RestorBackupModalComponent);
 
-type ModalState = 'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings';
+type ModalState = 'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings';
 
 interface ImportState {
     step: 'idle' | 'map_headers' | 'resolve_conflicts' | 'sanitize_file' | 'repair_characters' | 'error';
@@ -39,6 +40,7 @@ interface ModalManagerProps {
 
     activeLexicon: LexiconEntry[];
     activeLexiconName: string | null;
+    lexiconNames: string[];
     activeProfile: GenerativeProfile;
     activeMetadata: LexiconMetadata | null;
     activeCustomFunctions: string[];
@@ -68,6 +70,9 @@ interface ModalManagerProps {
     onOpenProfile: () => void;
     onOpenNeography: () => void;
     onOpenInflection: () => void;
+    onOpenCompare: () => void;
+    onLoadLexiconEntries: (name: string) => Promise<LexiconEntry[] | null>;
+    onMergeLexiconEntries: (entries: LexiconEntry[]) => void;
 
     importHandlers: {
         cancelImport: () => void;
@@ -88,6 +93,7 @@ const ModalManager = ({
     importState,
     activeLexicon,
     activeLexiconName,
+    lexiconNames,
     activeProfile,
     activeMetadata,
     activeCustomFunctions,
@@ -114,6 +120,9 @@ const ModalManager = ({
     onOpenProfile,
     onOpenNeography,
     onOpenInflection,
+    onOpenCompare,
+    onLoadLexiconEntries,
+    onMergeLexiconEntries,
     importHandlers,
     showNotification
 }: ModalManagerProps) => {
@@ -142,7 +151,21 @@ const ModalManager = ({
                 onOpenNeography={onOpenNeography}
                 onOpenGrammar={onOpenInflection}
                 onOpenTranslation={onClose}
+                onOpenCompare={onOpenCompare}
             />}
+
+            {activeModal === 'lexicon_compare' && (
+                <LexiconCompareModal
+                    open={true}
+                    onClose={onClose}
+                    baseEntries={activeLexicon}
+                    baseName={activeLexiconName}
+                    comparisonNames={lexiconNames.filter((name) => name !== activeLexiconName)}
+                    onLoadLexicon={onLoadLexiconEntries}
+                    onMergeEntries={onMergeLexiconEntries}
+                    showNotification={showNotification}
+                />
+            )}
 
             {activeModal === 'profile' && <GenerativeProfileModal
                 profile={activeProfile}

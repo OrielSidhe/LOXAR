@@ -28,7 +28,7 @@ export interface UseAppHandlersOptions {
   setActiveTab: React.Dispatch<React.SetStateAction<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>>;
   setShowWelcome: React.Dispatch<React.SetStateAction<boolean>>;
   setIsTourActive: React.Dispatch<React.SetStateAction<boolean>>;
-  setActiveModal: React.Dispatch<React.SetStateAction<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>>;
+  setActiveModal: React.Dispatch<React.SetStateAction<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>>;
   setCanvasState: React.Dispatch<React.SetStateAction<{ nodes: any[]; edges: any[] }>>;
   setCurrentTourSteps: React.Dispatch<React.SetStateAction<any[]>>;
   setActiveToolView: React.Dispatch<React.SetStateAction<'dashboard' | 'interlinear-gloss' | 'sound-change'>>;

@@ -167,7 +167,7 @@ const App = () => {
     setActiveGrammarModule(moduleId);
   }, [setActiveTab]);
 
-  const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
+  const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
 
   const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
   useEffect(() => {
@@ -365,6 +365,28 @@ const App = () => {
     handleAiCompleteFunctions,
     handleAiFillMissing,
   } = appHandlers;
+
+  const handleLoadLexiconEntries = useCallback(async (name: string): Promise<LexiconEntry[] | null> => {
+    try {
+      const data = await loadLexicon(name);
+      return data?.entries ?? null;
+    } catch (e) {
+      console.error(`No se pudo cargar el léxico "${name}" para comparar.`, e);
+      return null;
+    }
+  }, []);
+
+  const handleMergeLexiconEntries = useCallback((entries: LexiconEntry[]) => {
+    if (!lexiconHook.activeLexiconName) {
+      showNotification('No hay un léxico activo que fusionar.', 'error');
+      return;
+    }
+    lexiconHook.updateActiveLexiconEntries(
+      [...lexiconHook.activeLexicon, ...entries],
+      true,
+      entries.length,
+    );
+  }, [lexiconHook, showNotification]);
 
   const aiHandlers = useAiHandlers({
     activeLexicon,
@@ -587,6 +609,7 @@ const App = () => {
             importState={lexiconHook.importState}
             activeLexicon={activeLexicon}
             activeLexiconName={activeLexiconName}
+            lexiconNames={lexiconHook.lexiconNames}
             activeProfile={activeProfile}
             activeMetadata={activeMetadata}
             activeCustomFunctions={activeCustomFunctions}
@@ -617,6 +640,9 @@ const App = () => {
             onOpenProfile={() => setActiveModal('profile')}
             onOpenNeography={() => setActiveTab('writing')}
             onOpenInflection={() => setActiveTab('grammar')}
+            onOpenCompare={() => setActiveModal('lexicon_compare')}
+            onLoadLexiconEntries={handleLoadLexiconEntries}
+            onMergeLexiconEntries={handleMergeLexiconEntries}
             importHandlers={{
               cancelImport: lexiconHook.cancelImport,
               setImportMapping: lexiconHook.setImportMapping,

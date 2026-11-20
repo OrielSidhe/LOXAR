@@ -10,6 +10,7 @@ import HyphenIcon from './icons/HyphenIcon';
 import PenToolIcon from './icons/PenToolIcon';
 import BookOpenIcon from './icons/BookOpenIcon';
 import SparkleIcon from './icons/SparkleIcon';
+import GitMergeIcon from './icons/GitMergeIcon';
 
 interface LexiconToolsModalProps {
     onClose: () => void;
@@ -19,11 +20,12 @@ interface LexiconToolsModalProps {
     onOpenNeography: () => void;
     onOpenGrammar: () => void;
     onOpenTranslation: () => void;
+    onOpenCompare: () => void;
     disabled: boolean;
     totalEntries: number;
 }
 
-const LexiconToolsModal = ({ onClose, onManageCategories, onManageHyphens, onGenerateReport, onOpenNeography, onOpenGrammar, onOpenTranslation, disabled, totalEntries }: LexiconToolsModalProps) => {
+const LexiconToolsModal = ({ onClose, onManageCategories, onManageHyphens, onGenerateReport, onOpenNeography, onOpenGrammar, onOpenTranslation, onOpenCompare, disabled, totalEntries }: LexiconToolsModalProps) => {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4 animate-fade-in">
             <div className="bg-surface rounded-lg shadow-2xl w-full max-w-lg max-h-[95vh] flex flex-col border border-subtle">
@@ -93,6 +95,17 @@ const LexiconToolsModal = ({ onClose, onManageCategories, onManageHyphens, onGen
                         <div className="flex-grow">
                              <p className="text-lg font-semibold text-text-primary">Patio de Traducción</p>
                              <p className="text-sm text-text-secondary">Traduce textos usando tu léxico y gramática.</p>
+                        </div>
+                    </button>
+                    <button
+                        onClick={onOpenCompare}
+                        disabled={disabled || totalEntries === 0}
+                        className="bg-background p-4 rounded-lg flex items-center gap-4 text-left w-full transition-colors focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed hover:bg-subtle focus:ring-2 focus:ring-accent"
+                    >
+                        <div className="text-accent bg-accent/20 p-2 rounded-md"><GitMergeIcon className="h-6 w-6"/></div>
+                        <div className="flex-grow">
+                             <p className="text-lg font-semibold text-text-primary">Comparar y fusionar léxicos</p>
+                             <p className="text-sm text-text-secondary">Compará tu léxico activo con otro guardado o un archivo y fusioná las entradas que falten.</p>
                         </div>
                     </button>
                     <button

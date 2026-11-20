@@ -631,7 +631,7 @@ export const useLexicon = (
 
         setActiveLexicon, createNewLexicon, renameLexicon, deleteLexicon, addWord, addBatchWords, editWord,
         deleteWord, deleteBatchWords, batchUpdateFunction, getLexiconSample, updateActiveLexicon,
-        updateGenerativeProfile, updateNeographyProfile, updateInflectionProfile, updateCorpus, updateGrammarManifest, saveChanges, undoChange,
+        updateActiveLexiconEntries, updateGenerativeProfile, updateNeographyProfile, updateInflectionProfile, updateCorpus, updateGrammarManifest, saveChanges, undoChange,
         startImportProcess, cancelImport, setImportMapping, resolveConflict, proceedWithValidEntries,
         resanitizeAndContinue, applyCharacterRepair, aiCompleteFunctions, aiFillMissingFields, manageFunctions, addCustomFunction, manageHyphens,
         upsertLexiconData,
