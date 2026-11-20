@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from 'react';
-import Papa from 'papaparse';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from '../services/projectFile';
 import { loadLexicon, listLexiconNames } from '../services/sqlStorage';
 import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
+import { buildLexiconExport, EXPORT_FORMAT_LABELS, type ExportFormat } from '../utils/lexiconExport';
 import type { LexiconEntry, LexiconMetadata, GenerationMode } from '../types';
 
 export interface UseProjectOperationsOptions {
@@ -197,30 +197,17 @@ export function useProjectOperations(options: UseProjectOperationsOptions) {
         showNotification('Proyecto guardado como.', 'success');
     }, [buildProjectPayload, writeProjectToPath, activeMetadata?.conlangName, activeTab, setProjectPath, showNotification]);
 
-    const handleFileExport = useCallback(async (format: 'csv' | 'json' | 'txt') => {
+    const handleFileExport = useCallback(async (format: ExportFormat) => {
         if (!exportPath || !activeLexiconName) {
             showNotification("Establece una carpeta de exportación primero.", "error"); return;
         }
-        setIsLoading(true); setLoadingMessage(`Exportando a ${format.toUpperCase()}...`);
+        setIsLoading(true); setLoadingMessage(`Exportando a ${EXPORT_FORMAT_LABELS[format]}...`);
         try {
-            let content = '';
-            const safeName = activeLexiconName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const fileName = `${safeName}_${new Date().toISOString().split('T')[0]}.${format}`;
-
-            if (format === 'json') content = JSON.stringify(activeLexicon, null, 2);
-            else if (format === 'csv') {
-                const rows = activeLexicon.map(e => ({
-                    ID: e.ID,
-                    Raíz: e.Raíz,
-                    Léxema: e.Léxema.join(';'),
-                    Categoría: e.Categoría,
-                    Significado: e.Significado.join(';'),
-                    externalID: e.externalID || '',
-                }));
-                content = '\uFEFF' + Papa.unparse(rows);
-            }
-            else content = activeLexicon.map(e => `${e.Léxema.join(', ')} (${e.Categoría}): ${e.Significado.join(', ')}`).join('\n');
-
+            const { fileName, content } = buildLexiconExport(format, {
+                lexiconName: activeLexiconName,
+                metadata: activeMetadata,
+                entries: activeLexicon,
+            });
             const { success, error } = await window.loxarBridge.exportFile({ filePath: `${exportPath}/${fileName}`, content });
             if (success) showNotification(`¡Éxito! Léxico exportado a ${fileName}`, 'success');
             else showNotification(`Error de exportación: ${error}`, 'error');
@@ -228,7 +215,7 @@ export function useProjectOperations(options: UseProjectOperationsOptions) {
             showNotification(`Error: ${e instanceof Error ? e.message : "Ocurrió un error desconocido."}`, 'error');
         }
         finally { setIsLoading(false); }
-    }, [activeLexicon, activeLexiconName, exportPath, showNotification, setIsLoading, setLoadingMessage]);
+    }, [activeLexicon, activeLexiconName, activeMetadata, exportPath, showNotification, setIsLoading, setLoadingMessage]);
 
     const handleSetExportPath = useCallback(async () => {
         const path = await window.loxarBridge.getDirectoryPath();

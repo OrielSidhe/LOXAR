@@ -11,10 +11,13 @@ import Dropdown, { DropdownItem } from './Dropdown';
 import MoreVerticalIcon from './icons/MoreVerticalIcon';
 import AlertTriangleIcon from './icons/AlertTriangleIcon';
 import SparkleIcon from './icons/SparkleIcon';
+import { EXPORT_FORMATS, EXPORT_FORMAT_LABELS, EXPORT_FORMAT_DESCRIPTIONS, type ExportFormat } from '../utils/lexiconExport';
 
 interface FileControlsProps {
     onImport: (content: string) => void;
-    onExport: (format: 'csv' | 'json') => void;
+    onExport: (format: ExportFormat) => void;
+    /** Formatos activos elegidos en Settings; el dropdown solo ofrece estos. */
+    exportFormats?: ExportFormat[];
     onSave: () => void;
     onSetExportPath: () => void;
     onRestore: () => void;
@@ -37,8 +40,12 @@ const FileControls = (props: FileControlsProps) => {
     const {
         onImport, onExport, onSave, onSetExportPath, onRestore,
         onOpenAbout, onStartTour, onOpenAiSettings, onQuit, onResetApp, onError,
-        disabled = false, isDirty = false, onNewProject, onOpenProject, onSaveProject, onSaveProjectAs, projectPath
+        disabled = false, isDirty = false, onNewProject, onOpenProject, onSaveProject, onSaveProjectAs, projectPath,
+        exportFormats
     } = props;
+
+    const availableFormats: ExportFormat[] =
+        exportFormats && exportFormats.length > 0 ? exportFormats : [...EXPORT_FORMATS];
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -110,12 +117,11 @@ const FileControls = (props: FileControlsProps) => {
                 </button>
               }
             >
-              <DropdownItem onClick={() => onExport('csv')}>
-                <span className="font-bold">CSV</span> - Hoja de cálculo
-              </DropdownItem>
-              <DropdownItem onClick={() => onExport('json')}>
-                <span className="font-bold">JSON</span> - Backup/Re-importar
-              </DropdownItem>
+              {availableFormats.map((format) => (
+                <DropdownItem key={format} onClick={() => onExport(format)}>
+                  <span className="font-bold">{EXPORT_FORMAT_LABELS[format]}</span> - {EXPORT_FORMAT_DESCRIPTIONS[format]}
+                </DropdownItem>
+              ))}
             </Dropdown>
 
             {/* More Options Dropdown */}

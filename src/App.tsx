@@ -21,6 +21,7 @@ import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
+import { normalizeExportFormats, DEFAULT_EXPORT_FORMATS, type ExportFormat } from './utils/lexiconExport';
 import Papa from 'papaparse';
 
 // Icons
@@ -201,6 +202,7 @@ const App = () => {
 
   const [backups, setBackups] = useState<string[]>([]);
   const [exportPath, setExportPath] = useState<string | null>(null);
+  const [exportFormats, setExportFormats] = useState<ExportFormat[]>([...DEFAULT_EXPORT_FORMATS]);
   const [projectPath, setProjectPath] = useState<string | null>(null);
   const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
   const [isProjectDirty, setIsProjectDirty] = useState(false);
@@ -506,6 +508,8 @@ const App = () => {
         if (cancelled) return;
         setSessionCacheData(cache);
         setProjectPath(cache.projectPath ?? null);
+        setExportPath(cache.exportPath ?? null);
+        setExportFormats(normalizeExportFormats(cache.exportFormats));
         setBootstrapDismissed(cache.bootstrapDismissed === true);
         try {
           const names = await listLexiconNames();
@@ -629,6 +633,8 @@ const App = () => {
             showSettings={showSettings}
             onCloseSettings={() => setShowSettings(false)}
             onOpenAiSettings={() => { setShowSettings(false); handleOpenModal('ai_settings'); }}
+            exportFormats={exportFormats}
+            onExportFormatsChange={setExportFormats}
           />
 
           <Header
@@ -649,6 +655,7 @@ const App = () => {
             onRenameLexicon={handleRenameLexicon}
             onImport={lexiconHook.startImportProcess}
             onExport={handleFileExport}
+            exportFormats={exportFormats}
             onSave={handleSaveChanges}
             onSetExportPath={handleSetExportPath}
             onRestore={() => handleOpenModal('restore')}

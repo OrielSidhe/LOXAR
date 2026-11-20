@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import XCircleIcon from './icons/XCircleIcon';
 import SettingsIcon from './icons/SettingsIcon';
-import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
+import { loadSessionCache, saveSessionCache, type SessionCache } from '../services/sessionCache';
 import { applyTheme, themes, type ThemeId } from '../services/themeService';
 import { audioService } from '../services/audioService';
 import { type AIProviderConfig } from '../services/aiProviderRegistry';
 import { loadAIConfig } from '../services/geminiService';
+import { EXPORT_FORMATS, EXPORT_FORMAT_LABELS, normalizeExportFormats, type ExportFormat } from '../utils/lexiconExport';
 
 type Settings = {
   themeId: ThemeId;
@@ -19,7 +20,7 @@ type Settings = {
   backupFolder: string;
   autoBackupEnabled: boolean;
   autoBackupMinutes: number;
-  exportFormats: string[];
+  exportFormats: ExportFormat[];
   highContrast: boolean;
   density: 'comfortable' | 'compact';
   autoSave: boolean;
@@ -71,7 +72,13 @@ const DEFAULTS: Settings = {
   showWelcomeOnStart: true,
 };
 
-const SettingsModal: React.FC<{ open: boolean; onClose: () => void; onOpenAiSettings?: () => void }> = ({ open, onClose, onOpenAiSettings }) => {
+const SettingsModal: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onOpenAiSettings?: () => void;
+  exportFormats: ExportFormat[];
+  onExportFormatsChange: (formats: ExportFormat[]) => void;
+}> = ({ open, onClose, onOpenAiSettings, exportFormats, onExportFormatsChange }) => {
   const [settings, setSettings] = useState<Settings>(DEFAULTS);
   const [section, setSection] = useState<SectionId>('appearance');
   const [saved, setSaved] = useState(false);
@@ -94,6 +101,7 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void; onOpenAiSett
         tourOnStart: cache.tourCompleted === false ? false : prev.tourOnStart,
         showWelcomeOnStart: cache.showWelcomeOnStart ?? prev.showWelcomeOnStart,
         backupFolder: cache.exportPath || prev.backupFolder,
+        exportFormats: normalizeExportFormats(cache.exportFormats),
       }));
     });
     return () => {
@@ -112,7 +120,7 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void; onOpenAiSett
     setSaved(false);
   };
 
-  const toggleArray = (key: 'exportFormats', value: string) => {
+  const toggleArray = (key: 'exportFormats', value: ExportFormat) => {
     setSettings((prev) => ({
       ...prev,
       [key]: prev[key].includes(value) ? prev[key].filter((v) => v !== value) : [...prev[key], value],
@@ -121,13 +129,19 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void; onOpenAiSett
   };
 
   const handleSave = async () => {
+    // Fusionar con el cache previo: `saveSessionCache` también fusiona, pero
+    // aquí se deja explícito para no depender del orden de llamados.
+    const previous = (await loadSessionCache().catch(() => ({} as SessionCache))) as SessionCache;
     await saveSessionCache({
+      ...previous,
       themeId: settings.themeId,
       soundsEnabled: settings.soundsEnabled,
       tourCompleted: !settings.tourOnStart,
       showWelcomeOnStart: settings.showWelcomeOnStart,
       exportPath: settings.backupFolder || null,
+      exportFormats: settings.exportFormats,
     });
+    onExportFormatsChange(settings.exportFormats);
     setSaved(true);
     if (settings.soundsEnabled) audioService.playClick();
   };
@@ -280,7 +294,7 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void; onOpenAiSett
 
                 <SectionTitle>Exportación</SectionTitle>
                 <div className="flex flex-wrap gap-2">
-                  {['json', 'csv', 'md', 'xlsx', 'docx'].map((fmt) => (
+                  {EXPORT_FORMATS.map((fmt) => (
                     <button
                       key={fmt}
                       onClick={() => toggleArray('exportFormats', fmt)}
@@ -288,7 +302,7 @@ const SettingsModal: React.FC<{ open: boolean; onClose: () => void; onOpenAiSett
                         settings.exportFormats.includes(fmt) ? 'border-accent text-accent bg-accent/10' : 'border-border-dark text-text-secondary hover:text-white'
                       }`}
                     >
-                      {fmt.toUpperCase()}
+                      {EXPORT_FORMAT_LABELS[fmt]}
                     </button>
                   ))}
                 </div>

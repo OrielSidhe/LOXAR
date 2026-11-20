@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-20T16:10:00.000Z",
+  "lastUpdated": "2026-11-20T18:25:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: extraer el objeto stats del dashboard a buildDashboardStats (P1 God Component).",
+    "lastPrompt": "FASE EX v3.14: exportador real de lexico + dropdown unido a Settings.",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Stats del dashboard extraidos (2026-11-20): el objeto inline de ~24 lineas del tab dashboard paso a src/utils/dashboardStats.ts (buildDashboardStats + tipo DashboardStats compartido con LanguageHomeCanvas). App.tsx 925 -> 906 lineas. README: contador 506 -> 510 (57 archivos). Validaciones: typecheck 0, lint OK, build OK, vitest 510/510 (57 archivos), audit:orphans 13 (baseline). Commit 357744d. Pendiente: push + CI (47 commits locales), demo tauri:dev, FASE L y destino de los 13 huerfanos. -- Prev: Barra de navegacion extraida (2026-11-20): App.tsx bajo de 945 a 925 lineas al sacar la barra 'Volver / Panel' del area principal a src/components/AppNavigationBar.tsx con props tipadas (onBack/onHome) y tests propios (appNavigationBar.test.tsx, 3)."
+  "sessionSummary": "FASE EX del gauntlet v3.14 cerrada (2026-11-20): exportacion real de lexico con src/utils/lexiconExport.ts (json/csv/md/txt, casefold NFC, compareLexicons/mergeLexicons). useProjectOperations.handleFileExport ahora usa buildLexiconExport; FileControls y AppToolbar reciben exportFormats; SettingsModal elimina xlsx/docx, persiste exportFormats y fusiona el session cache (saveSessionCache fusiona). App hidrata exportPath y exportFormats del cache. README: 510 -> 522 (58 archivos). Validaciones: typecheck 0, lint OK, build OK, vitest 522/522 (58 archivos), audit:orphans 13 (baseline). Pendiente: push + CI (48 commits locales), demo tauri:dev, y Fases CMP/NAV/FX/MY/FLU/D/R. -- Prev: Stats del dashboard extraidos (2026-11-20): el objeto inline de ~24 lineas del tab dashboard paso a src/utils/dashboardStats.ts (buildDashboardStats + tipo DashboardStats compartido con LanguageHomeCanvas). App.tsx 925 -> 906 lineas. Commit 357744d."
 }

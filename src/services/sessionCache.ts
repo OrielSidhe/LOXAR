@@ -10,6 +10,7 @@ export interface SessionCache {
   soundsEnabled?: boolean;
   showWelcomeOnStart?: boolean;
   bootstrapDismissed?: boolean;
+  exportFormats?: string[];
 }
 
 const STORE_KEY = 'loxar-session-cache';
@@ -67,9 +68,14 @@ export async function loadSessionCache(): Promise<SessionCache> {
 }
 
 export async function saveSessionCache(state: SessionCache): Promise<void> {
+  // Fusión superficial con el cache previo: varios llamadores pasaban objetos
+  // parciales y pisan campos no mencionados (projectPath, activeTab, exportFormats).
+  const previous = await loadSessionCache().catch(() => ({} as SessionCache));
+  const merged: SessionCache = { ...previous, ...state };
+
   if (!isTauri()) {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('conlang_session_cache', JSON.stringify(state));
+      localStorage.setItem('conlang_session_cache', JSON.stringify(merged));
     }
     return;
   }
@@ -78,7 +84,7 @@ export async function saveSessionCache(state: SessionCache): Promise<void> {
     const path = await getSessionCachePath();
     await invoke('plugin:fs|write_file', {
       path,
-      contents: JSON.stringify(state, null, 2),
+      contents: JSON.stringify(merged, null, 2),
     });
   } catch (e: any) {
     // Silently ignore permission errors - session cache is not critical

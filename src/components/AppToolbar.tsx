@@ -2,6 +2,7 @@ import React from 'react';
 import LexiconSelector from './LexiconSelector';
 import FileControls from './FileControls';
 import InfoIcon from './icons/InfoIcon';
+import type { ExportFormat } from '../utils/lexiconExport';
 
 export interface AppToolbarProps {
   lexiconNames: string[];
@@ -11,7 +12,8 @@ export interface AppToolbarProps {
   onDeleteLexicon: (name: string) => void;
   onRenameLexicon: (oldName: string, newName: string) => void;
   onImport: (content: string) => void;
-  onExport: (format: 'csv' | 'json') => void;
+  onExport: (format: ExportFormat) => void;
+  exportFormats: ExportFormat[];
   onSave: () => void;
   onSetExportPath: () => void;
   onRestore: () => void;
@@ -55,6 +57,7 @@ const AppToolbar: React.FC<AppToolbarProps> = ({
   onSaveProject,
   onSaveProjectAs,
   projectPath,
+  exportFormats,
 }) => (
   <div className="flex items-center justify-between px-6 py-4 bg-surface-dark/90 backdrop-blur-md border-b border-border-dark flex-wrap gap-4 z-30 relative">
     <LexiconSelector
@@ -69,6 +72,7 @@ const AppToolbar: React.FC<AppToolbarProps> = ({
       <FileControls
         onImport={onImport}
         onExport={onExport}
+        exportFormats={exportFormats}
         onSave={onSave}
         onSetExportPath={onSetExportPath}
         onRestore={onRestore}
