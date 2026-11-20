@@ -5,6 +5,29 @@
 
 ---
 
+## [2026-11-20] Checkpoint: CLN — higiene de código muerto y puerta de calidad
+
+**Rama:** `master`. **Motivo:** cerrar el árbol de trabajo sucio (un import sin uso en
+`tests-gui/flow.spec.ts`) y eliminar el último estado muerto declarado (`showHomePanel` en
+`App.tsx`, presente desde el rediseño del dashboard y nunca consumido). Además, el CI no corría
+`npm run lint`, aunque el Bloque G2 lo exige como puerta de calidad.
+
+**Cambios:**
+- `tests-gui/flow.spec.ts`: se quita `type Page` del import de Playwright (sin uso; el parámetro
+  `page` se infiere del callback). Commit `be22301`.
+- `src/App.tsx`: se elimina `const [showHomePanel, setShowHomePanel] = useState(false)` (ni el
+  valor ni el setter se referencian en todo `src/`). Commit `be22301`.
+- `.github/workflows/ci.yml`: nuevo paso `npm run lint` entre typecheck y vitest. Commit `a03e57a`.
+
+**Verificación:** `npm run typecheck` 0 · `npm run lint` OK · `npx vitest run` 503/503 (55
+archivos) · `npm run build` OK · `npm run audit:orphans` 13 (baseline) · smoke runtime web
+(`npm run dev` + navegador real): 0 `error`/`unhandledrejection`, bienvenida renderiza completa.
+
+**Pendiente de decisión de producto:** destino de los 13 huérfanos, `push` + CI (43 commits
+locales), la demo `npm run tauri dev` y FASE L.
+
+---
+
 ## [2026-11-20] Checkpoint: CLN — el Sound Change Workbench ya persiste el lote en el léxico
 
 **Rama:** `master`. **Motivo:** el botón "Aplicar al léxico" del Sound Change Workbench ejecutaba
@@ -87,7 +110,10 @@ retomar sin corrupción ni pérdida de contexto, incluso si la cuota de IA corta
 - [x] **T1 — SESSION_CACHE en runtime:** `src/services/sessionCache.ts` (`loadSessionCache`/`saveSessionCache`) usando `@tauri-apps/api/core` invoke.
 - [x] **P-LOXAR — Persistencia controlada (`.loxar` como fuente de verdad):** la app YA NO guarda en silencio en appdata. Si no hay proyecto configurado al arrancar, muestra `ProjectBootstrapModal` que pide la ubicación del `.loxar` y escanea `.loxar` existentes en el equipo. Autosave (30s) + "Guardar" sincronizan el `.loxar`. Ver checkpoint 2026-08-14 abajo.
 - [ ] **Runtime (usuario, `npm run tauri dev`):** validar que en primera corrida aparece el modal de ubicación, que Crear/Abrir/Importar funcionan y que el `.loxar` sobrevive a un borrado de appdata.
-- [ ] **Auditoría de limpieza (ver `docs/AUDIT_REPORT.md`):** P0 — higiene pre-release de bajo riesgo: borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`), duplicado `src/constants/tourSteps.ts`, duplicados en raíz (`components/`, `hooks/useLexicon.ts`), `metadata.json` + `android-icon-*.png`, y descachear `docs/continuity/SESSION_CACHE.json`. Cada item tiene su prompt listo en el reporte.
+- [x] **Auditoría de limpieza (P0, resuelta 2026-11-13):** P0 — higiene pre-release de bajo riesgo: borrar deps muertas (`ws`, `dotenv`, `@tauri-apps/plugin-window`, `sharp`, `jest`), duplicado `src/constants/tourSteps.ts`, duplicados en raíz (`components/`, `hooks/useLexicon.ts`), `metadata.json` + `android-icon-*.png`, y descachear `docs/continuity/SESSION_CACHE.json`. Cada item tiene su prompt listo en el reporte. **Resuelta 2026-11-13:** deps muertas eliminadas,
+  duplicados y archivos sueltos resueltos. `docs/AUDIT_REPORT.md` quedó fuera de git (gitignore) y
+  `SESSION_CACHE.json` se mantiene rastreado a propósito como memoria viva (decisión del skill de
+  continuidad).
 - [x] **Auditoría de arquitectura (P1, tras typecheck verde):** 
   - [x] Renombrar `window.electronAPI`→`window.loxarBridge` y matar stubs Gemini.
   - [x] Extraer widget bridge de `App.tsx` a `src/hooks/useWidgetBridge.ts` (P1-2).

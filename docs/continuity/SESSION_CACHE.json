@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-20T06:30:00.000Z",
+  "lastUpdated": "2026-11-20T13:20:00.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "CLN: persistir el lote de sound change en el lexico (onApplyBatch cableada) + E2E.",
+    "lastPrompt": "CLN: higiene de codigo muerto (showHomePanel en App.tsx + import type Page en flow.spec.ts) y npm run lint en CI.",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "Sound change persistente (2026-11-20): el boton 'Aplicar al lexico' del Sound Change Workbench corria las reglas sobre un snapshot interno y descartaba el resultado; onApplyBatch era opcional y ToolsTab no lo cableaba (la prop no existia en ToolsTabProps), asi que el trabajo del usuario se perdia. Fix: onApplyBatch requerida de punta a punta, nueva prop requerida onApplySoundChangeBatch en ToolsTab y handler handleApplySoundChangeBatch en useAppHandlers.ts que persiste las entradas en el lexico activo via lexiconHook.updateActiveLexicon({ entries }) (marca dirty) y notifica 'Cambios de sonido aplicados a N entradas'. Nuevo E2E tests-gui/sound-change.spec.ts: crear lexico -> registrar pata -> previsualizar (phada) -> aplicar -> el lexema transformado aparece en la tabla del lexico. Helpers centralizados en tests-gui/helpers.ts (disableGuidedTour y registerWord); flow.spec y grammar-import.spec los importan. El importador es un chunk lazy de 348 kB: con 4 workers su aparicion supera los 10s por defecto, el spec usa timeout 30000. Validaciones: typecheck 0, lint OK, vitest 503/503 (55 archivos), audit:orphans 13, test:gui 7/7. Pitfall E2E: con Vite frio los specs que llaman disableGuidedTour caen en timeout de 60s en page.goto; con npm run dev ya caliente son 7/7. Pendiente: demo tauri:dev, push + CI (40 commits locales), FASE L y destino de los 13 huerfanos.  -- Prev: E2E del importador de gramatica (2026-11-20): el spec grammar-import.spec.ts (trabajo cortado de una sesion previa) fallaba en el toast de guardado. Diagnostico: GrammarTabModals.tsx pasaba showNotification={() => {}} al GrammarImporterModal, un no-op que tragaba exito/errores/'analisis completado'. Fix: propagar la showNotification real de App -> GrammarTab -> GrammarTabModals -> GrammarImporterModal (d10e3e6). createLexiconFromSelector se exporta de tests-gui/helpers.ts y el spec cubre crear lexico -> importador -> analizar offline (texto demo) -> tipologia SOV + reglas computables -> guarda"
+  "sessionSummary": "Higiene y puerta de calidad (2026-11-20): cerrado el arbol de trabajo sucio con el import type Page sin uso en tests-gui/flow.spec.ts y eliminado el estado muerto showHomePanel de App.tsx (ni el valor ni el setter se referencian en src/). El CI no corria npm run lint pese a exigirlo el Bloque G2; el workflow ahora lo ejecuta entre typecheck y vitest. Validaciones: typecheck 0, lint OK, build OK, vitest 503/503 (55 archivos), audit:orphans 13 (baseline), smoke runtime web con npm run dev y navegador real: 0 errores de error/unhandledrejection y la bienvenida renderiza completa. Commits be22301 y a03e57a. Pendiente: push + CI (43 commits locales), demo tauri:dev, FASE L y destino de los 13 huerfanos. -- Prev: Sound change persistente (2026-11-20): el boton 'Aplicar al lexico' del Sound Change Workbench corria las reglas sobre un snapshot interno y descartaba el resultado; onApplyBatch era opcional y ToolsTab no lo cableaba. Fix: onApplyBatch requerida, prop onApplySoundChangeBatch en ToolsTab y handler handleApplySoundChangeBatch en useAppHandlers.ts que persiste las entradas via lexiconHook.updateActiveLexicon({ entries })."
 }

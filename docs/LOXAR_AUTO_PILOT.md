@@ -13,7 +13,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 ## Estado actual
 - Repo limpio, build/typecheck/lint verdes
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `1f418e3`
+- Git inicializado y con commits; último commit `a03e57a`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -140,6 +140,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   `handleApplySoundChangeBatch` (`useAppHandlers.ts`) persiste las entradas vía
   `updateActiveLexicon` y el workbench exige la prop. Nuevo E2E
   `tests-gui/sound-change.spec.ts`. `npm run test:gui` 7/7.
+- Higiene y puerta de calidad (2026-11-20): eliminado el estado muerto `showHomePanel` de `App.tsx`
+  y el import sin uso `type Page` de `tests-gui/flow.spec.ts` (`be22301`); el CI ahora corre
+  `npm run lint` además de typecheck/vitest/build (`a03e57a`).
+- Smoke runtime web (2026-11-20): `npm run dev` + navegador real, 0 `error`/`unhandledrejection`;
+  la bienvenida renderiza completa tras la recarga.
 
 ---
 
@@ -163,9 +168,12 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 - [x] C2. `src/components/SoundChangeWorkbench.tsx`
 - [x] C3. `src/components/NeographyText.tsx` (render dinámico de glifos)
 
-### Bloque D: Performance y escala (COMPLETADO)
+### Bloque D: Performance y escala (COMPLETADO; D2 pendiente)
 - [x] D1. FTS5 en SQLite para búsqueda full-text
-- [x] D2. Web Worker para `JSON.stringify` de léxicos grandes
+- [ ] D2. Web Worker para `JSON.stringify` de léxicos grandes — NO cableado: `jsonWorker.ts`
+  está implementado pero `new Worker(blobURL)` queda fuera del CSP de Tauri (`script-src 'self'`);
+  `sqlStorage.ts` serializa síncrono. Requiere decidir alternativa (worker en archivo estático o
+  relajar el CSP) antes de marcarlo como hecho.
 - [x] D3. Transacciones SQLite + escritura atómica en Rust
 
 ### Bloque E: Release (COMPLETADO)
@@ -223,6 +231,14 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — higiene de código muerto y puerta de calidad (2026-11-20).** Cerrado el árbol de
+trabajo sucio: `tests-gui/flow.spec.ts` arrastraba un `type Page` sin uso y `App.tsx` conservaba
+el estado `showHomePanel` (declarado en el rediseño del dashboard, nunca consumido; ni el valor
+ni el setter se referencian en `src/`). Además, el CI no ejecutaba `npm run lint` pese a que el
+Bloque G2 lo exige como puerta de calidad; ahora el workflow lo corre entre typecheck y vitest.
+Validaciones: typecheck 0, lint OK, build OK, vitest 503/503 (55 archivos), audit:orphans 13,
+smoke runtime web con 0 errores de consola. Commits `be22301` y `a03e57a`.
 
 **[x] CLN — el Sound Change Workbench persiste el lote en el léxico (2026-11-20).** El botón
 "Aplicar al léxico" ejecutaba las reglas sobre un snapshot interno y descartaba el resultado:
@@ -392,8 +408,8 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 39 commits locales** en `master` que no están en `origin` (`git rev-list --count
-origin/master..master`; el más reciente es `8c4fc07`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
+**Hay 43 commits locales** en `master` que no están en `origin` (`git rev-list --count
+origin/master..master`; el más reciente es `a03e57a`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
 hay número de run y la fase queda formalmente abierta.
