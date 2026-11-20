@@ -11,6 +11,8 @@ export interface GrammarTabModalsProps {
   existingNotes?: string;
   onSaveFlexibleGrammar: (grammar: any) => void;
   onCloseImporter: () => void;
+  /** Notificaciones reales: antes el importador recibía un no-op y tragaba los toasts. */
+  showNotification: (message: string, type: 'success' | 'error') => void;
   onApplyWizard: (newManifest: any) => void;
   onCloseWizard: () => void;
   /** J1: abre Ajustes de IA desde el importador sin cerrarlo. */
@@ -24,6 +26,7 @@ const GrammarTabModals = ({
   existingNotes,
   onSaveFlexibleGrammar,
   onCloseImporter,
+  showNotification,
   onApplyWizard,
   onCloseWizard,
   onOpenAiSettings,
@@ -35,7 +38,7 @@ const GrammarTabModals = ({
             <GrammarImporterModal
                 onSaveFlexibleGrammar={onSaveFlexibleGrammar}
                 onClose={onCloseImporter}
-                showNotification={() => {}}
+                showNotification={showNotification}
                 existingNotes={existingNotes || ''}
                 onOpenAiSettings={onOpenAiSettings}
             />

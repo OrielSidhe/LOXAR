@@ -848,6 +848,7 @@ const App = () => {
                     onModuleChange={setActiveGrammarModule}
                     onBack={() => setActiveTab('dashboard')}
                     onOpenAiSettings={() => handleOpenModal('ai_settings')}
+                    showNotification={showNotification}
                   />
                 )}
                 {activeTab === 'translator' && (

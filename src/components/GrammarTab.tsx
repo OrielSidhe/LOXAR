@@ -36,15 +36,17 @@ interface GrammarTabProps {
     onModuleChange?: (module: GrammarModule) => void;
     /** Callback para volver al grafo/canvas */
     onBack?: () => void;
-    /** J1: abre Ajustes de IA desde el importador sin cerrar el importador. */
+    /** J1: abre Ajustes de IA desde el importador sin cerrarlo. */
     onOpenAiSettings?: () => void;
+    /** Notificaciones reales para el importador (antes llegaban como no-op). */
+    showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
 // Module-level guard so the first-run wizard auto-opens at most ONCE per session
 // (not localStorage — keeps it simple and resets on reload, exactly as required).
 let wizardAutoOpenedThisSession = false;
 
-const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange, onBack, onOpenAiSettings, }: GrammarTabProps) => {
+const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange, onBack, onOpenAiSettings, showNotification }: GrammarTabProps) => {
     const [internalModule, setInternalModule] = useState<GrammarModule>(DEFAULT_GRAMMAR_MODULE);
     const activeModule = activeModuleProp ?? internalModule;
     const setActiveModule = onModuleChange ?? setInternalModule;
@@ -321,6 +323,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
                 existingNotes={editedManifest.notes?.join('\n') || ''}
                 onSaveFlexibleGrammar={handleSaveFlexibleGrammar}
                 onCloseImporter={() => setIsImporterOpen(false)}
+                showNotification={showNotification}
                 onApplyWizard={handleWizardApply}
                 onCloseWizard={() => setIsWizardOpen(false)}
                 onOpenAiSettings={onOpenAiSettings}
