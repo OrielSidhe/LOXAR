@@ -269,8 +269,27 @@ automático de columnas), muestra faltantes en cada lado y diferencias campo a c
 (7) y `lexiconCompareModal.test.tsx` (5). Validaciones: typecheck 0, lint OK, build OK, vitest
 534/534 (60 archivos), audit:orphans 13. Commit `db9587d`.
 
-**[ ] v3.14 FASE NAV — paso rápido Workbench ↔ Léxico.** Salto directo entre el workbench y el
-módulo de léxico sin pérdida de estado (checklist demo ítem 5 del gauntlet).
+**[x] v3.14 FASE NAV — paso rápido Workbench ↔ Léxico (2026-11-20).** `LexiconTable` y
+`WorkbenchTab` quedan siempre montados (se ocultan con `hidden` + `aria-hidden`) y un botón
+"Ir al Léxico" / "Ir al Workbench" alterna entre ellos sin perder el borrador del `EntryEditor`
+ni el término de búsqueda. E2E `tests-gui/workbench-lexicon-jump.spec.ts`. Validaciones:
+typecheck 0, lint OK, build OK, vitest 537/537 (60 archivos), audit:orphans 13, `test:gui` 8/8.
+Commit `719a33c`.
+
+**[x] v3.14 FASE FX — extracción fonológica del léxico (2026-11-20).** Botón "Extraer del
+léxico" en `GrammarPhonologyPanel`: infiere consonantes, vocales, estructuras silábicas, clusters y
+`maxConsonantClusters` de las formas superficiales del léxico activo y los fusiona con la fonología
+actual por unión de conjuntos (reintentar NO duplica). Nuevo modelo puro
+`src/utils/phonologyExtraction.ts` (con evidencia por frecuencia) y helpers exportados desde
+`services/grammar/phonology.ts` (`segmentWordGraphemes`, `syllabifyGraphemes`,
+`syllableStructureOf`). Tests: `phonologyExtraction.test.ts` (15) y
+`grammarPhonologyPanel.test.tsx` (3). Validaciones: typecheck 0, lint OK, build OK, vitest
+554/554 (62 archivos), audit:orphans 13, smoke runtime web con 0 errores de consola y extracción
+doble sin duplicados. Commit `094eee9`.
+
+**[ ] v3.14 FASE MY — extracción morfológica con evidencia por regla (2026-11-20).** Siguiente
+bloque del gauntlet v3.14: inferir afijos/paradigmas del léxico y presentarlos como reglas editables
+con evidencia (checklist demo ítem 7).
 
 **[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 906 líneas; el siguiente
 bloque extraíble es la extracción de los handlers del wizard de primer arranque

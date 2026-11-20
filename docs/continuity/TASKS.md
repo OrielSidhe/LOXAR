@@ -3382,5 +3382,51 @@ que la etiqueta "borrador salto" sobrevive al salto ida y vuelta.
 MY (extraccion morfologica con evidencia por regla) y FLU (lexico/gramatica primero).
 Pendiente por autorizacion: `git push` + CI con numero de run.
 
+## [2026-11-20] Checkpoint: FASE FX v3.14 — extraccion fonologica del lexico
+
+**Rama:** `master`. **Motivo:** la filosofia del gauntlet v3.14 es "lexico + gramatica primero":
+la fonologia NO se define a mano antes de tener datos, se infiere del lexico activo y se presenta
+como reglas editables. El checklist demo (item 6) pide un boton "Extraer del lexico" que genere
+fonologia plausible y editable, y que al correrlo dos veces no duplique.
+
+**Decision:** el extractor es un modelo puro en `src/utils/phonologyExtraction.ts`, no logica
+inline en el panel. Reutiliza los helpers de silabificacion de `services/grammar/phonology.ts`,
+ahora exportados (`segmentWordGraphemes`, `syllabifyGraphemes`, `syllableStructureOf`); no se
+duplico la silabificacion.
+
+**Algoritmo:**
+- Formas: `Léxema` (todas) y, si la entrada no tiene, `Raíz`. Limpieza: NFC + minusculas + solo
+  letras Unicode (`cleanWordForm`).
+- Conteo de grafemas por frecuencia; umbral `minCountFor` (1 con <10 formas; 2% con piso 2 desde
+  10). Si el umbral vaciara el inventario, se conserva todo.
+- Vocales por NFD (`á` -> `a`); `y`/`w` se tratan como consonantes (glides).
+- Estructuras silábicas y clusters observados, ordenados por frecuencia; `maxConsonantClusters`
+  = maxima seguidilla consonantica.
+- `mergePhonology` une por conjuntos (dedupe por minuscula, preserva el orden y la primera
+  grafia). Por eso **reintentar no duplica**: la segunda pasada fusiona sobre el resultado de la
+  primera y llega al mismo punto fijo.
+
+**Cambios (commit `094eee9`):**
+- `src/utils/phonologyExtraction.ts`: `extractPhonologyFromLexicon`, `mergePhonology`,
+  `collectWordForms`, `cleanWordForm`, `isVowelGrapheme`, `collectClusters`, `maxRunOf`,
+  `mergeUnique`, `minCountFor` y la evidencia (`PhonologyEvidence`).
+- `src/services/grammar/phonology.ts`: exporta los tres helpers de segmentacion/silabificacion.
+- `src/components/GrammarPhonologyPanel.tsx`: boton "Extraer del lexico" + resumen de evidencia
+  (`wordCount`, consonantes, vocales, estructuras) + aviso cuando el lexico esta vacio. El boton no
+  se deshabilita: con lexico vacio explica que falta cargar entradas.
+- `src/components/GrammarTab.tsx`: pasa `lexicon` al panel.
+- Tests: `src/utils/__tests__/phonologyExtraction.test.ts` (15) y
+  `src/components/__tests__/grammarPhonologyPanel.test.tsx` (3, incluye idempotencia en un harness).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 554/554 (62 archivos) · audit:orphans 13
+(baseline) · smoke runtime web (`npm run dev` + Chromium): 0 errores de consola; con un lexico real
+de 2 entradas la extraccion dio 4 consonantes, 2 vocales y 1 estructura (CV), y el segundo click
+dejo los inputs exactamente iguales (sin duplicados).
+
+**Proximo bloque ejecutable (gauntlet v3.14):** MY (extraccion morfologica con evidencia por
+regla: afijos/paradigmas inferidos del lexico, presentados editables), luego FLU (lexico/gramatica
+primero). Pendiente por autorizacion: `git push` + CI con numero de run.
+
+
 
 
