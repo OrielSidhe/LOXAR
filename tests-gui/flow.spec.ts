@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import {
   enterDashboard,
   sidebarButton,
+  createLexiconFromSelector,
 } from './helpers';
 
 /**
@@ -24,23 +25,6 @@ async function disableGuidedTour(page: Page): Promise<void> {
     localStorage.setItem('conlang_session_cache', JSON.stringify(cache));
   });
   await page.reload();
-}
-
-/**
- * Crea un léxico por la vía real del dashboard: el botón "+" del selector de
- * léxico abre el modal de creación (nombre + idioma). Antes existía un formulario
- * inline encadenado que sólo pedía el nombre y perdía el idioma principal.
- */
-async function createLexiconFromSelector(page: Page, name: string, language: string): Promise<void> {
-  await page.getByRole('button', { name: 'Crear nuevo léxico', exact: true }).click();
-  await expect(page.locator('#lexicon-name')).toBeVisible();
-  await page.locator('#lexicon-name').fill(name);
-  await page.locator('#main-language').fill(language);
-  // El modal es un <form>: Enter en el último campo dispara el submit.
-  await page.locator('#main-language').press('Enter');
-  await expect(
-    page.getByText(`Léxico "${name}" creado exitosamente.`),
-  ).toBeVisible({ timeout: 15000 });
 }
 
 async function registerWord(
