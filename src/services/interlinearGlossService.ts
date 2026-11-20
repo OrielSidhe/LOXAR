@@ -131,6 +131,14 @@ export function glossSentence(
       ? morphemes.map((m) => (m.toLowerCase() === entry.Raíz.toLowerCase() ? entry.Categoría.toUpperCase() : opts.unknownGloss))
       : morphemes.map(() => opts.fallbackCategory);
 
+    // Derived lexemes (e.g. root "bask" -> lexeme "boskel") usually do not segment back
+    // into the bare root, so every morpheme would fall back to `unknownGloss` ("?") even
+    // though the token IS a known lexeme. In that case the first morpheme carries the
+    // entry category instead of an uninformative "?".
+    if (entry && gloss.length > 0 && gloss.every((g) => g === opts.unknownGloss)) {
+      gloss[0] = entry.Categoría.toUpperCase();
+    }
+
     lines.push({
       original: token,
       morphemes,
