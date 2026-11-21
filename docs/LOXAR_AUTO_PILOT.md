@@ -11,11 +11,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 577/577 (65 archivos) y `npm run test:gui` 8/8
+- Repo limpio, build/typecheck/lint verdes; vitest 586/586 (66 archivos) y `npm run test:gui` 8/8
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `e4d5dee`
+- Git inicializado y con commits; último commit `f8043f8`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -237,6 +237,17 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
+Los cinco handlers inline de `App.tsx` (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,
+`handleWizardSkip`, `handleWizardComplete`, `handleChooseDataFolder`) pasaron al modelo puro
+`src/utils/wizardActionsModel.ts` (`buildWizardActions` + `AppModalId`) y al hook
+`src/hooks/useFirstRunWizardActions.ts`, que los memoiza y cablea el dialogo real de carpetas.
+El state `activeModal` se movió arriba y la union inline de literales pasó a `AppModalId`; se
+eliminó el import `open`/`save` de `@tauri-apps/plugin-dialog`, sin uso tras la extracción.
+`App.tsx`: 962 → 935 líneas. Tests nuevos: `wizardActionsModel.test.ts` (9). Validaciones:
+typecheck 0, lint OK, build OK, vitest 586/586 (66 archivos), audit:orphans 13, smoke runtime web
+con el flujo completo del wizard en verde y 0 errores de consola. Commit `f8043f8`.
+
 **[x] CLN — `AppNavigationBar` extraído de `App.tsx` (P1, 2026-11-20).** La barra "Volver / Panel"
 del área principal era el último bloque inline de navegación del God Component. Nuevo
 `src/components/AppNavigationBar.tsx` con props tipadas (`onBack`/`onHome`), tests propios
@@ -312,10 +323,9 @@ Tests: `grammarOverview.test.tsx` (4). Validaciones: typecheck 0, lint OK, build
 de fonología y morfología, salto Workbench↔Léxico, arranque por léxico). Pendiente: `git push` + CI
 con número de run (requiere autorización).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 906 líneas; el siguiente
-bloque extraíble es la extracción de los handlers del wizard de primer arranque
-(`handleWizardConfigureAi`/`handleAiSettingsModalClose`/`handleWizardSkip`/`handleWizardComplete`/
-`handleChooseDataFolder`) a un hook dedicado (`src/hooks/`), con tests propios.
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` quedó en 935 líneas tras la
+extracción de los handlers del wizard (`f8043f8`). El siguiente bloque lo define la pasada
+siguiente: los handlers de modales/settings siguen inline y son el candidato natural.
 
 **[x] CLN — higiene de código muerto y puerta de calidad (2026-11-20).** Cerrado el árbol de
 trabajo sucio: `tests-gui/flow.spec.ts` arrastraba un `type Page` sin uso y `App.tsx` conservaba

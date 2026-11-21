@@ -3488,6 +3488,39 @@ sigue verde sin el modal.
 **Proximo bloque ejecutable (gauntlet v3.14):** D (checklist demo, lo ejecuta el usuario) y R
 (reporte final evidence-based). Pendiente por autorizacion: `git push` + CI con numero de run.
 
+## [2026-11-20] Checkpoint: CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions`
+
+**Rama:** `master`. **Motivo:** `App.tsx` (962 lineas) todavia resolia inline los cinco handlers
+del wizard de primer arranque (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,
+`handleWizardSkip`, `handleWizardComplete`, `handleChooseDataFolder`), el ultimo frente del P1 de
+God Components.
+
+**Decision:** la logica va a un modelo puro (`src/utils/wizardActionsModel.ts`:
+`buildWizardActions` + `AppModalId` + `WizardActionDeps`/`WizardActions`) y el hook
+`src/hooks/useFirstRunWizardActions.ts` la memoiza y cablea el dialogo real de carpetas de Tauri.
+El test ejercita el modelo puro con el dialogo inyectado, sin React ni
+`@tauri-apps/plugin-dialog`. El state `activeModal` se movio arriba (el hook lo necesita en el
+mismo render) y la union inline de literales paso al tipo `AppModalId`. Se elimino el import
+`open`/`save` de `@tauri-apps/plugin-dialog`, sin uso tras la extraccion.
+
+**Cambios (commit `f8043f8`):**
+- `src/utils/wizardActionsModel.ts` (nuevo): `buildWizardActions`, `AppModalId`,
+  `WizardActionDeps`, `WizardActions`.
+- `src/hooks/useFirstRunWizardActions.ts` (nuevo): hook envoltorio con `useMemo`.
+- `src/utils/__tests__/wizardActionsModel.test.ts` (nuevo, 9 tests).
+- `src/App.tsx`: 962 → 935 lineas.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 586/586 (66 archivos) · audit:orphans
+13 (baseline) · smoke runtime web (`npm run dev` + navegador real): el primer arranque muestra el
+wizard, "Configurar ahora" abre el modal de IA sin completar el wizard, al cerrar el modal se
+marca `loxar_onboarding_v1_done=true`, el wizard desaparece y no reaparece tras recargar; 0 errores
+de consola.
+
+**Proximo bloque ejecutable (gauntlet v3.14):** D (checklist demo, lo ejecuta el usuario) y R
+(reporte final evidence-based). Pendiente por autorizacion: `git push` + CI con numero de run.
+Frente CLN: `App.tsx` sigue en 935 lineas; la proxima extraccion la define la pasada siguiente
+(los handlers de modales/settings siguen inline).
+
 
 
 

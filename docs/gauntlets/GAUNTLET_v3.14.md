@@ -158,7 +158,7 @@ definirlas antes de tener datos.
 | NAV | Paso rápido Workbench ↔ Léxico | `719a33c` | pendiente push | CERRADA |
 | FX | Extracción fonológica del léxico | `094eee9` | pendiente push | CERRADA |
 | MY | Extracción morfológica | `a5f5c3a` | pendiente push | CERRADA |
-| FLU | Léxico/gramática primero | pendiente | pendiente push | EN CURSO |
+| FLU | Léxico/gramática primero | `9921103` | pendiente push | CERRADA |
 | D | Checklist demo (lo hace el usuario) | — | — | PENDIENTE |
 | R | Reporte final evidence-based | — | — | PENDIENTE |
 
