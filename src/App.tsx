@@ -11,7 +11,6 @@ import { useAppHandlers } from './hooks/useAppHandlers';
 import { generateRootAndLexeme, normalizeText, completeEntry, correctSignificado } from './services/geminiService';
 import { filterParadigmsForFunction, generateInflectedForms } from './services/inflectionService';
 import { searchLexicon } from './services/ftsSearch';
-import { loadSessionCache, saveSessionCache } from './services/sessionCache';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode, LexiconFilter } from './types';
 import type { AppTabId } from './utils/appTabs';
@@ -22,10 +21,10 @@ import FirstRunWizard from './components/FirstRunWizard';
 import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
 import { useModalCoordination } from './hooks/useModalCoordination';
+import { useAppSessionHydration } from './hooks/useAppSessionHydration';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
-import { normalizeExportFormats, DEFAULT_EXPORT_FORMATS, type ExportFormat } from './utils/lexiconExport';
 import Papa from 'papaparse';
 
 // Icons
@@ -75,7 +74,7 @@ import { isAiAvailable } from './services/geminiService';
 import { validateGrammarEngine } from './validation/runtimeValidation';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
-import { listLexiconNames, loadLexicon } from './services/sqlStorage';
+import { loadLexicon } from './services/sqlStorage';
 import { initPragmaticDb } from './services/grammarDb';
 import { scanForLoxarProjects } from './services/projectDiscovery';
 import { getGrammarMetrics } from './utils/grammarMetrics';
@@ -85,12 +84,9 @@ const App = () => {
   const appVersion = '2.4.0-pro';
 
   const [splashFinished, setSplashFinished] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const [hasSeenWelcome, setHasSeenWelcome] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
-  const [isAppLoaded, setIsAppLoaded] = useState(false);
   // Estado y acciones de modales/settings (P1: `useModalCoordination`).
   const {
     activeModal,
@@ -126,6 +122,26 @@ const App = () => {
     updateDataFolder,
     openModal,
   });
+
+  // Hidratacion de sesion (P1: `useAppSessionHydration`). Sustituye a los dos
+  // `useEffect` que decidian la bienvenida y el bootstrap de proyecto.
+  const {
+    showWelcome,
+    sessionCacheData,
+    projectPath,
+    exportPath,
+    exportFormats,
+    bootstrapDismissed,
+    hasLocalData,
+    showProjectBootstrap,
+    isAppLoaded,
+    setProjectPath,
+    setExportPath,
+    setExportFormats,
+    setBootstrapDismissed,
+    setShowProjectBootstrap,
+    setShowWelcome,
+  } = useAppSessionHydration();
 
   const [tabHistory, setTabHistory] = useState<AppTabId[]>(['dashboard']);
   const activeTab: AppTabId = tabHistory[tabHistory.length - 1] ?? 'dashboard';
@@ -197,22 +213,15 @@ const App = () => {
   const [suggestionListName, setSuggestionListName] = useState('');
 
   const [backups, setBackups] = useState<string[]>([]);
-  const [exportPath, setExportPath] = useState<string | null>(null);
-  const [exportFormats, setExportFormats] = useState<ExportFormat[]>([...DEFAULT_EXPORT_FORMATS]);
-  const [projectPath, setProjectPath] = useState<string | null>(null);
   const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
   const [isProjectDirty, setIsProjectDirty] = useState(false);
   const [canvasState, setCanvasState] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
   const [isTourActive, setIsTourActive] = useState(false);
   const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
 
-  const [sessionCacheData, setSessionCacheData] = useState<{ tourCompleted?: boolean } | null>(null);
   const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
 
-  const [showProjectBootstrap, setShowProjectBootstrap] = useState(false);
   const [availableProjects, setAvailableProjects] = useState<string[]>([]);
-  const [hasLocalData, setHasLocalData] = useState(false);
-  const [bootstrapDismissed, setBootstrapDismissed] = useState(false);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();
@@ -494,60 +503,9 @@ const App = () => {
     }
   }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
 
-  // ── Welcome screen: respetar setting "showWelcomeOnStart" ──
-  useEffect(() => {
-    if (hasSeenWelcome) return;
-    loadSessionCache().then((cache) => {
-      // showWelcomeOnStart por defecto = true (mostrar bienvenida)
-      // Si el usuario lo desactivó en settings, ir directo al dashboard
-      const shouldShowWelcome = cache.showWelcomeOnStart !== false;
-      setShowWelcome(shouldShowWelcome);
-      setHasSeenWelcome(true);
-    }).catch(() => {
-      setShowWelcome(true);
-      setHasSeenWelcome(true);
-    });
-  }, [hasSeenWelcome]);
-
   // ── Initialize pragmatic grammar database on mount ──
   useEffect(() => {
     initPragmaticDb().catch(e => console.error('[App] Failed to init pragmatic DB:', e));
-  }, []);
-
-  // ── B0: Bootstrap de proyecto — hidratar la sesión y activar la capa de bootstrap ──
-  // `isAppLoaded` solo se elevaba aquí; antes ningún setter se invocaba, así que
-  // `AppProjectBootstrapLayer` retornaba null siempre y el flujo de proyecto
-  // (elegir ubicación del `.loxar`) estaba muerto en runtime.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const cache = await loadSessionCache();
-        if (cancelled) return;
-        setSessionCacheData(cache);
-        setProjectPath(cache.projectPath ?? null);
-        setExportPath(cache.exportPath ?? null);
-        setExportFormats(normalizeExportFormats(cache.exportFormats));
-        setBootstrapDismissed(cache.bootstrapDismissed === true);
-        try {
-          const names = await listLexiconNames();
-          if (!cancelled) setHasLocalData(names.length > 0);
-        } catch (e) {
-          // En modo no-Tauri (tests) no hay backend SQL: no es un error de usuario.
-          console.error('[App] No se pudo consultar los léxicos locales:', e);
-        }
-        if (cancelled) return;
-        setIsAppLoaded(true);
-        // Sin proyecto configurado y sin descarte previo: ofrecer ubicación segura.
-        if (!cache.projectPath && cache.bootstrapDismissed !== true) {
-          setShowProjectBootstrap(true);
-        }
-      } catch (e) {
-        console.error('[App] No se pudo cargar la sesión:', e);
-        if (!cancelled) setIsAppLoaded(true);
-      }
-    })();
-    return () => { cancelled = true; };
   }, []);
 
   return (
