@@ -10,9 +10,10 @@ import InfoIcon from './icons/InfoIcon';
 import WidgetIcon from './icons/WidgetIcon';
 import HomeIcon from './icons/HomeIcon';
 import ChevronLeftIcon from './icons/ChevronLeftIcon';
+import type { AppTabId } from '../utils/appTabs';
 
 type SidebarItem = {
-  id: string;
+  id: AppTabId;
   label: string;
   icon: React.FC<{ className?: string }>;
 };
@@ -29,8 +30,8 @@ const items: SidebarItem[] = [
 ];
 
 interface VerticalSidebarProps {
-  active: string;
-  onChange: (id: string) => void;
+  active: AppTabId;
+  onChange: (id: AppTabId) => void;
   onOpenWidget: () => void;
   onOpenSettings: () => void;
   onShowTour?: () => void;
@@ -38,7 +39,7 @@ interface VerticalSidebarProps {
 }
 
 const VerticalSidebar: React.FC<VerticalSidebarProps> = ({ active, onChange, onOpenWidget, onOpenSettings, onShowTour, onGoHome }) => {
-  const [hovered, setHovered] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<AppTabId | null>(null);
   const [collapsed, setCollapsed] = useState(false);
 
   return (

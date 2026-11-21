@@ -12,35 +12,10 @@
 
 import React from 'react';
 import type { LexiconEntry } from '../types';
+import type { AppTabId } from '../utils/appTabs';
+import type { GrammarModule } from '../utils/grammarTabModel';
+import { resolveDashboardNavigation } from '../utils/dashboardNavigation';
 import LanguageHomeCanvas from './LanguageHomeCanvas';
-
-/** Tabs de primer nivel de la app (mismo conjunto que `tabHistory` en `App.tsx`). */
-export type AppTabId =
-  | 'dashboard'
-  | 'table'
-  | 'workbench'
-  | 'collections'
-  | 'writing'
-  | 'grammar'
-  | 'translator'
-  | 'tools';
-
-/** Sub-módulos del módulo de gramática: cada uno es una sección dentro de `GrammarTab`. */
-const GRAMMAR_SUB_MODULES: readonly string[] = [
-  'overview',
-  'phonology',
-  'typology',
-  'morphology',
-  'syntax',
-  'semantics',
-  'roles',
-  'strategies',
-  'pragmatic',
-  'notes',
-];
-
-const isGrammarSubModule = (moduleId: string): boolean =>
-  GRAMMAR_SUB_MODULES.includes(moduleId);
 
 type CanvasStats = NonNullable<React.ComponentProps<typeof LanguageHomeCanvas>['stats']>;
 type PragmaticSummary = NonNullable<
@@ -57,8 +32,8 @@ export interface DashboardTabProps {
   pragmaticEngine?: PragmaticSummary;
   /** Navega a un tab de primer nivel. */
   onOpenTab: (tab: AppTabId) => void;
-  /** Abre el tab de gramática en un sub-módulo concreto. */
-  onOpenGrammarModule: (moduleId: string) => void;
+  /** Abre el tab de gramática en un sub-módulo concreto (validado por `resolveDashboardNavigation`). */
+  onOpenGrammarModule: (moduleId: GrammarModule) => void;
 }
 
 const DashboardTab: React.FC<DashboardTabProps> = ({
@@ -73,33 +48,23 @@ const DashboardTab: React.FC<DashboardTabProps> = ({
   onOpenGrammarModule,
 }) => {
   const handleModuleClick = (moduleId: string) => {
-    if (isGrammarSubModule(moduleId)) {
-      onOpenGrammarModule(moduleId);
-    } else if (moduleId === 'lexicon') {
-      onOpenTab('table');
-    } else if (moduleId === 'workbench') {
-      onOpenTab('workbench');
-    } else if (moduleId === 'collections') {
-      onOpenTab('collections');
-    } else if (moduleId === 'neography') {
-      onOpenTab('writing');
-    } else if (moduleId === 'translator') {
-      onOpenTab('translator');
+    const target = resolveDashboardNavigation(moduleId);
+    if (!target) return;
+    if (target.kind === 'grammar') {
+      onOpenGrammarModule(target.module);
     } else {
-      // El canvas puede emitir ids de módulo no contemplados; se conserva el
-      // comportamiento original de navegar al tab con ese identificador.
-      onOpenTab(moduleId as AppTabId);
+      onOpenTab(target.tab);
     }
   };
 
   const handleZoomToNode = (moduleId: string) => {
-    // Zoom desde un nodo del grafo → abrir el panel correspondiente
-    if (isGrammarSubModule(moduleId)) {
-      onOpenGrammarModule(moduleId);
-    } else if (moduleId === 'lexicon') {
-      onOpenTab('table');
-    } else if (moduleId === 'phonology') {
-      onOpenGrammarModule('phonology');
+    // Zoom desde un nodo del grafo → abrir el panel correspondiente.
+    const target = resolveDashboardNavigation(moduleId);
+    if (!target) return;
+    if (target.kind === 'grammar') {
+      onOpenGrammarModule(target.module);
+    } else {
+      onOpenTab(target.tab);
     }
   };
 

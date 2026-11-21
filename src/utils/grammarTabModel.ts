@@ -34,6 +34,25 @@ export const DEFAULT_GRAMMAR_MODULE: GrammarModule = 'syntax';
 /** Sub-pestaña inicial del módulo de sintaxis (canvas se siembra desde el motor). */
 export const DEFAULT_SYNTAX_SUB_TAB: SyntaxSubTab = 'canvas';
 
+/** Módulos navegables del tab de gramática (fuente única para validar ids del canvas). */
+export const GRAMMAR_MODULES: readonly GrammarModule[] = [
+  'overview',
+  'phonology',
+  'typology',
+  'morphology',
+  'syntax',
+  'semantics',
+  'roles',
+  'strategies',
+  'pragmatic',
+  'notes',
+];
+
+/** Type guard de frontera para los ids de módulo que emite el canvas del dashboard. */
+export function isGrammarModule(value: string): value is GrammarModule {
+  return GRAMMAR_MODULES.some(module => module === value);
+}
+
 export interface ProgressMetric {
   category: string;
   completed: number;

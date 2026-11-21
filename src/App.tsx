@@ -13,7 +13,9 @@ import { filterParadigmsForFunction, generateInflectedForms } from './services/i
 import { searchLexicon } from './services/ftsSearch';
 import { loadSessionCache, saveSessionCache } from './services/sessionCache';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
-import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode } from './types';
+import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode, LexiconFilter } from './types';
+import type { AppTabId } from './utils/appTabs';
+import { DEFAULT_GRAMMAR_MODULE, type GrammarModule } from './utils/grammarTabModel';
 import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
 import { FloatingWidget } from './components/FloatingWidget';
 import FirstRunWizard from './components/FirstRunWizard';
@@ -113,11 +115,11 @@ const App = () => {
     setActiveModal,
   });
 
-  const [tabHistory, setTabHistory] = useState<Array<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>>(['dashboard']);
-  const activeTab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' = tabHistory[tabHistory.length - 1] ?? 'dashboard';
-  const [activeGrammarModule, setActiveGrammarModule] = useState<any>('syntax');
+  const [tabHistory, setTabHistory] = useState<AppTabId[]>(['dashboard']);
+  const activeTab: AppTabId = tabHistory[tabHistory.length - 1] ?? 'dashboard';
+  const [activeGrammarModule, setActiveGrammarModule] = useState<GrammarModule>(DEFAULT_GRAMMAR_MODULE);
 
-  const setActiveTab = useCallback((tab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' | ((prev: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools') => 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools')) => {
+  const setActiveTab = useCallback((tab: AppTabId | ((prev: AppTabId) => AppTabId)) => {
     setTabHistory(prev => {
       const next = typeof tab === 'function' ? tab(prev[prev.length - 1] ?? 'dashboard') : tab;
       if (prev[prev.length - 1] === next) return prev;
@@ -137,7 +139,7 @@ const App = () => {
   }, []);
 
   /** Abre el tab de gramática en un sub-módulo concreto (consume `DashboardTab`). */
-  const handleOpenGrammarModule = useCallback((moduleId: string) => {
+  const handleOpenGrammarModule = useCallback((moduleId: GrammarModule) => {
     setActiveTab('grammar');
     setActiveGrammarModule(moduleId);
   }, [setActiveTab]);
@@ -169,7 +171,7 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchColumn, setSearchColumn] = useState('all');
   const [functionFilter, setFunctionFilter] = useState('all');
-  const [viewFilter, setViewFilter] = useState('all');
+  const [viewFilter, setViewFilter] = useState<LexiconFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['Léxema', 'Significado', 'Función', 'Raíz']);
   const [showAffixFormatting, setShowAffixFormatting] = useState(true);
@@ -651,7 +653,7 @@ const App = () => {
             onShowTour={handleStartTour}
             onOpenSettings={() => setShowSettings(true)}
             themeId={themeId}
-            onThemeChange={id => setThemeId(id as any)}
+            onThemeChange={id => setThemeId(id)}
           />
 
           <AppToolbar
@@ -685,7 +687,7 @@ const App = () => {
           <div className="flex flex-1 min-h-0 relative">
             <VerticalSidebar
               active={activeTab}
-              onChange={id => setActiveTab(id as any)}
+              onChange={setActiveTab}
               onOpenWidget={() => window.loxarBridge.openWidget()}
               onOpenSettings={() => setShowSettings(true)}
               onShowTour={handleStartTour}
@@ -736,8 +738,8 @@ const App = () => {
                     onSearchTermChange={setSearchTerm}
                     categoryFilter={functionFilter}
                     onCategoryFilterChange={setFunctionFilter}
-                    viewFilter={viewFilter as any}
-                    onViewFilterChange={setViewFilter as any}
+                    viewFilter={viewFilter}
+                    onViewFilterChange={setViewFilter}
                     showAffixFormatting={showAffixFormatting}
                     onShowAffixFormattingChange={setShowAffixFormatting}
                     selectedIds={selectedIds}

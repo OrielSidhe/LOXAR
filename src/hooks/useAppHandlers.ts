@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useLexicon } from './useLexicon';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, GenerationMode } from '../types';
+import type { AppTabId } from '../utils/appTabs';
 import { LoxarProject } from '../services/projectFile';
 import { listLexiconNames, loadLexicon } from '../services/sqlStorage';
 import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
@@ -25,7 +26,7 @@ export interface UseAppHandlersOptions {
   setBootstrapDismissed: React.Dispatch<React.SetStateAction<boolean>>;
   setProjectPath: React.Dispatch<React.SetStateAction<string | null>>;
   setIsProjectDirty: React.Dispatch<React.SetStateAction<boolean>>;
-  setActiveTab: React.Dispatch<React.SetStateAction<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>>;
+  setActiveTab: React.Dispatch<React.SetStateAction<AppTabId>>;
   setShowWelcome: React.Dispatch<React.SetStateAction<boolean>>;
   setIsTourActive: React.Dispatch<React.SetStateAction<boolean>>;
   setActiveModal: React.Dispatch<React.SetStateAction<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>>;
@@ -44,7 +45,7 @@ export interface UseAppHandlersOptions {
   setAiProgress: React.Dispatch<React.SetStateAction<{ processed: number; total: number } | null>>;
   setLastAiResult: React.Dispatch<React.SetStateAction<any>>;
 
-  activeTab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools';
+  activeTab: AppTabId;
   exportPath: string | null;
   isDirty: boolean;
   activeLexiconName: string | null;

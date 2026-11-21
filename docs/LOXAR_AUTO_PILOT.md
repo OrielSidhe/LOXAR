@@ -11,11 +11,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 586/586 (66 archivos) y `npm run test:gui` 8/8
+- Repo limpio, build/typecheck/lint verdes; vitest 595/595 (68 archivos) y `npm run test:gui` 8/8
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `f8043f8`
+- Git inicializado y con commits; último commit `db47ce9` (trabajo CLN de tipado pendiente de commit)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -236,6 +236,23 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — tipado estricto de navegación (`AppTabId` + `dashboardNavigation`, 2026-11-20).** La
+unión de tabs estaba duplicada en `App.tsx`, `DashboardTab.tsx` y `useAppHandlers.ts`, y los casts
+`as any` de la barra lateral/filtro/tema y el `moduleId as AppTabId` de `DashboardTab` dejaban
+pasar ids inválidos: los nodos del nivel léxico del canvas (`wordtypes`, `roots`, `entries`,
+`import`) colaban un tab inexistente y la app quedaba en blanco. Nuevos `src/utils/appTabs.ts`
+(`AppTabId` + `isAppTabId`) y `src/utils/dashboardNavigation.ts` (`resolveDashboardNavigation`),
+con `GRAMMAR_MODULES`/`isGrammarModule` en `grammarTabModel.ts`; `VerticalSidebar` y `Header`
+tipados en la frontera (`AppTabId`/`ThemeId`). Tests: `appTabs.test.ts` (3) y
+`dashboardNavigation.test.ts` (6, recorre todos los nodos del canvas). Validaciones: typecheck 0,
+lint OK, build OK, vitest 595/595 (68 archivos), audit:orphans 13, `test:gui` 8/8, smoke
+`vite preview` (navegación a Léxico y tema `midnight → cyber`). Commit `PENDIENTE`.
+
+**[ ] CLN — capa de modales del God Component (P1).** `App.tsx` quedó en 937 líneas tras el tipado
+de navegación. El bloque `Suspense` + `ModalManager` (lazy) + `AiSettingsModal` (~54 líneas de JSX
+con ~40 props) es el siguiente candidato: extraerlo a `AppModalLayer` siguiendo el patrón de
+`AppSettingsModalLayer`/`AppToastLayer`, con `ModalManagerProps` exportado desde `ModalManager.tsx`.
 
 **[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
 Los cinco handlers inline de `App.tsx` (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,

@@ -3521,6 +3521,50 @@ de consola.
 Frente CLN: `App.tsx` sigue en 935 lineas; la proxima extraccion la define la pasada siguiente
 (los handlers de modales/settings siguen inline).
 
+## [2026-11-20] Checkpoint: CLN — tipado estricto de navegacion (`AppTabId` + `dashboardNavigation`)
+
+**Rama:** `master`. **Motivo:** el frente P1 del God Component todavia tenia `any` y uniones de
+literales duplicadas en la navegacion: `App.tsx` repetia la union de tabs en `tabHistory` y
+`setActiveTab`, `DashboardTab.tsx` definia su propio `AppTabId` y `useAppHandlers.ts` la volvia a
+copiar en dos props. Ademas `DashboardTab` castiaba `moduleId as AppTabId`, asi que los nodos del
+nivel lexico del canvas (`wordtypes`, `roots`, `entries`, `import`) colaban un tab inexistente al
+historial y la app quedaba en blanco; los casts `as any` de la barra lateral, el filtro de vista y
+el tema hacian lo propio en la frontera.
+
+**Decision:** una sola fuente de verdad para los tabs (`src/utils/appTabs.ts`: `AppTabId`,
+`APP_TAB_IDS`, `isAppTabId`) y para el mapeo nodo → destino
+(`src/utils/dashboardNavigation.ts`: `resolveDashboardNavigation`), con un type guard de modulo en
+`grammarTabModel.ts` (`GRAMMAR_MODULES` + `isGrammarModule`). `VerticalSidebar` y `Header` se tipan
+en la frontera (`AppTabId` / `ThemeId`), de modo que `App.tsx` elimina los cuatro casts `as any` y
+`DashboardTab` valida antes de navegar: ids desconocidos se ignoran.
+
+**Cambios (commit `PENDIENTE`):**
+- `src/utils/appTabs.ts` (nuevo): `AppTabId`, `APP_TAB_IDS`, `isAppTabId`.
+- `src/utils/dashboardNavigation.ts` (nuevo): `resolveDashboardNavigation` +
+  `DashboardNavigationTarget`.
+- `src/utils/grammarTabModel.ts`: `GRAMMAR_MODULES` + `isGrammarModule`.
+- `src/App.tsx`: `tabHistory`/`activeTab`/`setActiveTab` con `AppTabId`; `activeGrammarModule` con
+  `GrammarModule` (`DEFAULT_GRAMMAR_MODULE`); `viewFilter` con `LexiconFilter`; fuera los casts
+  `as any` de `VerticalSidebar`, `Header` y `LexiconTable`.
+- `src/components/DashboardTab.tsx`: `AppTabId`/`GrammarModule` importados; `GRAMMAR_SUB_MODULES` y
+  el `else` con `moduleId as AppTabId` sustituidos por `resolveDashboardNavigation`.
+- `src/components/VerticalSidebar.tsx` y `src/components/Header.tsx`: props tipadas.
+- `src/hooks/useAppHandlers.ts`: `AppTabId` importado.
+- Tests: `src/utils/__tests__/appTabs.test.ts` (3) y
+  `src/utils/__tests__/dashboardNavigation.test.ts` (6; recorre `ROOT_NODES` + `GRAMMAR_NODES` +
+  `LEXICON_NODES` y afirma que TODOS los nodos tienen destino valido).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 595/595 (68 archivos) · audit:orphans
+13 (baseline) · `npm run test:gui` **8/8** · smoke runtime web (`vite preview` + navegador real):
+arranque → wizard → dashboard, navegacion por barra lateral a "Léxico" y cambio de tema
+`midnight → cyber` en verde. Pendiente: `git push` + CI con numero de run (requiere autorizacion).
+
+**Proximo bloque ejecutable (gauntlet v3.14):** D (checklist demo, lo ejecuta el usuario) y R
+(reporte final evidence-based). Pendiente por autorizacion: `git push` + CI con numero de run.
+Frente CLN: `App.tsx` queda en 937 lineas (el tipo de tab se centraliza; el balance neto es +2 por
+los imports); el proximo bloque es la capa de modales
+(`Suspense` + `ModalManager` + `AiSettingsModal`), que podra extraerse a `AppModalLayer`.
+
 
 
 

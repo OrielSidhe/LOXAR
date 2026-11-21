@@ -2,17 +2,18 @@ import React from 'react';
 import WidgetIcon from './icons/WidgetIcon';
 import InfoIcon from './icons/InfoIcon';
 import SettingsIcon from './icons/SettingsIcon';
+import type { ThemeId } from '../services/themeService';
 
 interface HeaderProps {
   wordsAddedCount: number;
   onOpenWidget: () => void;
   onShowTour?: () => void;
   onOpenSettings?: () => void;
-  themeId: string;
-  onThemeChange: (themeId: string) => void;
+  themeId: ThemeId;
+  onThemeChange: (themeId: ThemeId) => void;
 }
 
-const themes = [
+const themes: ReadonlyArray<{ id: ThemeId; label: string; dot: string }> = [
   { id: 'midnight', label: 'Midnight', dot: '#0db9f2' },
   { id: 'cyber', label: 'Cyber', dot: '#7c5cff' },
   { id: 'amber', label: 'Amber', dot: '#f5a623' },
