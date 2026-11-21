@@ -528,8 +528,8 @@ El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` 
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 46 commits locales** en `master` que no están en `origin` (`git rev-list --count
-origin/master..master`; el más reciente es `e4d5dee`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
+**Hay 15 commits locales** en `master` que no están en `origin` (`git rev-list --count
+origin/master..master`; el más reciente es `b326e34`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
 hay número de run y la fase queda formalmente abierta.
