@@ -11,6 +11,10 @@ export interface GrammarOverviewProps {
   strategiesCount: number;
   lastUpdated?: string;
   importReport?: ImportValidationReport | null;
+  /** FASE FLU (gauntlet v3.14): manifiesto "first run" (sin fonología ni tipología). */
+  isFirstRun?: boolean;
+  /** FASE FLU: abre el asistente de gramática bajo demanda (ya no es un modal forzado). */
+  onOpenWizard?: () => void;
 }
 
 const GrammarOverview = ({
@@ -20,9 +24,36 @@ const GrammarOverview = ({
   strategiesCount,
   lastUpdated,
   importReport,
+  isFirstRun = false,
+  onOpenWizard,
 }: GrammarOverviewProps) => {
   return (
     <div className="space-y-6">
+      {isFirstRun && (
+        <div
+          data-testid="grammar-first-run-banner"
+          className="bg-primary/10 border border-primary/30 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+        >
+          <div className="flex-1">
+            <h3 className="text-base font-bold text-white mb-1">Empieza por el léxico</h3>
+            <p className="text-sm text-text-secondary">
+              La fonología y la morfología no se definen antes de tener datos: se extraen del
+              léxico. Carga entradas y usa "Extraer del léxico" en esos módulos; el asistente de
+              perfil es opcional.
+            </p>
+          </div>
+          {onOpenWizard && (
+            <button
+              type="button"
+              onClick={onOpenWizard}
+              className="self-start sm:self-auto px-4 py-2 bg-primary text-background-dark text-sm font-semibold rounded-md hover:bg-primary-dark transition-colors"
+            >
+              Abrir asistente de gramática
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="bg-background rounded-lg p-6 border border-border-dark">
         <h3 className="text-xl font-bold text-white mb-4">Progreso General</h3>
         <div className="flex items-center gap-4 mb-4">

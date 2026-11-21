@@ -42,9 +42,11 @@ interface GrammarTabProps {
     showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
-// Module-level guard so the first-run wizard auto-opens at most ONCE per session
-// (not localStorage — keeps it simple and resets on reload, exactly as required).
-let wizardAutoOpenedThisSession = false;
+// FASE FLU (gauntlet v3.14): el asistente de gramática ya NO se autoabre con un
+// manifiesto "first run". La filosofía del proyecto es léxico + gramática primero:
+// la fonología y la morfología se extraen del léxico (FASE FX/MY), así que el
+// asistente de perfil es una acción explícita del usuario (header del tab o el
+// banner del overview), nunca un modal que exige definirlas antes de tener datos.
 
 const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalException, onExportGrammar, activeModule: activeModuleProp, onModuleChange, onBack, onOpenAiSettings, showNotification }: GrammarTabProps) => {
     const [internalModule, setInternalModule] = useState<GrammarModule>(DEFAULT_GRAMMAR_MODULE);
@@ -78,16 +80,9 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
         return () => window.removeEventListener('loxar:addLexicalException', handler);
     }, [onAddLexicalException]);
 
-    // First-run detection: empty manifest (no paradigms, no phonology, default
-    // typology) → auto-open the wizard exactly once per session.
+    // FASE FLU: `isFirstRun` ya no dispara un modal; alimenta el banner del
+    // overview, que ofrece el asistente como acción opcional.
     const isFirstRun = isFirstRunManifest(manifest);
-    useEffect(() => {
-        if (isFirstRun && !wizardAutoOpenedThisSession) {
-            wizardAutoOpenedThisSession = true;
-            setIsWizardOpen(true);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isFirstRun]);
 
     // Auto-seed the canvas ONCE from the engine when it is effectively empty
     // and the user is on the canvas subtab. Guards against infinite loops by
@@ -202,6 +197,8 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
             strategiesCount={editedManifest.strategies.length}
             lastUpdated={editedManifest.meta.lastUpdated}
             importReport={importReport}
+            isFirstRun={isFirstRun}
+            onOpenWizard={() => setIsWizardOpen(true)}
         />
     );
 
