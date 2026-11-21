@@ -16,15 +16,20 @@
  *  - el bootstrap de proyecto se ofrece solo si no hay `projectPath` y no fue
  *    descartado antes;
  *  - en modo no-Tauri (tests) `listLexiconNames` no existe: el error se registra y
- *    `hasLocalData` queda en `false`, sin tumbar el arranque.
+ *    `hasLocalData` queda en `false`, sin tumbar el arranque;
+ *  - los `.loxar` del equipo se escanean una sola vez y solo cuando el modal de
+ *    bootstrap va a ofrecerse (`availableProjects` alimenta la lista "Proyectos
+ *    encontrados en este equipo"); el scan fallido degrada a `[]`.
  */
 
 import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { loadSessionCache, type SessionCache } from '../services/sessionCache';
 import { listLexiconNames } from '../services/sqlStorage';
+import { scanForLoxarProjects } from '../services/projectDiscovery';
 import { DEFAULT_EXPORT_FORMATS, type ExportFormat } from '../utils/lexiconExport';
 import {
   buildSessionHydrationPlan,
+  shouldOfferProjectBootstrap,
   shouldShowWelcomeOnStart,
   type SessionHydrationPlan,
 } from '../utils/sessionHydrationModel';
@@ -58,6 +63,7 @@ export function useAppSessionHydration(): UseAppSessionHydrationResult {
   const [bootstrapDismissed, setBootstrapDismissed] = useState(false);
   const [hasLocalData, setHasLocalData] = useState(false);
   const [showProjectBootstrap, setShowProjectBootstrap] = useState(false);
+  const [availableProjects, setAvailableProjects] = useState<string[]>([]);
 
   // ── Pantalla de bienvenida: respetar el opt-out `showWelcomeOnStart` ──
   useEffect(() => {
@@ -98,7 +104,17 @@ export function useAppSessionHydration(): UseAppSessionHydrationResult {
           console.error('[App] No se pudo consultar los léxicos locales:', e);
         }
         if (cancelled) return;
-        const plan = buildSessionHydrationPlan({ cache, hasLexicons });
+        // Solo se escanean `.loxar` cuando el modal de bootstrap va a ofrecerse:
+        // con proyecto configurado o con el descarte previo no tiene sentido
+        // tocar el sistema de archivos en cada arranque. En modo no-Tauri
+        // `scanForLoxarProjects` devuelve `[]` sin efectos.
+        const offerBootstrap = shouldOfferProjectBootstrap(cache);
+        let foundProjects: string[] = [];
+        if (offerBootstrap) {
+          foundProjects = await scanForLoxarProjects().catch(() => [] as string[]);
+        }
+        if (cancelled) return;
+        const plan = buildSessionHydrationPlan({ cache, hasLexicons, foundProjects });
         // El hook solo recibe `SessionCache` reales; el modelo lo tipa como su
         // subconjunto estructural `SessionCacheLike`, asi que el cast es seguro.
         setSessionCacheData(plan.sessionCacheData as SessionCache | null);
@@ -108,6 +124,7 @@ export function useAppSessionHydration(): UseAppSessionHydrationResult {
         setBootstrapDismissed(plan.bootstrapDismissed);
         setHasLocalData(plan.hasLocalData);
         setShowProjectBootstrap(plan.showProjectBootstrap);
+        setAvailableProjects(plan.availableProjects);
         setIsAppLoaded(true);
       } catch (e) {
         console.error('[App] No se pudo cargar la sesión:', e);
@@ -143,6 +160,7 @@ export function useAppSessionHydration(): UseAppSessionHydrationResult {
       bootstrapDismissed,
       hasLocalData,
       showProjectBootstrap,
+      availableProjects,
       hasSeenWelcome,
       isAppLoaded,
       ...setters,
@@ -156,6 +174,7 @@ export function useAppSessionHydration(): UseAppSessionHydrationResult {
       bootstrapDismissed,
       hasLocalData,
       showProjectBootstrap,
+      availableProjects,
       hasSeenWelcome,
       isAppLoaded,
       setters,

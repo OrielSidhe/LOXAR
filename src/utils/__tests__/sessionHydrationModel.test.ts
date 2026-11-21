@@ -90,6 +90,18 @@ describe('buildSessionHydrationPlan', () => {
     expect(plan.showProjectBootstrap).toBe(true);
   });
 
+  it('conserva los proyectos .loxar encontrados en el plan', () => {
+    const found = ['C:/Users/test/documentos/mi.loxar', 'C:/Users/test/escritorio/otro.loxar'];
+    const plan = buildSessionHydrationPlan({ cache: null, hasLexicons: false, foundProjects: found });
+    expect(plan.availableProjects).toEqual(found);
+    expect(plan.showProjectBootstrap).toBe(true);
+  });
+
+  it('availableProjects es vacio cuando no se escaneo el equipo', () => {
+    expect(buildSessionHydrationPlan({ cache: null, hasLexicons: false }).availableProjects).toEqual([]);
+    expect(buildSessionHydrationPlan({ cache, hasLexicons: true, foundProjects: [] }).availableProjects).toEqual([]);
+  });
+
   it('es puro: no muta el cache de entrada', () => {
     const original: SessionCacheLike = { ...cache };
     buildSessionHydrationPlan({ cache, hasLexicons: true });
@@ -105,6 +117,7 @@ describe('DEFAULT_SESSION_HYDRATION', () => {
     expect(DEFAULT_SESSION_HYDRATION.bootstrapDismissed).toBe(false);
     expect(DEFAULT_SESSION_HYDRATION.hasLocalData).toBe(false);
     expect(DEFAULT_SESSION_HYDRATION.showProjectBootstrap).toBe(true);
+    expect(DEFAULT_SESSION_HYDRATION.availableProjects).toEqual([]);
     expect(DEFAULT_SESSION_HYDRATION.exportFormats).toEqual([...DEFAULT_EXPORT_FORMATS]);
   });
 });

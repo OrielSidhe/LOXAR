@@ -35,6 +35,13 @@ export interface SessionCacheLike {
 export interface SessionHydrationInput {
   cache: SessionCacheLike | null;
   hasLexicons: boolean;
+  /**
+   * Rutas `.loxar` descubiertas en el equipo. El modelo no las escanea (seria un
+   * efecto con `@tauri-apps/plugin-fs`); solo las conserva en el plan para que
+   * el hook decida cuando pedirlas y los tests puedan recorrer el flujo sin
+   * tocar el sistema de archivos.
+   */
+  foundProjects?: string[];
 }
 
 export interface SessionHydrationPlan {
@@ -46,6 +53,8 @@ export interface SessionHydrationPlan {
   bootstrapDismissed: boolean;
   hasLocalData: boolean;
   showProjectBootstrap: boolean;
+  /** Proyectos `.loxar` ofrecidos en el modal de bootstrap. */
+  availableProjects: string[];
 }
 
 /** `true` si la bienvenida debe mostrarse (default: true salvo opt-out explicito). */
@@ -63,7 +72,7 @@ export function shouldOfferProjectBootstrap(cache: SessionCacheLike | null): boo
 
 /** Resuelve el plan completo de hidratacion a partir del cache y los lexicos locales. */
 export function buildSessionHydrationPlan(input: SessionHydrationInput): SessionHydrationPlan {
-  const { cache, hasLexicons } = input;
+  const { cache, hasLexicons, foundProjects } = input;
   return {
     showWelcome: shouldShowWelcomeOnStart(cache),
     sessionCacheData: cache,
@@ -73,6 +82,7 @@ export function buildSessionHydrationPlan(input: SessionHydrationInput): Session
     bootstrapDismissed: cache?.bootstrapDismissed === true,
     hasLocalData: hasLexicons,
     showProjectBootstrap: shouldOfferProjectBootstrap(cache),
+    availableProjects: foundProjects ?? [],
   };
 }
 

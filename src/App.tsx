@@ -75,7 +75,6 @@ import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
 import { loadLexicon } from './services/sqlStorage';
 import { initPragmaticDb } from './services/grammarDb';
-import { scanForLoxarProjects } from './services/projectDiscovery';
 import { getGrammarMetrics } from './utils/grammarMetrics';
 import { buildDashboardStats } from './utils/dashboardStats';
 
@@ -133,6 +132,7 @@ const App = () => {
     bootstrapDismissed,
     hasLocalData,
     showProjectBootstrap,
+    availableProjects,
     isAppLoaded,
     setProjectPath,
     setExportPath,
@@ -198,8 +198,6 @@ const App = () => {
   const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
 
   const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
-
-  const [availableProjects, setAvailableProjects] = useState<string[]>([]);
 
   const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
     const id = Date.now();

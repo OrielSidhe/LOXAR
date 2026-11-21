@@ -25,6 +25,7 @@ import { DEFAULT_EXPORT_FORMATS } from '../../utils/lexiconExport';
 const backend = vi.hoisted(() => ({
   loadSessionCache: vi.fn(),
   listLexiconNames: vi.fn(),
+  scanForLoxarProjects: vi.fn(),
 }));
 
 vi.mock('../../services/sessionCache', () => ({
@@ -35,6 +36,11 @@ vi.mock('../../services/sessionCache', () => ({
 vi.mock('../../services/sqlStorage', () => ({
   listLexiconNames: backend.listLexiconNames,
   loadLexicon: vi.fn(),
+}));
+
+vi.mock('../../services/projectDiscovery', () => ({
+  scanForLoxarProjects: backend.scanForLoxarProjects,
+  projectFileExists: vi.fn(),
 }));
 
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost' });
@@ -70,8 +76,10 @@ const flush = async (): Promise<void> => {
 beforeEach(() => {
   backend.loadSessionCache.mockReset();
   backend.listLexiconNames.mockReset();
+  backend.scanForLoxarProjects.mockReset();
   backend.loadSessionCache.mockResolvedValue({});
   backend.listLexiconNames.mockResolvedValue([]);
+  backend.scanForLoxarProjects.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -92,6 +100,7 @@ describe('useAppSessionHydration', () => {
     expect(latest!.hasSeenWelcome).toBe(false);
     expect(latest!.isAppLoaded).toBe(false);
     expect(latest!.hasLocalData).toBe(false);
+    expect(latest!.availableProjects).toEqual([]);
     expect(latest!.exportFormats).toEqual([...DEFAULT_EXPORT_FORMATS]);
   });
 
@@ -125,7 +134,58 @@ describe('useAppSessionHydration', () => {
     expect(latest!.projectPath).toBeNull();
     expect(latest!.showProjectBootstrap).toBe(true);
     expect(latest!.hasLocalData).toBe(false);
+    expect(latest!.availableProjects).toEqual([]);
     expect(latest!.isAppLoaded).toBe(true);
+  });
+
+  it('escanea .loxar del equipo y los expone cuando ofrece el bootstrap', async () => {
+    backend.loadSessionCache.mockResolvedValue({ tourCompleted: false });
+    backend.listLexiconNames.mockResolvedValue([]);
+    backend.scanForLoxarProjects.mockResolvedValue([
+      'C:/Users/test/documentos/mi.loxar',
+      'C:/Users/test/escritorio/otro.loxar',
+    ]);
+    renderProbe();
+    await flush();
+
+    expect(backend.scanForLoxarProjects).toHaveBeenCalledTimes(1);
+    expect(latest!.availableProjects).toEqual([
+      'C:/Users/test/documentos/mi.loxar',
+      'C:/Users/test/escritorio/otro.loxar',
+    ]);
+  });
+
+  it('degrada a availableProjects vacio si el escaneo falla', async () => {
+    backend.loadSessionCache.mockResolvedValue({});
+    backend.listLexiconNames.mockResolvedValue([]);
+    backend.scanForLoxarProjects.mockRejectedValue(new Error('sin backend fs'));
+    renderProbe();
+    await flush();
+
+    expect(latest!.availableProjects).toEqual([]);
+    expect(latest!.showProjectBootstrap).toBe(true);
+    expect(latest!.isAppLoaded).toBe(true);
+  });
+
+  it('no escanea el equipo si el proyecto ya esta configurado', async () => {
+    backend.loadSessionCache.mockResolvedValue({ projectPath: 'C:/loxar/proyecto' });
+    backend.listLexiconNames.mockResolvedValue([]);
+    renderProbe();
+    await flush();
+
+    expect(backend.scanForLoxarProjects).not.toHaveBeenCalled();
+    expect(latest!.availableProjects).toEqual([]);
+    expect(latest!.showProjectBootstrap).toBe(false);
+  });
+
+  it('no escanea el equipo si el usuario ya descarto el bootstrap', async () => {
+    backend.loadSessionCache.mockResolvedValue({ bootstrapDismissed: true });
+    backend.listLexiconNames.mockResolvedValue([]);
+    renderProbe();
+    await flush();
+
+    expect(backend.scanForLoxarProjects).not.toHaveBeenCalled();
+    expect(latest!.showProjectBootstrap).toBe(false);
   });
 
   it('no ofrece el bootstrap si el proyecto ya esta configurado', async () => {
