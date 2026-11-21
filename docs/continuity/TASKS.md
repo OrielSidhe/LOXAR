@@ -5,6 +5,59 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — banner offline restaurado (`useOfflineBannerStatus`)
+
+**Rama:** `master`. **Motivo:** mismo patrón que `a804a8c`: un estado aparentemente muerto
+era un cableado perdido por el revert de P1-2f (`7767f8b`). `showOfflineBanner` se leía en
+`AppOfflineBannerLayer`, pero su setter nunca se invocaba: el banner "Grammar engine running
+offline" nunca aparecía. `grammarOk` se declaraba sin lector y `App.tsx` importaba
+`isAiAvailable`/`validateGrammarEngine` sin uso.
+
+**Cambios (commit `7299386`):**
+- `src/utils/offlineBannerModel.ts` (NUEVO): `OfflineBannerStatusInput` +
+  `shouldShowOfflineBanner({ aiAvailable, grammarOk })` (`!aiAvailable && !grammarOk`; con
+  `grammarOk === null` el banner se muestra, porque aún no hay inferencia local sostenida).
+- `src/hooks/useOfflineBannerStatus.ts` (NUEVO): corre `validateGrammarEngine()` +
+  `isAiAvailable()` una vez al montar, con guard de desmontaje; degrada a `false` y registra
+  el fallo si alguna comprobación lanza.
+- `src/App.tsx`: 866 → 865 lineas. Fuera los dos `useState` (`grammarOk`, `showOfflineBanner`)
+  y los dos imports sin uso; entra el hook.
+- Tests: `offlineBannerModel.test.ts` (5) y `useOfflineBannerStatus.test.tsx` (4, con
+  `vi.mock` del servicio de IA y de la validación).
+
+**Verificacion:** typecheck 0 · lint OK · build OK · vitest 678/678 (80 archivos) ·
+audit:orphans 13 (baseline, sin huerfanos nuevos).
+
+**Proximo bloque ejecutable (CLN/P1):** el `return` de `App.tsx` (~393 de JSX de tabs) es el
+ultimo frente grande del God Component; candidato natural: extraer el switch de tabs a
+`AppTabContent` con props tipadas. Frentes no-CLN pendientes: D2 (Web Worker vs CSP de Tauri),
+destino de los 13 huerfanos y `git push` + CI (requiere autorizacion).
+
+---
+
+## [2026-11-21] Checkpoint: CLN — handlers de comparacion/merge a `useLexiconMerge`
+
+**Rama:** `master`. **Motivo:** el arbol de trabajo llegaba con `src/App.tsx` modificado y
+cuatro archivos nuevos sin commitear (sesion previa cortada): la extraccion de los dos
+`useCallback` inline que cargaban otro lexico y lo fusionaban al activo.
+
+**Cambios (commit `7026051`):**
+- `src/utils/lexiconMergeModel.ts` (NUEVO): `NO_ACTIVE_LEXICON_MESSAGE`, `LexiconMergeDeps`,
+  `LexiconMergePlan` y `buildLexiconMerge` (sin lexico activo no fusiona y deja la base
+  intacta; con activo concatena al final y reporta `addedCount`).
+- `src/hooks/useLexiconMerge.ts` (NUEVO): `loadLexiconEntries` (carga `loadLexicon`, degrada a
+  `null` y registra) y `mergeLexiconEntries` (escribe via `updateActiveLexiconEntries` con
+  `makeDirty=true` y el conteo; sin activo notifica y no escribe). Acciones memoizadas.
+- `src/App.tsx`: 881 → 866 lineas. Fuera los dos `useCallback` inline y el import sin uso de
+  `loadLexicon`.
+- Tests: `lexiconMergeModel.test.ts` (5) y `useLexiconMerge.test.tsx` (6, con `vi.mock` de
+  `sqlStorage`).
+
+**Verificacion:** typecheck 0 · lint OK · build OK · vitest 669/669 (78 archivos) ·
+audit:orphans 13 (baseline).
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — el escaneo de `.loxar` vuelve a alimentar el bootstrap
 
 **Rama:** `master`. **Motivo:** el estado muerto `availableProjects` (deuda declarada) no era solo
