@@ -3599,6 +3599,48 @@ fuente unica de la union de modales).
 bloque de settings/bootstrap y los handlers de modales que siguen inline. Pendiente por autorizacion:
 `git push` + CI con numero de run.
 
+## [2026-11-20] Checkpoint: CLN — coordinacion de modales a `useModalCoordination` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** `App.tsx` mantenia dos estados sueltos (`activeModal`,
+`showSettings`) y resolvía las transiciones con flechas inline; `useAppHandlers` declaraba la
+union de modales duplicada y `handleOpenModal` era `(modal: any) => void`, asi que un id invalido
+colaba al `ModalManager`.
+
+**Decision:** concentrar el estado y las transiciones en `src/utils/modalCoordinationModel.ts`
+(`ModalCoordinationState`, `DEFAULT_MODAL_COORDINATION`, `ModalCoordinationEvent` y el reducer
+`reduceModalCoordination`) y exponerlo memoizado desde `src/hooks/useModalCoordination.ts`. La
+union de modales sigue saliendo de `AppModalId` (`wizardActionsModel`), que ahora es la unica
+fuente; `useAppHandlers` y `useFirstRunWizardActions` reciben `openModal: (modal: AppModalId) =>
+void` en vez del `setActiveModal` con la union inline.
+
+**Cambios (commit `f526fd0`):**
+- `src/utils/modalCoordinationModel.ts` (nuevo): estado + reducer puro (openModal, closeModal,
+  openSettings, closeSettings, openAiSettingsFromSettings).
+- `src/hooks/useModalCoordination.ts` (nuevo): hook con `useReducer` + acciones memoizadas,
+  incluidas las concretas (`openFunctions`, `openHyphens`, `openProfile`, `openCompare`,
+  `openRestore`, `openAbout`, `openAiSettings`).
+- `src/utils/wizardActionsModel.ts` y `src/hooks/useFirstRunWizardActions.ts`: la dep
+  `setActiveModal` pasa a `openModal` (mismo contrato).
+- `src/hooks/useAppHandlers.ts`: fuera la union de modales duplicada; `handleOpenModal` tipado
+  con `AppModalId` (se elimina el `any`).
+- `src/App.tsx`: 933 → 947 lineas (el destructure del hook aporta 15; se eliminan 2 estados y 13
+  flechas inline). Sin `setActiveModal`/`setShowSettings`.
+- Tests: `src/utils/__tests__/modalCoordinationModel.test.ts` (7) y
+  `src/hooks/__tests__/useModalCoordination.test.tsx` (5); `wizardActionsModel.test.ts` renombra
+  la dep.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 613/613 (72 archivos) · audit:orphans
+13 (baseline). `npm run test:gui`: 7/8 en suite completa; el unico fallo es
+`grammar-import.spec.ts` (chunk lazy del importador bajo 8 workers). Verificacion cruzada: en el
+arbol limpio (sin estos cambios) la suite completa da 5/8 con los mismos sintomas, y en
+aislamiento `flow.spec.ts` + `grammar-import.spec.ts` pasan 2/2 con los cambios (39s cada uno).
+Pendiente por autorizacion: `git push` + CI con numero de run.
+
+**Proximo bloque ejecutable (CLN/P1):** `App.tsx` sigue en ~947 lineas; el siguiente candidato es
+el bloque de hidratacion de sesion (bienvenida + bootstrap, dos `useEffect` de ~55 lineas) o el
+grupo de navegacion por tabs (`setActiveTab('writing'/'grammar')` inline). Pendiente por
+autorizacion: `git push` + CI con numero de run.
+
 
 
 

@@ -11,11 +11,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 601/601 (70 archivos) y `npm run test:gui` 8/8
+- Repo limpio, build/typecheck/lint verdes; vitest 613/613 (72 archivos) y `npm run test:gui` 8 specs (7/8 en suite completa; el fallo es el chunk lazy del importador bajo 8 workers, reproducible en el arbol limpio)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `4ba2515` (capa de modales `AppModalLayer`)
+- Git inicializado y con commits; último commit `f526fd0` (coordinacion de modales `useModalCoordination`)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -257,10 +257,22 @@ exporta desde `useLexicon.ts` (antes duplicada) y `ModalState = AppModalId`. `Ap
 líneas. Tests: `modalLayerModel.test.ts` (3) y `appModalLayer.test.tsx` (3, con `vi.mock` de los
 chunks lazy). Validaciones: typecheck 0, lint OK, vitest 601/601 (70 archivos), audit:orphans 13.
 
-**[ ] CLN — handlers de modales/settings inline (P1).** `App.tsx` quedó en 933 líneas. El siguiente
-bloque es el grupo de handlers que resuelven inline (`handleAiSettingsModalClose` y el resto de
-cierres/ aperturas de modales) junto con el cableado de `showSettings`/`onCloseSettings`; candidato
-natural a un hook `useModalCoordination` o a un `AppSettingsLayer` que agrupe settings + bootstrap.
+**[x] CLN — coordinacion de modales a `useModalCoordination` (P1, 2026-11-20, commit `f526fd0`).**
+`App.tsx` tenia dos estados sueltos (`activeModal`, `showSettings`) y 13 flechas inline que
+resolvian aperturas/cierres; `useAppHandlers` duplicaba la union de modales y `handleOpenModal` era
+`(modal: any) => void`. Nuevo `src/utils/modalCoordinationModel.ts` (estado + reducer puro) y
+`src/hooks/useModalCoordination.ts` (acciones memoizadas, incluidas `openFunctions`/`openHyphens`/
+`openProfile`/`openCompare`/`openRestore`/`openAbout`/`openAiSettings`); `openAiSettingsFromSettings`
+conserva el contrato original (cierra ajustes y abre el modal de IA). `useAppHandlers` y
+`useFirstRunWizardActions` reciben `openModal: (modal: AppModalId) => void`; se elimina el `any` y
+la union duplicada. `App.tsx`: 933 → 947 lineas (el destructure del hook aporta 15). Tests:
+`modalCoordinationModel.test.ts` (7) y `useModalCoordination.test.tsx` (5). Validaciones: typecheck 0,
+lint OK, build OK, vitest 613/613 (72 archivos), audit:orphans 13.
+
+**[ ] CLN — hidratacion de sesion (P1).** `App.tsx` aun tiene dos `useEffect` grandes (bienvenida +
+bootstrap, ~55 lineas) que hidratan `showWelcome`/`sessionCacheData`/`projectPath`/`exportPath`/
+`exportFormats`/`bootstrapDismissed`/`hasLocalData`/`isAppLoaded`. Candidato a un hook
+`useAppSessionHydration` con el decision-making en un modelo puro poblable con tests.
 
 **[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
 Los cinco handlers inline de `App.tsx` (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,
