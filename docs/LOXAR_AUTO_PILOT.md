@@ -11,11 +11,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 613/613 (72 archivos) y `npm run test:gui` 8 specs (7/8 en suite completa; el fallo es el chunk lazy del importador bajo 8 workers, reproducible en el arbol limpio)
+- Repo limpio, build/typecheck/lint verdes; vitest 632/632 (74 archivos) y `npm run test:gui` 8 specs (7/8 en suite completa; el fallo es el chunk lazy del importador bajo 8 workers, reproducible en el arbol limpio)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `f526fd0` (coordinacion de modales `useModalCoordination`)
+- Git inicializado y con commits; último commit `ae9a497` (hidratacion de sesion `useAppSessionHydration`)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -269,10 +269,26 @@ la union duplicada. `App.tsx`: 933 → 947 lineas (el destructure del hook aport
 `modalCoordinationModel.test.ts` (7) y `useModalCoordination.test.tsx` (5). Validaciones: typecheck 0,
 lint OK, build OK, vitest 613/613 (72 archivos), audit:orphans 13.
 
-**[ ] CLN — hidratacion de sesion (P1).** `App.tsx` aun tiene dos `useEffect` grandes (bienvenida +
-bootstrap, ~55 lineas) que hidratan `showWelcome`/`sessionCacheData`/`projectPath`/`exportPath`/
-`exportFormats`/`bootstrapDismissed`/`hasLocalData`/`isAppLoaded`. Candidato a un hook
-`useAppSessionHydration` con el decision-making en un modelo puro poblable con tests.
+**[x] CLN — hidratacion de sesion a `useAppSessionHydration` (P1, 2026-11-21).** Los dos
+`useEffect` grandes (bienvenida + bootstrap, ~55 lineas) que hidrataban
+`showWelcome`/`sessionCacheData`/`projectPath`/`exportPath`/`exportFormats`/`bootstrapDismissed`/
+`hasLocalData`/`isAppLoaded` pasaron al hook `src/hooks/useAppSessionHydration.ts`, con el
+decision-making en el modelo puro `src/utils/sessionHydrationModel.ts`
+(`shouldShowWelcomeOnStart`, `shouldOfferProjectBootstrap`, `buildSessionHydrationPlan`,
+`DEFAULT_SESSION_HYDRATION`, `SessionCacheLike` sin imports de Tauri). El hook mantiene el
+contrato: `isAppLoaded` se eleva tambien en el camino de error (con guard `cancelled`) y los
+setters se exponen como `Dispatch<SetStateAction<T>>` para no tocar `useProjectOperations` ni
+`useAppHandlers`. `App.tsx`: 947 → 905 lineas; fuera 9 `useState` y los imports sin uso
+(`loadSessionCache`, `saveSessionCache`, `listLexiconNames`, `normalizeExportFormats`,
+`DEFAULT_EXPORT_FORMATS`, `ExportFormat`). Tests: `sessionHydrationModel.test.ts` (11) y
+`useAppSessionHydration.test.tsx` (8, con `vi.mock` del cache y de `sqlStorage`). Validaciones:
+typecheck 0, lint OK, build OK, vitest 632/632 (74 archivos), audit:orphans 13.
+
+**[ ] CLN — navegacion por tabs inline (P1).** `App.tsx` (905 lineas) conserva flechas de
+navegacion (`setActiveTab('writing'/'grammar')` y handlers que combinan tab + estado derivado).
+Candidato a un hook `useTabNavigation` con el modelo puro de transiciones. Tambien pendiente:
+el estado `availableProjects` esta declarado y se lee en el JSX pero su setter nunca se invoca
+(deuda declarada, no bloqueante).
 
 **[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
 Los cinco handlers inline de `App.tsx` (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,

@@ -1,7 +1,40 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-11-20 
+**Última actualización:** 2026-11-21 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
+
+---
+
+## [2026-11-21] Checkpoint: CLN — hidratacion de sesion a `useAppSessionHydration` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** continuar la descomposicion del God Component (`App.tsx`, 947 lineas).
+Los dos `useEffect` grandes que quedaban (bienvenida + bootstrap de proyecto, ~55 lineas)
+resolvian a mano, con flechas inline, si correspondia mostrar la bienvenida y si debia ofrecerse
+la ubicacion del `.loxar`, y eran el unico lugar que elevaba `isAppLoaded`.
+
+**Cambios:**
+- `src/utils/sessionHydrationModel.ts` (NUEVO): `SessionCacheLike` (subconjunto estructural de
+  `SessionCache`, sin importar `@tauri-apps/api`), `shouldShowWelcomeOnStart`,
+  `shouldOfferProjectBootstrap`, `buildSessionHydrationPlan({ cache, hasLexicons })` y
+  `DEFAULT_SESSION_HYDRATION`. Los formatos de exportacion salen de `normalizeExportFormats`.
+- `src/hooks/useAppSessionHydration.ts` (NUEVO): un unico efecto de bootstrap (cache +
+  `listLexiconNames`) y el efecto de bienvenida (`hasSeenWelcome`); aplica el plan y eleva
+  `isAppLoaded` tambien en el camino de error, con guard `cancelled`. Los setters se exponen con
+  el tipo completo `Dispatch<SetStateAction<T>>` para que `useProjectOperations` y
+  `useAppHandlers` reciban el mismo contrato de antes.
+- `src/App.tsx`: 947 → 905 lineas. Fuera 9 `useState`, 2 `useEffect` y los imports sin uso
+  (`loadSessionCache`, `saveSessionCache`, `listLexiconNames`, `normalizeExportFormats`,
+  `DEFAULT_EXPORT_FORMATS`, `ExportFormat`).
+
+**Verificacion:** `npm run typecheck` 0 · `npm run lint` OK · `npx vitest run` 632/632
+(74 archivos) · `npm run build` OK · `npm run audit:orphans` 13 (baseline, sin huerfanos nuevos).
+
+**Commit:** `ae9a497`.
+
+**Proximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 905 lineas. El siguiente candidato es
+el grupo de navegacion por tabs (`setActiveTab('writing'/'grammar')` inline) o el estado muerto
+`availableProjects` (declarado, leido en el JSX, cuyo setter nunca se invoca). Pendiente por
+autorizacion: `git push` + CI con numero de run.
 
 ---
 
