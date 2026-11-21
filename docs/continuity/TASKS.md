@@ -5,6 +5,36 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — switch de tabs a `AppTabContent` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el arbol de trabajo llegaba con `src/App.tsx` modificado y
+`src/components/AppTabContent.tsx` nuevo sin commitear (sesion previa cortada): la extraccion del
+switch de tabs del `return` de `App.tsx`, el ultimo frente grande del God Component (~393 de JSX
+con ocho ramas y ~30 props por rama).
+
+**Cambios (commit `6ef5337`):**
+- `src/components/AppTabContent.tsx` (NUEVO, 489 lineas): `AppTabContentProps` tipado
+  estrictamente y el mismo orden de render que el original. Preserva los contratos: `table` y
+  `workbench` quedan SIEMPRE montados (FASE NAV) con `hidden` + `aria-hidden` y `active`; el
+  resto de tabs se monta solo cuando `activeTab` coincide; `DashboardTab` recibe el `stats` ya
+  calculado; `onSearch` se propaga tal cual; `ToolsTab.lexicon` cae a `EMPTY_TOOLS_LEXICON`
+  cuando no hay `lexiconData`.
+- `src/App.tsx`: 865 → 790 lineas; el bloque JSX de tabs sale completo y entra
+  `<AppTabContent ... />`.
+- Tests: `src/components/__tests__/appTabContent.test.tsx` (8, con los ocho hijos mockeados):
+  enrutado de tabs, montaje permanente de `table`/`workbench`, `active`, propagacion de
+  `onSearch`, `disabled` sin lexico, fallback de lexico de herramientas y modulo de gramatica.
+- `.gitignore`: `scratch/` (scripts de reescritura de sesiones) queda fuera del repo.
+
+**Verificacion:** typecheck 0 · lint OK · build OK · vitest 686/686 (81 archivos) ·
+audit:orphans 13 (baseline, sin huerfanos nuevos).
+
+**Proximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 790 lineas; el siguiente candidato es
+el bloque de capas superpuestas que quedan (welcome/toast/offline/bootstrap/settings/modales) o
+los handlers que siguen inline. Pendiente por autorizacion: `git push` + CI con numero de run.
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — banner offline restaurado (`useOfflineBannerStatus`)
 
 **Rama:** `master`. **Motivo:** mismo patrón que `a804a8c`: un estado aparentemente muerto

@@ -11,15 +11,15 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 658/658 (76 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 686/686 (81 archivos) y `npm run test:gui`
   (6 specs / 8 tests): en aislamiento los specs de navegacion pasan; la suite completa en
   paralelo es inestable por contencion del chunk lazy del importador (5/8 con estos cambios,
   6/8 en el arbol limpio, con specs distintos fallando en cada corrida)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `7299386` (banner offline restaurado);
-  26 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `6ef5337` (switch de tabs a `AppTabContent`);
+  27 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -154,6 +154,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - God Component (2026-11-20): `App.tsx` 925 → 906 líneas al extraer `buildDashboardStats`
   (`src/utils/dashboardStats.ts`) con el tipo `DashboardStats` compartido con `LanguageHomeCanvas`;
   tests propios (4). `audit:orphans` se mantiene en 13.
+- Switch de tabs (2026-11-21): `App.tsx` 865 → 790 líneas al extraer el bloque JSX de tabs
+  (`src/components/AppTabContent.tsx`, 489 líneas) con `AppTabContentProps` tipado y los ocho
+  hijos en el mismo orden de render; `table`/`workbench` siguen siempre montados (FASE NAV) y
+  `ToolsTab.lexicon` cae a un lexico vacio sin `lexiconData`. Tests propios (8, hijos mockeados).
+  `audit:orphans` 13 (baseline).
 
 ---
 
@@ -241,6 +246,16 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — switch de tabs a `AppTabContent` (P1, 2026-11-21, commit `6ef5337`).** Trabajo de
+una sesion previa cortada, verificado y cerrado: el `return` de `App.tsx` guardaba ~393 de JSX
+con ocho ramas de tab y ~30 props por rama. Nuevo `src/components/AppTabContent.tsx` (489
+lineas) con `AppTabContentProps` tipado estrictamente y el mismo orden de render; preserva los
+contratos (table/workbench siempre montados con `hidden` + `aria-hidden` y `active`; `stats` ya
+calculado; `onSearch` propagado; `ToolsTab.lexicon` con fallback a un lexico vacio).
+`App.tsx`: 865 → 790 lineas. Tests: `appTabContent.test.tsx` (8, con los ocho hijos mockeados).
+`.gitignore`: `scratch/` fuera del repo. Validaciones: typecheck 0, lint OK, build OK, vitest
+686/686 (81 archivos), audit:orphans 13.
+
 **[x] CLN — banner offline restaurado (P1, 2026-11-21, commit `7299386`).** Segundo cableado
 perdido por el revert de P1-2f (`7767f8b`), mismo patrón que `a804a8c`: `showOfflineBanner` se
 leía en `AppOfflineBannerLayer` pero su setter nunca se invocaba, así que el banner "Grammar
@@ -258,10 +273,9 @@ Trabajo de una sesion previa cortada, verificado y cerrado: `handleLoadLexiconEn
 modelo (5) y hook (6). Validaciones: typecheck 0, lint OK, build OK, vitest 669/669
 (78 archivos), audit:orphans 13.
 
-**[ ] CLN — extraer el switch de tabs del `return` de `App.tsx` (P1).** `App.tsx` queda en 865
-lineas, de las cuales ~393 son el JSX de tabs (`dashboard`/`table`/`workbench`/`collections`/
-`writing`/`grammar`/`translator`/`tools`) con ~30 props. Es el ultimo frente grande del God
-Component; candidato: `src/components/AppTabContent.tsx` con props tipadas estrictas.
+**[ ] CLN — capas superpuestas del `return` de `App.tsx` (P1).** `App.tsx` queda en 790 lineas;
+siguen inline las capas de welcome/toast/offline/bootstrap/settings y el `ModalManager` del area
+principal. Candidato: agruparlas en un `AppOverlayLayers.tsx` con props tipadas estrictas.
 
 **[x] CLN — tipado estricto de navegación (`AppTabId` + `dashboardNavigation`, 2026-11-20).** La
 unión de tabs estaba duplicada en `App.tsx`, `DashboardTab.tsx` y `useAppHandlers.ts`, y los casts
