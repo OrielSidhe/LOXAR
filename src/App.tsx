@@ -22,6 +22,7 @@ import { useModalCoordination } from './hooks/useModalCoordination';
 import { useAppSessionHydration } from './hooks/useAppSessionHydration';
 import { useTabNavigation } from './hooks/useTabNavigation';
 import { useLexiconMerge } from './hooks/useLexiconMerge';
+import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -70,8 +71,6 @@ import { WORD_LISTS } from './data/wordLists';
 import { MAIN_TOUR_STEPS, COLLECTIONS_TOUR_STEPS, WRITING_TOUR_STEPS, TOOLS_TOUR_STEPS } from './data/tourSteps';
 import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
-import { isAiAvailable } from './services/geminiService';
-import { validateGrammarEngine } from './validation/runtimeValidation';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
 import { initPragmaticDb } from './services/grammarDb';
@@ -183,8 +182,6 @@ const App = () => {
   const [showAffixFormatting, setShowAffixFormatting] = useState(true);
 
   const [aiStatus, setAiStatus] = useState<'idle' | 'working' | 'complete' | 'error'>('idle');
-  const [grammarOk, setGrammarOk] = useState<boolean | null>(null);
-  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
   const [aiProgress, setAiProgress] = useState<{ processed: number; total: number } | null>(null);
   const [lastAiResult, setLastAiResult] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<MissingWord[]>([]);
@@ -353,6 +350,8 @@ const App = () => {
     updateActiveLexiconEntries: lexiconHook.updateActiveLexiconEntries,
     showNotification,
   });
+
+  const { showOfflineBanner } = useOfflineBannerStatus();
 
   const aiHandlers = useAiHandlers({
     activeLexicon,
