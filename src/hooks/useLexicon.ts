@@ -21,7 +21,7 @@ export interface Conflict {
     incoming: NewLexiconEntry;
 }
 
-interface ImportState {
+export interface ImportState {
     step: 'idle' | 'map_headers' | 'resolve_conflicts' | 'sanitize_file' | 'repair_characters' | 'error';
     rawData?: any[];
     headers?: string[];

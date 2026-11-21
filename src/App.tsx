@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect, useMemo, ReactNode, Suspense, lazy } from 'react';
+import React, { useCallback, useState, useEffect, useMemo, ReactNode } from 'react';
 import Header from './components/Header';
 import LexiconTable from './components/LexiconTable';
 import AppToolbar from './components/AppToolbar';
@@ -57,6 +57,7 @@ import AppProjectBootstrapLayer from './components/AppProjectBootstrapLayer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 import AppSettingsModalLayer from './components/AppSettingsModalLayer';
+import AppModalLayer from './components/AppModalLayer';
 import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
@@ -79,9 +80,6 @@ import { initPragmaticDb } from './services/grammarDb';
 import { scanForLoxarProjects } from './services/projectDiscovery';
 import { getGrammarMetrics } from './utils/grammarMetrics';
 import { buildDashboardStats } from './utils/dashboardStats';
-
-const ModalManager = lazy(() => import('./components/ModalManager'));
-const AiSettingsModal = lazy(() => import('./components/AiSettingsModal'));
 
 const App = () => {
   const appVersion = '2.4.0-pro';
@@ -585,8 +583,7 @@ const App = () => {
 
           <ImportJobBanner />
 
-          <Suspense fallback={<div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-text-secondary text-sm">Cargando…</div>}>
-            <ModalManager
+          <AppModalLayer
             activeModal={activeModal}
             entryToEditInModal={entryToEditInModal}
             entryToInflect={entryToInflect}
@@ -636,9 +633,8 @@ const App = () => {
               applyCharacterRepair: lexiconHook.applyCharacterRepair,
             }}
             showNotification={showNotification}
+            onAiSettingsClose={handleAiSettingsModalClose}
           />
-          {activeModal === 'ai_settings' && <AiSettingsModal onClose={handleAiSettingsModalClose} />}
-          </Suspense>
           <AppSettingsModalLayer
             showSettings={showSettings}
             onCloseSettings={() => setShowSettings(false)}

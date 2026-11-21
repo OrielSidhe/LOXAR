@@ -15,24 +15,15 @@ import ImportMappingModal from './ImportMappingModal';
 import ImportConflictModal from './ImportConflictModal';
 import ImportSanitizationModal from './ImportSanitizationModal';
 import { LexiconEntry, LexiconMetadata, GenerativeProfile, HyphenOperation, FunctionOperation, InflectionProfile, NewLexiconEntry } from '../types';
+import type { ImportState } from '../hooks/useLexicon';
+import type { AppModalId } from '../utils/wizardActionsModel';
 
 const RestoreBackupModal = memo(RestorBackupModalComponent);
 
-type ModalState = 'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings';
+/** Alias heredado: la unión de modales vive en `wizardActionsModel` (fuente única). */
+export type ModalState = AppModalId;
 
-interface ImportState {
-    step: 'idle' | 'map_headers' | 'resolve_conflicts' | 'sanitize_file' | 'repair_characters' | 'error';
-    headers?: string[];
-    warnings?: string[];
-    conflicts?: any[];
-    errorContent?: string | null;
-    parseError?: string | null;
-    error?: string;
-    rawData?: any[];
-    rawContent?: string;
-}
-
-interface ModalManagerProps {
+export interface ModalManagerProps {
     activeModal: ModalState;
     entryToEditInModal: LexiconEntry | null;
     entryToInflect: LexiconEntry | null;
