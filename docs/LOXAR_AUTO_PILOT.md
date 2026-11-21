@@ -11,11 +11,15 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 632/632 (74 archivos) y `npm run test:gui` 8 specs (7/8 en suite completa; el fallo es el chunk lazy del importador bajo 8 workers, reproducible en el arbol limpio)
+- Repo limpio, build/typecheck/lint verdes; vitest 652/652 (76 archivos) y `npm run test:gui`
+  (6 specs / 8 tests): en aislamiento los specs de navegacion pasan; la suite completa en
+  paralelo es inestable por contencion del chunk lazy del importador (5/8 con estos cambios,
+  6/8 en el arbol limpio, con specs distintos fallando en cada corrida)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `ae9a497` (hidratacion de sesion `useAppSessionHydration`)
+- Git inicializado y con commits; último commit `4f89276` (navegacion por tabs
+  `useTabNavigation`)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -284,11 +288,29 @@ setters se exponen como `Dispatch<SetStateAction<T>>` para no tocar `useProjectO
 `useAppSessionHydration.test.tsx` (8, con `vi.mock` del cache y de `sqlStorage`). Validaciones:
 typecheck 0, lint OK, build OK, vitest 632/632 (74 archivos), audit:orphans 13.
 
-**[ ] CLN — navegacion por tabs inline (P1).** `App.tsx` (905 lineas) conserva flechas de
-navegacion (`setActiveTab('writing'/'grammar')` y handlers que combinan tab + estado derivado).
-Candidato a un hook `useTabNavigation` con el modelo puro de transiciones. Tambien pendiente:
-el estado `availableProjects` esta declarado y se lee en el JSX pero su setter nunca se invoca
-(deuda declarada, no bloqueante).
+**[x] CLN — navegacion por tabs a `useTabNavigation` (P1, 2026-11-21, commit `4f89276`).**
+`App.tsx` guardaba el tab activo como un historial (`AppTabId[]`) resuelto por flechas inline
+(`setActiveTab` que apilaba sin duplicar, `goBack`, `goHome`, `handleOpenGrammarModule`,
+`handleQuickNav`) y repetía `() => setActiveTab('writing'|'grammar'|'translator'|'dashboard')`
+en los modales y en `ToolsTab`. Nuevo `src/utils/tabNavigationModel.ts` (`DEFAULT_TAB`,
+`resolveActiveTab`, `pushTab`, `popTab`, `resetTabHistory`, `isAtHome`, `QuickNavTarget` +
+`isQuickNavTarget`) y `src/hooks/useTabNavigation.ts`, que expone ademas los atajos
+`openDashboard`/`openWriting`/`openGrammar`/`openTranslator` y mantiene la firma
+`Dispatch<SetStateAction<AppTabId>>` que reciben `useProjectOperations`, `useAppHandlers`,
+`useAiHandlers` y `useWorkQueue`. `App.tsx`: 905 → 883 lineas. Tests:
+`tabNavigationModel.test.ts` (10) y `useTabNavigation.test.tsx` (10). Validaciones: typecheck 0,
+lint OK, build OK, vitest 652/652 (76 archivos), audit:orphans 13; `test:gui` con el dev server
+caliente: `flow.spec.ts` y `workbench-lexicon-jump.spec.ts` pasan en aislamiento (la suite
+completa en paralelo es inestable por contencion del chunk lazy, igual que en el arbol limpio).
+
+**[ ] CLN — estado muerto `availableProjects` (P1, deuda declarada).** `App.tsx` declara
+`availableProjects` y lo pasa a `AppProjectBootstrapLayer`, pero `setAvailableProjects` nunca
+se invoca y la capa no lo consume de forma visible. Requiere decision: cablear el listado de
+proyectos descubiertos (`scanForLoxarProjects`) o eliminar el estado y la prop.
+
+**[ ] CLN — handlers de comparacion/merge inline (P1).** `handleLoadLexiconEntries` y
+`handleMergeLexiconEntries` siguen inline en `App.tsx` (883 lineas); son el siguiente bloque
+candidato a un hook propio con su modelo puro.
 
 **[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
 Los cinco handlers inline de `App.tsx` (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,

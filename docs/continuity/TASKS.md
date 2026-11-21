@@ -5,6 +5,48 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — navegacion por tabs a `useTabNavigation` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** continuar la descomposicion del God Component (`App.tsx`, 905 lineas).
+El tab activo se guardaba como un historial (`AppTabId[]`) resuelto por flechas inline
+(`setActiveTab` que apila sin duplicar, `goBack`, `goHome`, `handleOpenGrammarModule`,
+`handleQuickNav`), y las flechas `() => setActiveTab('writing'|'grammar'|'translator'|
+'dashboard')` estaban repetidas en los modales y en `ToolsTab`.
+
+**Cambios:**
+- `src/utils/tabNavigationModel.ts` (NUEVO): `DEFAULT_TAB`, `TabHistory`, `QuickNavTarget`
+  + `QUICK_NAV_TARGETS` + `isQuickNavTarget` (type guard del salto rapido), `resolveActiveTab`
+  (fallback a `dashboard`), `pushTab` (apila sin duplicar y devuelve el mismo array si no
+  cambia, para no re-renderizar), `popTab` (nunca vacia el historial), `resetTabHistory`
+  y `isAtHome`.
+- `src/hooks/useTabNavigation.ts` (NUEVO): concentra `tabHistory`/`activeTab`/`setActiveTab`
+  (con la firma `Dispatch<SetStateAction<AppTabId>>` que reciben `useProjectOperations`,
+  `useAppHandlers`, `useAiHandlers` y `useWorkQueue`), `goBack`, `goHome`,
+  `activeGrammarModule`/`setActiveGrammarModule`, `handleOpenGrammarModule`, `handleQuickNav`
+  y los atajos `openDashboard`/`openWriting`/`openGrammar`/`openTranslator`.
+- `src/App.tsx`: 905 → 883 lineas. Fuera el `useState` del historial y 6 flechas de navegacion
+  (`onOpenNeography`/`onOpenInflection`/`onOpenInflectionWorkshop`/`onOpenGrammar`/
+  `onOpenTranslator` pasan a los atajos; el `onBack` de `GrammarTab` usa `openDashboard`) y los
+  imports sin uso (`AppTabId`, `DEFAULT_GRAMMAR_MODULE`, `GrammarModule`).
+
+**Verificacion:** `npm run typecheck` 0 · `npm run lint` OK · `npx vitest run` 652/652
+(76 archivos) · `npm run build` OK · `npm run audit:orphans` 13 (baseline, sin huerfanos nuevos).
+`npm run test:gui` (6 specs / 8 tests): en aislamiento `flow.spec.ts` y
+`workbench-lexicon-jump.spec.ts` pasan (33s y 37s con el dev server caliente); la suite
+completa en paralelo es inestable por contencion (el chunk lazy del importador de 348 kB con
+varios workers): con estos cambios 5/8 y en el arbol limpio (`ae9a497`) 6/8, con distintos
+specs fallando en cada corrida, por lo que el fallo no es determinista ni atribuible al cambio.
+
+**Commit:** `4f89276`.
+
+**Proximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 883 lineas. Siguientes candidatos:
+el estado muerto `availableProjects` (declarado y leido en el JSX, pero su setter nunca se
+invoca) y los handlers de comparacion/merge (`handleLoadLexiconEntries`/
+`handleMergeLexiconEntries`) que siguen inline. Pendiente por autorizacion: `git push` + CI
+con numero de run.
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — hidratacion de sesion a `useAppSessionHydration` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** continuar la descomposicion del God Component (`App.tsx`, 947 lineas).
