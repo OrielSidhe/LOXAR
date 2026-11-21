@@ -18,6 +18,8 @@ import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragm
 import { FloatingWidget } from './components/FloatingWidget';
 import FirstRunWizard from './components/FirstRunWizard';
 import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
+import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
+import type { AppModalId } from './utils/wizardActionsModel';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -68,7 +70,6 @@ import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
 import { isAiAvailable } from './services/geminiService';
 import { validateGrammarEngine } from './validation/runtimeValidation';
-import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
 import { listLexiconNames, loadLexicon } from './services/sqlStorage';
@@ -91,52 +92,26 @@ const App = () => {
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
   const [isAppLoaded, setIsAppLoaded] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [activeModal, setActiveModal] = useState<AppModalId>('none');
 
   // I1: First-run wizard state
   const { showWizard, step, dataFolder, goToStep, nextStep, prevStep, skipWizard, completeWizard, updateDataFolder } = useFirstRunWizard();
 
-  // W1: "Configurar ahora" must open AiSettingsModal and WAIT for the user to close it.
-  // The wizard only completes (onboarding flag set) when the modal closes.
-  const handleWizardConfigureAi = () => {
-    // Open the EXISTING AiSettingsModal
-    setActiveModal('ai_settings');
-    // Mark wizard as showing, but don't complete until modal closes
-  };
-
-  // W4: Called when AiSettingsModal closes - closes modal AND marks wizard complete
-  const handleAiSettingsModalClose = () => {
-    // First close the modal
-    setActiveModal('none');
-    // Then complete the wizard (mark onboarding as done)
-    if (showWizard && step === 'ai') {
-      completeWizard();
-    }
-  };
-
-  const handleWizardSkip = () => {
-    // I3: "Más tarde" — skip but mark as shown so it doesn't reappear
-    skipWizard();
-  };
-
-  const handleWizardComplete = () => {
-    // I5: Mark as complete
-    completeWizard();
-  };
-
-  const handleChooseDataFolder = () => {
-    // I4: Open Tauri file dialog to choose data folder
-    open({
-      multiple: false,
-      directory: true,
-      title: 'Seleccionar carpeta de datos del proyecto',
-    }).then(selected => {
-      if (selected) {
-        updateDataFolder(selected);
-      }
-    }).catch(err => {
-      console.error('Error choosing data folder:', err);
-    });
-  };
+  // Handlers del wizard de primer arranque (logica pura en `wizardActionsModel`).
+  const {
+    handleWizardConfigureAi,
+    handleAiSettingsModalClose,
+    handleWizardSkip,
+    handleWizardComplete,
+    handleChooseDataFolder,
+  } = useFirstRunWizardActions({
+    showWizard,
+    step,
+    completeWizard,
+    skipWizard,
+    updateDataFolder,
+    setActiveModal,
+  });
 
   const [tabHistory, setTabHistory] = useState<Array<'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools'>>(['dashboard']);
   const activeTab: 'dashboard' | 'table' | 'workbench' | 'collections' | 'writing' | 'grammar' | 'translator' | 'tools' = tabHistory[tabHistory.length - 1] ?? 'dashboard';
@@ -175,8 +150,6 @@ const App = () => {
   const handleQuickNav = useCallback((target: 'table' | 'workbench') => {
     setActiveTab(target);
   }, [setActiveTab]);
-
-  const [activeModal, setActiveModal] = useState<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>('none');
 
   const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
   useEffect(() => {
