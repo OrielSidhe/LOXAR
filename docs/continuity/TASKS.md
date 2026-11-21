@@ -3427,6 +3427,68 @@ dejo los inputs exactamente iguales (sin duplicados).
 regla: afijos/paradigmas inferidos del lexico, presentados editables), luego FLU (lexico/gramatica
 primero). Pendiente por autorizacion: `git push` + CI con numero de run.
 
+## [2026-11-20] Checkpoint: FASE MY v3.14 — extraccion morfologica con evidencia por regla
+
+**Rama:** `master`. **Motivo:** la filosofia del gauntlet v3.14 es "lexico + gramatica primero":
+la morfologia tampoco se define a mano antes de tener datos, se infiere del lexico y se presenta
+como afijos editables, cada uno con la prueba (pares base → forma) que lo respalda.
+
+**Decision:** el extractor es un modelo puro en `src/utils/morphologyExtraction.ts`, sin logica
+inline en el panel. Fusiona por `affixInventoryKey` (dedupe por forma+tipo), por eso reintentar no
+duplica.
+
+**Algoritmo:** pares `Raíz` → `Léxema` por entrada; candidate a afijo lo que sobra de la forma
+respecto a la raiz (`MIN_ROOT_LENGTH`/`MAX_AFFIX_LENGTH`, `isPlausibleAffix`); umbral
+`minAffixCountFor` (2 desde 6 pares, si no 1); `MAX_EVIDENCE_PAIRS = 5` por regla.
+
+**Cambios (commit `a5f5c3a`):**
+- `src/utils/morphologyExtraction.ts`: `extractMorphologyFromLexicon`, `collectMorphologyPairs`,
+  `dedupePairs`, `isPlausibleAffix`, `minAffixCountFor`, `affixInventoryKey`, `mergeAffixes`,
+  constantes y `MorphologyExtraction`/`MorphologyPairEvidence`/`MorphologyRuleEvidence`.
+- `src/types.ts`: `GrammarAffix.evidence?` + los dos tipos de evidencia.
+- `src/components/GrammarMorphologyPanel.tsx`: boton "Extraer del lexico", resumen
+  (`data-testid="morphology-extraction-summary"`) y evidencia por afijo
+  (`data-testid="morphology-affix-evidence"`).
+- Tests: `src/utils/__tests__/morphologyExtraction.test.ts` (167) y
+  `src/components/__tests__/grammarMorphologyPanel.test.tsx` (205, incluye idempotencia).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 573/573 (64 archivos) · audit:orphans 13
+(baseline).
+
+**Proximo bloque ejecutable (gauntlet v3.14):** FLU (lexico/gramatica primero: el asistente
+inicial ya no exige definir fonologia/morfologia antes de tener datos), luego D (checklist demo,
+lo hace el usuario) y R (reporte final). Pendiente por autorizacion: `git push` + CI con numero de
+run.
+
+## [2026-11-20] Checkpoint: FASE FLU v3.14 — lexico/gramatica primero (sin modal fonologico)
+
+**Rama:** `master`. **Motivo:** el checklist demo item 8 pide que un proyecto nuevo "empiece por
+lexico, no por fonologia". Concretamente, `GrammarTab` auto-abria `GrammarWizard` cuando el
+manifiesto era "first run" (`isFirstRunManifest`), es decir: el asistente exigia elegir un perfil
+(fonologia incluida) antes de que existiera una sola entrada. Con FX/MY ya existe la via correcta
+("Extraer del lexico" en fonologia y morfologia), que es la que la filosofia del gauntlet manda.
+
+**Decision:** se elimina el auto-open del asistente y se sustituye por un banner NO bloqueante en
+`GrammarOverview`, que explica que la fonologia/morfologia se extraen del lexico y ofrece el
+asistente como accion opcional. El header del tab ya tenia su propio boton ("Asistente de
+gramatica"), asi que no se pierde ningun punto de entrada.
+
+**Cambios (commit `9921103`):**
+- `src/components/GrammarTab.tsx`: fuera el guard a nivel modulo (`wizardAutoOpenedThisSession`) y
+  el `useEffect` de auto-open; `isFirstRun` ahora alimenta el banner del overview.
+- `src/components/GrammarOverview.tsx`: props `isFirstRun`/`onOpenWizard` + banner
+  (`data-testid="grammar-first-run-banner"`).
+- Tests: `src/components/__tests__/grammarOverview.test.tsx` (4).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 577/577 (65 archivos) · audit:orphans 13
+(baseline) · `npm run test:gui` **8/8** (con `npm run dev` caliente). El spec
+`tests-gui/grammar-import.spec.ts` ya descartaba el asistente de forma condicional, por lo que
+sigue verde sin el modal.
+
+**Proximo bloque ejecutable (gauntlet v3.14):** D (checklist demo, lo ejecuta el usuario) y R
+(reporte final evidence-based). Pendiente por autorizacion: `git push` + CI con numero de run.
+
+
 
 
 

@@ -71,7 +71,7 @@ Esto permite que un agente de coding IA retome el proyecto desde cualquier punto
 ## Estado actual
 
 - **Frontend modularizado:** `App.tsx` reducido mediante extracciones controladas (`AppWelcomeSection`, `AppToastLayer`, `AppOfflineBannerLayer`, `AppSettingsModalLayer`, etc.).
-- **Suite de tests:** 537/537 tests unitarios/integración en Vitest (60 archivos).
+- **Suite de tests:** 577/577 tests unitarios/integración en Vitest (65 archivos).
 - **E2E web:** `npm run test:gui` 8/8 en Playwright (arranque, flujo completo de léxico, importador
   de gramática, sound change, salto Workbench ↔ Léxico y canvas).
 - **Build estable:** `npm run typecheck`, `npm run lint` y `npm run build` en verde.

@@ -11,7 +11,9 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes
+- Repo limpio, build/typecheck/lint verdes; vitest 577/577 (65 archivos) y `npm run test:gui` 8/8
+- Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
+  R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
 - Git inicializado y con commits; último commit `e4d5dee`
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
@@ -287,9 +289,28 @@ actual por unión de conjuntos (reintentar NO duplica). Nuevo modelo puro
 554/554 (62 archivos), audit:orphans 13, smoke runtime web con 0 errores de consola y extracción
 doble sin duplicados. Commit `094eee9`.
 
-**[ ] v3.14 FASE MY — extracción morfológica con evidencia por regla (2026-11-20).** Siguiente
-bloque del gauntlet v3.14: inferir afijos/paradigmas del léxico y presentarlos como reglas editables
-con evidencia (checklist demo ítem 7).
+**[x] v3.14 FASE MY — extracción morfológica con evidencia por regla (2026-11-20).** Botón
+"Extraer del léxico" en `GrammarMorphologyPanel`: infiere afijos de los pares `Raíz` → `Léxema`
+con umbral por frecuencia y fusiona por `affixInventoryKey` (reintentar NO duplica). Cada afijo
+inferido lleva `evidence` (pares base → forma, hasta 5) y se muestra en la UI. Nuevo modelo puro
+`src/utils/morphologyExtraction.ts` + `GrammarAffix.evidence?` y `MorphologyPairEvidence`/
+`MorphologyRuleEvidence` en `src/types.ts`. Tests: `morphologyExtraction.test.ts` y
+`grammarMorphologyPanel.test.tsx`. Validaciones: typecheck 0, lint OK, build OK, vitest 573/573
+(64 archivos), audit:orphans 13. Commit `a5f5c3a`.
+
+**[x] v3.14 FASE FLU — léxico/gramática primero, sin modal fonológico (2026-11-20).** El checklist
+demo ítem 8 pedía que un proyecto nuevo "empiece por léxico, no por fonología". Se eliminó el
+auto-open de `GrammarWizard` con manifiesto "first run" (antes el asistente exigía elegir un perfil
+con fonología antes de existir entradas) y se sustituyó por un banner NO bloqueante en
+`GrammarOverview` (`isFirstRun`/`onOpenWizard`) que explica que la fonología/morfología se extraen
+del léxico y ofrece el asistente como acción opcional; el header del tab ya tenía su propio botón.
+Tests: `grammarOverview.test.tsx` (4). Validaciones: typecheck 0, lint OK, build OK, vitest 577/577
+(65 archivos), audit:orphans 13, `npm run test:gui` 8/8. Commit `9921103`.
+
+**[ ] v3.14 FASE D — checklist demo (lo ejecuta el usuario, NO el agente).** 8 ítems en
+`docs/gauntlets/GAUNTLET_v3.14.md` (MD/TXT en Settings, exportable legible, diff/merge, extracción
+de fonología y morfología, salto Workbench↔Léxico, arranque por léxico). Pendiente: `git push` + CI
+con número de run (requiere autorización).
 
 **[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 906 líneas; el siguiente
 bloque extraíble es la extracción de los handlers del wizard de primer arranque

@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-20T19:18:33.000Z",
+  "lastUpdated": "2026-11-21T00:14:45.000Z",
   "uiState": {
     "activeTab": "dashboard",
     "syntaxSubTab": "ast",
@@ -12,9 +12,9 @@
     "selectedIds": []
   },
   "aiContext": {
-    "lastPrompt": "FASE CMP v3.14: comparacion y merge de lexicos.",
+    "lastPrompt": "FASE FLU v3.14: lexico/gramatica primero, sin modal fonologico.",
     "lastModelUsed": "meituan/longcat-2.5:free",
     "lastProfileId": "default"
   },
-  "sessionSummary": "FASE CMP del gauntlet v3.14 cerrada (2026-11-20): nuevo LexiconCompareModal + src/utils/lexiconCompareFile.ts (mapeo automatico de columnas; parsea backup JSON, JSON de filas o CSV con cabecera). Compara el lexico activo contra otro guardado o un archivo, muestra faltantes en cada lado y diferencias campo a campo, y fusiona todas las faltantes o solo las seleccionadas. Cableado LexiconToolsModal -> ModalManager; useLexicon expone updateActiveLexiconEntries para el merge. Validaciones: typecheck 0, lint OK, build OK, vitest 534/534 (60 archivos), audit:orphans 13 (baseline). Commit db9587d. Pendiente: push + CI, demo tauri:dev, y Fases NAV/FX/MY/FLU/D/R. -- Prev: FASE EX del gauntlet v3.14 cerrada (2026-11-20): exportacion real de lexico con src/utils/lexiconExport.ts (json/csv/md/txt, casefold NFC, compareLexicons/mergeLexicons). useProjectOperations.handleFileExport ahora usa buildLexiconExport; FileControls y AppToolbar reciben exportFormats; SettingsModal elimina xlsx/docx, persiste exportFormats y fusiona el session cache. Commit 919fee1."
+  "sessionSummary": "FASE FLU del gauntlet v3.14 cerrada (2026-11-20): el asistente de gramatica ya no se autoabre con manifiesto first-run (antes exigia elegir perfil con fonologia antes de tener entradas); banner no bloqueante en GrammarOverview (isFirstRun/onOpenWizard) con el asistente como accion opcional. Tests grammarOverview.test.tsx (4). Validaciones: typecheck 0, lint OK, build OK, vitest 577/577 (65 archivos), audit:orphans 13, test:gui 8/8. -- Prev: FASE MY del gauntlet v3.14 cerrada (2026-11-20): extraccion morfologica con evidencia por regla (src/utils/morphologyExtraction.ts, GrammarAffix.evidence, tests propios). Commit a5f5c3a. -- Prev: FASE CMP del gauntlet v3.14 cerrada (2026-11-20): LexiconCompareModal + src/utils/lexiconCompareFile.ts (mapeo automatico de columnas; backup JSON, JSON de filas o CSV con cabecera), diff campo a campo y merge total/seleccionado. Commit db9587d. -- Prev: FASE EX del gauntlet v3.14 cerrada (2026-11-20): exportacion real de lexico con src/utils/lexiconExport.ts (json/csv/md/txt). Commit 919fee1."
 }
