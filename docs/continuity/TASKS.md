@@ -3538,7 +3538,7 @@ el tema hacian lo propio en la frontera.
 en la frontera (`AppTabId` / `ThemeId`), de modo que `App.tsx` elimina los cuatro casts `as any` y
 `DashboardTab` valida antes de navegar: ids desconocidos se ignoran.
 
-**Cambios (commit `PENDIENTE`):**
+**Cambios (commit `7d53813`):**
 - `src/utils/appTabs.ts` (nuevo): `AppTabId`, `APP_TAB_IDS`, `isAppTabId`.
 - `src/utils/dashboardNavigation.ts` (nuevo): `resolveDashboardNavigation` +
   `DashboardNavigationTarget`.
@@ -3564,6 +3564,40 @@ arranque → wizard → dashboard, navegacion por barra lateral a "Léxico" y ca
 Frente CLN: `App.tsx` queda en 937 lineas (el tipo de tab se centraliza; el balance neto es +2 por
 los imports); el proximo bloque es la capa de modales
 (`Suspense` + `ModalManager` + `AiSettingsModal`), que podra extraerse a `AppModalLayer`.
+
+## [2026-11-20] Checkpoint: CLN — capa de modales `AppModalLayer` extraída de `App.tsx` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** cerrar el trabajo de una sesion previa cortada: el arbol de trabajo
+traia la extraccion de la capa de modales sin commitear (7 archivos, 3 modificados + 4 nuevos).
+`App.tsx` montaba inline un `Suspense` con los dos chunks lazy (`ModalManager` y `AiSettingsModal`)
+y ~40 props cableadas a mano.
+
+**Decision:** encapsular el bloque en `src/components/AppModalLayer.tsx` siguiendo el patron de
+`AppSettingsModalLayer`/`AppToastLayer`. `ModalManagerProps` queda exportado desde `ModalManager.tsx`
+y `ImportState` se exporta desde `useLexicon.ts` (antes duplicado como interfaz local en
+`ModalManager.tsx`), de modo que `ModalState` es un alias de `AppModalId` (`wizardActionsModel`,
+fuente unica de la union de modales).
+
+**Cambios (commit `4ba2515`):**
+- `src/components/AppModalLayer.tsx` (nuevo): `AppModalLayerProps = ModalManagerProps & { onAiSettingsClose }`,
+  `Suspense` + `ModalManager` lazy + `AiSettingsModal` condicional, fallback `z-40` "Cargando…"
+  preservado.
+- `src/utils/modalLayerModel.ts` (nuevo): `resolveModalLayer`/`shouldMountAiSettingsModal` (decision
+  de montaje sin React).
+- `src/components/ModalManager.tsx`: `ModalManagerProps`/`ModalState` exportados; `ModalState = AppModalId`;
+  fuera la interfaz `ImportState` duplicada (importada de `useLexicon`).
+- `src/hooks/useLexicon.ts`: `ImportState` exportada.
+- `src/App.tsx`: 937 → 933 lineas; fuera `Suspense`, `lazy`, los dos imports dinamicos y la union
+  inline; entra `<AppModalLayer ... onAiSettingsClose={handleAiSettingsModalClose} />`.
+- Tests: `src/utils/__tests__/modalLayerModel.test.ts` (3) y
+  `src/components/__tests__/appModalLayer.test.tsx` (3, con `vi.mock` de los dos chunks lazy).
+
+**Validaciones:** typecheck 0 · lint OK · vitest 601/601 (70 archivos) · audit:orphans 13
+(baseline, sin huerfanos nuevos).
+
+**Proximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 933 lineas; el siguiente candidato es el
+bloque de settings/bootstrap y los handlers de modales que siguen inline. Pendiente por autorizacion:
+`git push` + CI con numero de run.
 
 
 

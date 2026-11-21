@@ -11,11 +11,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 595/595 (68 archivos) y `npm run test:gui` 8/8
+- Repo limpio, build/typecheck/lint verdes; vitest 601/601 (70 archivos) y `npm run test:gui` 8/8
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `db47ce9` (trabajo CLN de tipado pendiente de commit)
+- Git inicializado y con commits; último commit `4ba2515` (capa de modales `AppModalLayer`)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -247,12 +247,20 @@ con `GRAMMAR_MODULES`/`isGrammarModule` en `grammarTabModel.ts`; `VerticalSideba
 tipados en la frontera (`AppTabId`/`ThemeId`). Tests: `appTabs.test.ts` (3) y
 `dashboardNavigation.test.ts` (6, recorre todos los nodos del canvas). Validaciones: typecheck 0,
 lint OK, build OK, vitest 595/595 (68 archivos), audit:orphans 13, `test:gui` 8/8, smoke
-`vite preview` (navegación a Léxico y tema `midnight → cyber`). Commit `PENDIENTE`.
+`vite preview` (navegación a Léxico y tema `midnight → cyber`). Commit `7d53813`.
 
-**[ ] CLN — capa de modales del God Component (P1).** `App.tsx` quedó en 937 líneas tras el tipado
-de navegación. El bloque `Suspense` + `ModalManager` (lazy) + `AiSettingsModal` (~54 líneas de JSX
-con ~40 props) es el siguiente candidato: extraerlo a `AppModalLayer` siguiendo el patrón de
-`AppSettingsModalLayer`/`AppToastLayer`, con `ModalManagerProps` exportado desde `ModalManager.tsx`.
+**[x] CLN — capa de modales del God Component (P1, 2026-11-20, commit `4ba2515`).** Extraído el
+bloque `Suspense` + `ModalManager` (lazy) + `AiSettingsModal` (~54 líneas de JSX con ~40 props) a
+`src/components/AppModalLayer.tsx`, siguiendo el patrón de `AppSettingsModalLayer`/`AppToastLayer`;
+`ModalManagerProps` y `ModalState` quedaron exportados desde `ModalManager.tsx`, `ImportState` se
+exporta desde `useLexicon.ts` (antes duplicada) y `ModalState = AppModalId`. `App.tsx`: 937 → 933
+líneas. Tests: `modalLayerModel.test.ts` (3) y `appModalLayer.test.tsx` (3, con `vi.mock` de los
+chunks lazy). Validaciones: typecheck 0, lint OK, vitest 601/601 (70 archivos), audit:orphans 13.
+
+**[ ] CLN — handlers de modales/settings inline (P1).** `App.tsx` quedó en 933 líneas. El siguiente
+bloque es el grupo de handlers que resuelven inline (`handleAiSettingsModalClose` y el resto de
+cierres/ aperturas de modales) junto con el cableado de `showSettings`/`onCloseSettings`; candidato
+natural a un hook `useModalCoordination` o a un `AppSettingsLayer` que agrupe settings + bootstrap.
 
 **[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
 Los cinco handlers inline de `App.tsx` (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,
