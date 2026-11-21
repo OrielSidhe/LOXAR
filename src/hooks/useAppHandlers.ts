@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useLexicon } from './useLexicon';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, GenerationMode } from '../types';
 import type { AppTabId } from '../utils/appTabs';
+import type { AppModalId } from '../utils/wizardActionsModel';
 import { LoxarProject } from '../services/projectFile';
 import { listLexiconNames, loadLexicon } from '../services/sqlStorage';
 import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
@@ -29,7 +30,7 @@ export interface UseAppHandlersOptions {
   setActiveTab: React.Dispatch<React.SetStateAction<AppTabId>>;
   setShowWelcome: React.Dispatch<React.SetStateAction<boolean>>;
   setIsTourActive: React.Dispatch<React.SetStateAction<boolean>>;
-  setActiveModal: React.Dispatch<React.SetStateAction<'none' | 'about' | 'restore' | 'ai_assistant' | 'lexicon_tools' | 'lexicon_compare' | 'profile' | 'report' | 'functions' | 'hyphens' | 'inflection_generator' | 'create_lexicon' | 'ai_settings'>>;
+  openModal: (modal: AppModalId) => void;
   setCanvasState: React.Dispatch<React.SetStateAction<{ nodes: any[]; edges: any[] }>>;
   setCurrentTourSteps: React.Dispatch<React.SetStateAction<any[]>>;
   setActiveToolView: React.Dispatch<React.SetStateAction<'dashboard' | 'interlinear-gloss' | 'sound-change'>>;
@@ -62,7 +63,7 @@ export interface UseAppHandlersOptions {
 }
 
 export interface UseAppHandlersResult {
-  handleOpenModal: (modal: any) => void;
+  handleOpenModal: (modal: AppModalId) => void;
   handleCloseModal: () => void;
   handleCreateNewLexicon: () => void;
   handleContinueToDashboard: () => void;
@@ -118,7 +119,7 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     setActiveTab,
     setShowWelcome,
     setIsTourActive,
-    setActiveModal,
+    openModal,
     setCanvasState,
     setCurrentTourSteps,
     setActiveToolView,
@@ -148,13 +149,13 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     setLastAiResult,
   } = options;
 
-  const handleOpenModal = useCallback((modal: any) => setActiveModal(modal), [setActiveModal]);
-  const handleCloseModal = useCallback(() => setActiveModal('none'), [setActiveModal]);
+  const handleOpenModal = useCallback((modal: AppModalId) => openModal(modal), [openModal]);
+  const handleCloseModal = useCallback(() => openModal('none'), [openModal]);
 
   const handleCreateNewLexicon = useCallback(() => {
     setShowWelcome(false);
-    setActiveModal('create_lexicon');
-  }, [setActiveModal, setShowWelcome]);
+    openModal('create_lexicon');
+  }, [openModal, setShowWelcome]);
 
   const handleContinueToDashboard = useCallback(() => {
     // La bienvenida es un overlay `fixed inset-0 z-50`: debe desmontarse antes de
@@ -168,7 +169,7 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
       lexiconHook.createNewLexicon(name, language);
       audioService.playStartup();
       showNotification(`Léxico "${name}" creado exitosamente.`, 'success');
-      setActiveModal('none');
+      openModal('none');
       setShowWelcome(false);
 
       const tourCompleted = sessionCacheData?.tourCompleted;
@@ -179,7 +180,7 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     } catch (e) {
       showNotification(e instanceof Error ? e.message : "Ocurrió un error al crear el léxico.", 'error');
     }
-  }, [lexiconHook, showNotification, sessionCacheData, setActiveModal, setShowWelcome, setIsTourActive]);
+  }, [lexiconHook, showNotification, sessionCacheData, openModal, setShowWelcome, setIsTourActive]);
 
   const handleRenameLexicon = useCallback((oldName: string, newName: string) => {
     try {
@@ -225,12 +226,12 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
       const normalizedPath = exportPath.replace(/\\/g, '/');
       const content = await window.loxarBridge.readBackupFile(`${normalizedPath}/${fileName}`);
       await lexiconHook.startImportProcess(content);
-      setActiveModal('none');
+      openModal('none');
     } catch (e) {
       showNotification(e instanceof Error ? e.message : "Ocurrió un error al restaurar la copia de seguridad.", 'error');
     }
     finally { setIsLoading(false); }
-  }, [exportPath, showNotification, lexiconHook, setIsLoading, setLoadingMessage]);
+  }, [exportPath, showNotification, lexiconHook, setIsLoading, setLoadingMessage, openModal]);
 
   const handleStartTour = useCallback(() => {
     let steps = MAIN_TOUR_STEPS;

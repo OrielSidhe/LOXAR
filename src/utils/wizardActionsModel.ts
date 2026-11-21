@@ -34,7 +34,7 @@ export type AppModalId =
 export interface WizardActionDeps {
   showWizard: boolean;
   step: WizardStep;
-  setActiveModal: (modal: AppModalId) => void;
+  openModal: (modal: AppModalId) => void;
   completeWizard: () => void;
   skipWizard: () => void;
   updateDataFolder: (folder: string) => void;
@@ -54,7 +54,7 @@ export function buildWizardActions(deps: WizardActionDeps): WizardActions {
   const {
     showWizard,
     step,
-    setActiveModal,
+    openModal,
     completeWizard,
     skipWizard,
     updateDataFolder,
@@ -64,13 +64,13 @@ export function buildWizardActions(deps: WizardActionDeps): WizardActions {
   const handleWizardConfigureAi = () => {
     // Abre el AiSettingsModal existente; el wizard NO se completa hasta que el
     // modal se cierra (W4).
-    setActiveModal('ai_settings');
+    openModal('ai_settings');
   };
 
   const handleAiSettingsModalClose = () => {
     // Primero cierra el modal; despues, si el wizard seguia en el paso `ai`,
     // marca el onboarding como hecho.
-    setActiveModal('none');
+    openModal('none');
     if (showWizard && step === 'ai') {
       completeWizard();
     }

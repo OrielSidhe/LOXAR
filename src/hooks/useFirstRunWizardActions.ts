@@ -20,7 +20,7 @@ export interface UseFirstRunWizardActionsOptions {
   completeWizard: () => void;
   skipWizard: () => void;
   updateDataFolder: (folder: string) => void;
-  setActiveModal: (modal: AppModalId) => void;
+  openModal: (modal: AppModalId) => void;
 }
 
 const DATA_FOLDER_DIALOG_OPTIONS = {
@@ -38,7 +38,7 @@ export function useFirstRunWizardActions(
     completeWizard,
     skipWizard,
     updateDataFolder,
-    setActiveModal,
+    openModal,
   } = options;
 
   return useMemo<WizardActions>(
@@ -49,7 +49,7 @@ export function useFirstRunWizardActions(
         completeWizard,
         skipWizard,
         updateDataFolder,
-        setActiveModal,
+        openModal,
         chooseDataFolder: async () => {
           const selected = await open({ ...DATA_FOLDER_DIALOG_OPTIONS });
           return typeof selected === 'string' ? selected : null;
@@ -61,7 +61,7 @@ export function useFirstRunWizardActions(
       completeWizard,
       skipWizard,
       updateDataFolder,
-      setActiveModal,
+      openModal,
     ],
   );
 }

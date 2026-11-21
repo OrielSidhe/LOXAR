@@ -9,7 +9,7 @@ function createDeps(overrides: Partial<WizardActionDeps> = {}) {
   return {
     showWizard: true,
     step: 'ai' as WizardStep,
-    setActiveModal: vi.fn(),
+    openModal: vi.fn(),
     completeWizard: vi.fn(),
     skipWizard: vi.fn(),
     updateDataFolder: vi.fn(),
@@ -29,8 +29,8 @@ describe('buildWizardActions', () => {
 
     actions.handleWizardConfigureAi();
 
-    expect(deps.setActiveModal).toHaveBeenCalledTimes(1);
-    expect(deps.setActiveModal).toHaveBeenCalledWith('ai_settings');
+    expect(deps.openModal).toHaveBeenCalledTimes(1);
+    expect(deps.openModal).toHaveBeenCalledWith('ai_settings');
     expect(deps.completeWizard).not.toHaveBeenCalled();
   });
 
@@ -40,8 +40,8 @@ describe('buildWizardActions', () => {
 
     actions.handleAiSettingsModalClose();
 
-    expect(deps.setActiveModal).toHaveBeenCalledTimes(1);
-    expect(deps.setActiveModal).toHaveBeenCalledWith('none');
+    expect(deps.openModal).toHaveBeenCalledTimes(1);
+    expect(deps.openModal).toHaveBeenCalledWith('none');
     expect(deps.completeWizard).toHaveBeenCalledTimes(1);
   });
 
@@ -51,8 +51,8 @@ describe('buildWizardActions', () => {
 
     actions.handleAiSettingsModalClose();
 
-    expect(deps.setActiveModal).toHaveBeenCalledTimes(1);
-    expect(deps.setActiveModal).toHaveBeenCalledWith('none');
+    expect(deps.openModal).toHaveBeenCalledTimes(1);
+    expect(deps.openModal).toHaveBeenCalledWith('none');
     expect(deps.completeWizard).not.toHaveBeenCalled();
   });
 

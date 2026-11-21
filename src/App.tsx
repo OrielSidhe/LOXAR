@@ -21,7 +21,7 @@ import { FloatingWidget } from './components/FloatingWidget';
 import FirstRunWizard from './components/FirstRunWizard';
 import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
-import type { AppModalId } from './utils/wizardActionsModel';
+import { useModalCoordination } from './hooks/useModalCoordination';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -91,8 +91,22 @@ const App = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
   const [isAppLoaded, setIsAppLoaded] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [activeModal, setActiveModal] = useState<AppModalId>('none');
+  // Estado y acciones de modales/settings (P1: `useModalCoordination`).
+  const {
+    activeModal,
+    showSettings,
+    openModal,
+    openSettings,
+    closeSettings,
+    openAiSettings,
+    openAiSettingsFromSettings,
+    openFunctions,
+    openHyphens,
+    openProfile,
+    openCompare,
+    openRestore,
+    openAbout,
+  } = useModalCoordination();
 
   // I1: First-run wizard state
   const { showWizard, step, dataFolder, goToStep, nextStep, prevStep, skipWizard, completeWizard, updateDataFolder } = useFirstRunWizard();
@@ -110,7 +124,7 @@ const App = () => {
     completeWizard,
     skipWizard,
     updateDataFolder,
-    setActiveModal,
+    openModal,
   });
 
   const [tabHistory, setTabHistory] = useState<AppTabId[]>(['dashboard']);
@@ -276,7 +290,7 @@ const App = () => {
     setActiveTab,
     setShowWelcome,
     setIsTourActive,
-    setActiveModal,
+    openModal,
     setCanvasState,
     setCurrentTourSteps,
     setActiveToolView,
@@ -616,12 +630,12 @@ const App = () => {
             onEditWord={lexiconHook.editWord}
             onConfirmCreateLexicon={handleConfirmCreateLexicon}
             onAddCustomFunction={lexiconHook.addCustomFunction}
-            onOpenFunctions={() => setActiveModal('functions')}
-            onOpenHyphens={() => setActiveModal('hyphens')}
-            onOpenProfile={() => setActiveModal('profile')}
+            onOpenFunctions={openFunctions}
+            onOpenHyphens={openHyphens}
+            onOpenProfile={openProfile}
             onOpenNeography={() => setActiveTab('writing')}
             onOpenInflection={() => setActiveTab('grammar')}
-            onOpenCompare={() => setActiveModal('lexicon_compare')}
+            onOpenCompare={openCompare}
             onLoadLexiconEntries={handleLoadLexiconEntries}
             onMergeLexiconEntries={handleMergeLexiconEntries}
             importHandlers={{
@@ -637,8 +651,8 @@ const App = () => {
           />
           <AppSettingsModalLayer
             showSettings={showSettings}
-            onCloseSettings={() => setShowSettings(false)}
-            onOpenAiSettings={() => { setShowSettings(false); handleOpenModal('ai_settings'); }}
+            onCloseSettings={closeSettings}
+            onOpenAiSettings={openAiSettingsFromSettings}
             exportFormats={exportFormats}
             onExportFormatsChange={setExportFormats}
           />
@@ -647,7 +661,7 @@ const App = () => {
             wordsAddedCount={lexiconHook.wordsAddedSinceSave}
             onOpenWidget={() => window.loxarBridge.openWidget()}
             onShowTour={handleStartTour}
-            onOpenSettings={() => setShowSettings(true)}
+            onOpenSettings={openSettings}
             themeId={themeId}
             onThemeChange={id => setThemeId(id)}
           />
@@ -664,10 +678,10 @@ const App = () => {
             exportFormats={exportFormats}
             onSave={handleSaveChanges}
             onSetExportPath={handleSetExportPath}
-            onRestore={() => handleOpenModal('restore')}
-            onOpenAbout={() => handleOpenModal('about')}
+            onRestore={openRestore}
+            onOpenAbout={openAbout}
             onStartTour={handleStartTour}
-            onOpenAiSettings={() => handleOpenModal('ai_settings')}
+            onOpenAiSettings={openAiSettings}
             onQuit={handleQuit}
             onResetApp={handleResetApp}
             onError={(msg) => showNotification(msg, 'error')}
@@ -685,7 +699,7 @@ const App = () => {
               active={activeTab}
               onChange={setActiveTab}
               onOpenWidget={() => window.loxarBridge.openWidget()}
-              onOpenSettings={() => setShowSettings(true)}
+              onOpenSettings={openSettings}
               onShowTour={handleStartTour}
               onGoHome={goHome}
             />
@@ -835,7 +849,7 @@ const App = () => {
                     activeModule={activeGrammarModule}
                     onModuleChange={setActiveGrammarModule}
                     onBack={() => setActiveTab('dashboard')}
-                    onOpenAiSettings={() => handleOpenModal('ai_settings')}
+                    onOpenAiSettings={openAiSettings}
                     showNotification={showNotification}
                   />
                 )}
@@ -866,9 +880,9 @@ const App = () => {
                     onCompleteFunctions={handleAiCompleteFunctions}
                     onFillMissing={handleAiFillMissing}
                     onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
-                    onManageFunctions={() => setActiveModal('functions')}
-                    onManageHyphens={() => setActiveModal('hyphens')}
-                    onOpenProfile={() => setActiveModal('profile')}
+                    onManageFunctions={openFunctions}
+                    onManageHyphens={openHyphens}
+                    onOpenProfile={openProfile}
                     onOpenNeography={() => setActiveTab('writing')}
                     onOpenInflectionWorkshop={() => setActiveTab('grammar')}
                     onOpenGrammar={() => setActiveTab('grammar')}
