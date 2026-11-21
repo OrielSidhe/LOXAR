@@ -57,7 +57,10 @@ test-results/
 tests-gui/result.json
 tests-gui/tests-gui/
 
-# graft's local graph cache — regenerable, not committed (run `graft build`).
+# Scratch de sesiones (scripts de reescritura, dumps temporales) — local only
+scratch/
+
+# grafts local graph cache — regenerable, not committed (run `graft build`).
 /graft/
 .graft/
 
