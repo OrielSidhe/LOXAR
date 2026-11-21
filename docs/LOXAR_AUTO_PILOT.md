@@ -11,15 +11,15 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 652/652 (76 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 658/658 (76 archivos) y `npm run test:gui`
   (6 specs / 8 tests): en aislamiento los specs de navegacion pasan; la suite completa en
   paralelo es inestable por contencion del chunk lazy del importador (5/8 con estos cambios,
   6/8 en el arbol limpio, con specs distintos fallando en cada corrida)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `4f89276` (navegacion por tabs
-  `useTabNavigation`)
+- Git inicializado y con commits; último commit `a804a8c` (escaneo de `.loxar` cableado
+  al bootstrap)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -241,6 +241,20 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — escaneo de `.loxar` cableado al bootstrap (P1, 2026-11-21, commit `a804a8c`).** El
+estado muerto `availableProjects` no era solo deuda: el revert de P1-2f habia perdido el cableado de
+`scanForLoxarProjects`, asi que el modal de bootstrap nunca listo los "Proyectos encontrados en este
+equipo". `SessionHydrationPlan` ahora tiene `availableProjects` (`foundProjects?` en la entrada,
+`[]` por defecto) y `useAppSessionHydration` escanea el equipo solo cuando `shouldOfferProjectBootstrap`
+(es decir, sin `projectPath` y sin descarte previo); el fallo degrada a `[]`. `App.tsx`: fuera el
+`useState` muerto y el import sin uso; 883 → 881 lineas. Tests: modelo (+2) y hook (+4 con el
+scanner mockado). Validaciones: typecheck 0, lint OK, build OK, vitest 658/658 (76 archivos),
+audit:orphans 13.
+
+**[ ] CLN — handlers de comparacion/merge inline (P1).** `handleLoadLexiconEntries` y
+`handleMergeLexiconEntries` siguen inline en `App.tsx` (881 lineas); son el siguiente bloque
+candidato a un hook propio con su modelo puro.
+
 **[x] CLN — tipado estricto de navegación (`AppTabId` + `dashboardNavigation`, 2026-11-20).** La
 unión de tabs estaba duplicada en `App.tsx`, `DashboardTab.tsx` y `useAppHandlers.ts`, y los casts
 `as any` de la barra lateral/filtro/tema y el `moduleId as AppTabId` de `DashboardTab` dejaban
@@ -303,13 +317,8 @@ lint OK, build OK, vitest 652/652 (76 archivos), audit:orphans 13; `test:gui` co
 caliente: `flow.spec.ts` y `workbench-lexicon-jump.spec.ts` pasan en aislamiento (la suite
 completa en paralelo es inestable por contencion del chunk lazy, igual que en el arbol limpio).
 
-**[ ] CLN — estado muerto `availableProjects` (P1, deuda declarada).** `App.tsx` declara
-`availableProjects` y lo pasa a `AppProjectBootstrapLayer`, pero `setAvailableProjects` nunca
-se invoca y la capa no lo consume de forma visible. Requiere decision: cablear el listado de
-proyectos descubiertos (`scanForLoxarProjects`) o eliminar el estado y la prop.
-
 **[ ] CLN — handlers de comparacion/merge inline (P1).** `handleLoadLexiconEntries` y
-`handleMergeLexiconEntries` siguen inline en `App.tsx` (883 lineas); son el siguiente bloque
+`handleMergeLexiconEntries` siguen inline en `App.tsx` (881 lineas); son el siguiente bloque
 candidato a un hook propio con su modelo puro.
 
 **[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
@@ -398,9 +407,9 @@ Tests: `grammarOverview.test.tsx` (4). Validaciones: typecheck 0, lint OK, build
 de fonología y morfología, salto Workbench↔Léxico, arranque por léxico). Pendiente: `git push` + CI
 con número de run (requiere autorización).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` quedó en 935 líneas tras la
-extracción de los handlers del wizard (`f8043f8`). El siguiente bloque lo define la pasada
-siguiente: los handlers de modales/settings siguen inline y son el candidato natural.
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` quedó en 881 líneas tras
+cablear el escaneo de `.loxar` (`a804a8c`). El siguiente bloque lo define la pasada siguiente:
+los handlers de comparacion/merge siguen inline y son el candidato natural.
 
 **[x] CLN — higiene de código muerto y puerta de calidad (2026-11-20).** Cerrado el árbol de
 trabajo sucio: `tests-gui/flow.spec.ts` arrastraba un `type Page` sin uso y `App.tsx` conservaba

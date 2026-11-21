@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — el escaneo de `.loxar` vuelve a alimentar el bootstrap
+
+**Rama:** `master`. **Motivo:** el estado muerto `availableProjects` (deuda declarada) no era solo
+estado muerto: después del revert de P1-2f se perdió el cableado de `scanForLoxarProjects` y el modal
+de bootstrap nunca listó los "Proyectos encontrados en este equipo", pese a que
+`ProjectBootstrapModal` ya renderizaba esa lista y `App.tsx` importaba el scanner sin usarlo.
+
+**Cambios:**
+- `src/utils/sessionHydrationModel.ts`: `SessionHydrationInput.foundProjects?` y
+  `SessionHydrationPlan.availableProjects` (`[]` por defecto). El modelo no escanea (seria un
+  efecto con `@tauri-apps/plugin-fs`); solo conserva lo que el hook le pasa.
+- `src/hooks/useAppSessionHydration.ts`: en el efecto de bootstrap, si `shouldOfferProjectBootstrap(cache)`
+  se llama `scanForLoxarProjects()` (degrada a `[]` si falla) y el plan resultante hidrata
+  `availableProjects`. Con `projectPath` configurado o con el descarte previo NO se toca el sistema
+  de archivos en cada arranque. El hook expone `availableProjects` (sin setter: nadie lo necesitaba).
+- `src/App.tsx`: fuera el `useState` muerto y el import sin uso de `projectDiscovery`; el valor llega
+  del hook de hidratacion. `App.tsx` queda en 881 lineas.
+- Tests: `sessionHydrationModel.test.ts` (+2) y `useAppSessionHydration.test.tsx` (+4, con el
+  scanner mockado; cubren escaneo, fallo, y los dos casos en que no se escanea).
+
+**Verificacion:** `npm run typecheck` 0 · `npm run lint` OK · `npx vitest run` 658/658
+(76 archivos) · `npm run build` OK · `npm run audit:orphans` 13 (baseline, sin huerfanos nuevos).
+
+**Commit:** `a804a8c`.
+
+**Proximo bloque ejecutable (CLN/P1):** los handlers de comparacion/merge
+(`handleLoadLexiconEntries`/`handleMergeLexiconEntries`) siguen inline en `App.tsx` (881 lineas);
+son el siguiente bloque candidato a un hook propio con su modelo puro. Pendiente por autorizacion:
+`git push` + CI con numero de run.
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — navegacion por tabs a `useTabNavigation` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** continuar la descomposicion del God Component (`App.tsx`, 905 lineas).
