@@ -21,6 +21,7 @@ import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
 import { useModalCoordination } from './hooks/useModalCoordination';
 import { useAppSessionHydration } from './hooks/useAppSessionHydration';
 import { useTabNavigation } from './hooks/useTabNavigation';
+import { useLexiconMerge } from './hooks/useLexiconMerge';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -73,7 +74,6 @@ import { isAiAvailable } from './services/geminiService';
 import { validateGrammarEngine } from './validation/runtimeValidation';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
 import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
-import { loadLexicon } from './services/sqlStorage';
 import { initPragmaticDb } from './services/grammarDb';
 import { getGrammarMetrics } from './utils/grammarMetrics';
 import { buildDashboardStats } from './utils/dashboardStats';
@@ -347,27 +347,12 @@ const App = () => {
     handleAiFillMissing,
   } = appHandlers;
 
-  const handleLoadLexiconEntries = useCallback(async (name: string): Promise<LexiconEntry[] | null> => {
-    try {
-      const data = await loadLexicon(name);
-      return data?.entries ?? null;
-    } catch (e) {
-      console.error(`No se pudo cargar el léxico "${name}" para comparar.`, e);
-      return null;
-    }
-  }, []);
-
-  const handleMergeLexiconEntries = useCallback((entries: LexiconEntry[]) => {
-    if (!lexiconHook.activeLexiconName) {
-      showNotification('No hay un léxico activo que fusionar.', 'error');
-      return;
-    }
-    lexiconHook.updateActiveLexiconEntries(
-      [...lexiconHook.activeLexicon, ...entries],
-      true,
-      entries.length,
-    );
-  }, [lexiconHook, showNotification]);
+  const { loadLexiconEntries, mergeLexiconEntries } = useLexiconMerge({
+    activeLexicon,
+    activeLexiconName,
+    updateActiveLexiconEntries: lexiconHook.updateActiveLexiconEntries,
+    showNotification,
+  });
 
   const aiHandlers = useAiHandlers({
     activeLexicon,
@@ -570,8 +555,8 @@ const App = () => {
             onOpenNeography={openWriting}
             onOpenInflection={openGrammar}
             onOpenCompare={openCompare}
-            onLoadLexiconEntries={handleLoadLexiconEntries}
-            onMergeLexiconEntries={handleMergeLexiconEntries}
+            onLoadLexiconEntries={loadLexiconEntries}
+            onMergeLexiconEntries={mergeLexiconEntries}
             importHandlers={{
               cancelImport: lexiconHook.cancelImport,
               setImportMapping: lexiconHook.setImportMapping,
