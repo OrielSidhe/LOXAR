@@ -13,8 +13,6 @@ import { filterParadigmsForFunction, generateInflectedForms } from './services/i
 import { searchLexicon } from './services/ftsSearch';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode, LexiconFilter } from './types';
-import type { AppTabId } from './utils/appTabs';
-import { DEFAULT_GRAMMAR_MODULE, type GrammarModule } from './utils/grammarTabModel';
 import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
 import { FloatingWidget } from './components/FloatingWidget';
 import FirstRunWizard from './components/FirstRunWizard';
@@ -22,6 +20,7 @@ import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
 import { useModalCoordination } from './hooks/useModalCoordination';
 import { useAppSessionHydration } from './hooks/useAppSessionHydration';
+import { useTabNavigation } from './hooks/useTabNavigation';
 import InterlinearGlossViewer from './components/InterlinearGlossViewer';
 import SoundChangeWorkbench from './components/SoundChangeWorkbench';
 import { phonologyFromManifest } from './services/grammar/phonologySync';
@@ -143,43 +142,22 @@ const App = () => {
     setShowWelcome,
   } = useAppSessionHydration();
 
-  const [tabHistory, setTabHistory] = useState<AppTabId[]>(['dashboard']);
-  const activeTab: AppTabId = tabHistory[tabHistory.length - 1] ?? 'dashboard';
-  const [activeGrammarModule, setActiveGrammarModule] = useState<GrammarModule>(DEFAULT_GRAMMAR_MODULE);
-
-  const setActiveTab = useCallback((tab: AppTabId | ((prev: AppTabId) => AppTabId)) => {
-    setTabHistory(prev => {
-      const next = typeof tab === 'function' ? tab(prev[prev.length - 1] ?? 'dashboard') : tab;
-      if (prev[prev.length - 1] === next) return prev;
-      return [...prev, next];
-    });
-  }, []);
-
-  const goBack = useCallback(() => {
-    setTabHistory(prev => {
-      if (prev.length <= 1) return prev;
-      return prev.slice(0, -1);
-    });
-  }, []);
-
-  const goHome = useCallback(() => {
-    setTabHistory(['dashboard']);
-  }, []);
-
-  /** Abre el tab de gramática en un sub-módulo concreto (consume `DashboardTab`). */
-  const handleOpenGrammarModule = useCallback((moduleId: GrammarModule) => {
-    setActiveTab('grammar');
-    setActiveGrammarModule(moduleId);
-  }, [setActiveTab]);
-
-  /**
-   * Salto rapido Workbench <-> Léxico (FASE NAV del gauntlet v3.14). Ambos tabs
-   * permanecen montados en el arbol (solo se ocultan), asi que el borrador del
-   * editor y los filtros/pagina de la tabla sobreviven al salto.
-   */
-  const handleQuickNav = useCallback((target: 'table' | 'workbench') => {
-    setActiveTab(target);
-  }, [setActiveTab]);
+  // Navegacion por tabs (P1: `useTabNavigation`). Sustituye al `tabHistory`,
+  // al `activeTab` derivado y a las flechas inline de navegacion.
+  const {
+    activeTab,
+    setActiveTab,
+    goBack,
+    goHome,
+    activeGrammarModule,
+    setActiveGrammarModule,
+    handleOpenGrammarModule,
+    handleQuickNav,
+    openDashboard,
+    openWriting,
+    openGrammar,
+    openTranslator,
+  } = useTabNavigation();
 
   const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
   useEffect(() => {
@@ -591,8 +569,8 @@ const App = () => {
             onOpenFunctions={openFunctions}
             onOpenHyphens={openHyphens}
             onOpenProfile={openProfile}
-            onOpenNeography={() => setActiveTab('writing')}
-            onOpenInflection={() => setActiveTab('grammar')}
+            onOpenNeography={openWriting}
+            onOpenInflection={openGrammar}
             onOpenCompare={openCompare}
             onLoadLexiconEntries={handleLoadLexiconEntries}
             onMergeLexiconEntries={handleMergeLexiconEntries}
@@ -806,7 +784,7 @@ const App = () => {
                     onExportGrammar={handleExportGrammar}
                     activeModule={activeGrammarModule}
                     onModuleChange={setActiveGrammarModule}
-                    onBack={() => setActiveTab('dashboard')}
+                    onBack={openDashboard}
                     onOpenAiSettings={openAiSettings}
                     showNotification={showNotification}
                   />
@@ -841,10 +819,10 @@ const App = () => {
                     onManageFunctions={openFunctions}
                     onManageHyphens={openHyphens}
                     onOpenProfile={openProfile}
-                    onOpenNeography={() => setActiveTab('writing')}
-                    onOpenInflectionWorkshop={() => setActiveTab('grammar')}
-                    onOpenGrammar={() => setActiveTab('grammar')}
-                    onOpenTranslator={() => setActiveTab('translator')}
+                    onOpenNeography={openWriting}
+                    onOpenInflectionWorkshop={openGrammar}
+                    onOpenGrammar={openGrammar}
+                    onOpenTranslator={openTranslator}
                     onStartTour={handleStartTour}
                     lexicon={lexicons[activeLexiconName ?? '']}
                     stats={completionStats}
