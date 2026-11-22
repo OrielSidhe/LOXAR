@@ -5,6 +5,45 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — limpieza de código muerto de `App.tsx` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** las extracciones de P1 (switch de tabs, capas superpuestas,
+bienvenida, modales, navegación) dejaron en `App.tsx` ~40 imports que ya no se leen: componentes
+que hoy viven en `AppTabContent` (`LexiconTable`, `EntryEditor`, `GrammarTab`, `WorkbenchTab`,
+`ToolsTab`, `DashboardTab`, `ModulePanel`, `ToolsDashboard`, `WritingAndNeographyTab`,
+`TranslationPlayground`, `CollectionsManager`, `SuggestionsWorkbench`, `WorkbenchRightPanel`,
+`WorkQueueBar`), los siete iconos, `Papa`, `plugin-fs`, `projectFile`, `phonologySync`, servicios
+de gemini/inflexión sin consumo y varios tipos. Además arrastraba el estado muerto
+`visibleColumns`/`setVisibleColumns` (`LexiconTable` tiene el suyo propio) y cinco entradas de
+destructure sin uso.
+
+**Decisión:** la limpieza se hizo sobre la lista autoritativa de `tsc --noEmit --noUnusedLocals`
+(con `noUnusedLocals: false` en `tsconfig.json` el typecheck normal no los marca). Las entradas de
+destructure eliminadas se verificaron como muertas: `confirmDiscardUnsaved` y `buildProjectPayload` se
+usan internamente en sus hooks; `currentQueueItem`/`enqueueItems` también; `handleCanvasChange` queda
+expuesto en `useAppHandlers`, pero `LanguageHomeCanvas` es hoy un canvas de navegación sin edición
+(`GraphCanvas` gestiona sus nodos internamente y ya no existe el prop `onCanvasChange`), así que no
+hay cableado perdido. También se descartó la idea de "agrupar las props de `AppTabContent` por tab":
+medido sobre el árbol real, ese agrupamiento **aumenta** el call site (105 → 115 líneas) sin
+ganar nada funcional, así que no se aplicó.
+
+**Cambios (commit `a0fd7cc`):**
+- `src/App.tsx`: 746 → 710 líneas. Fuera ~40 imports sin uso, el estado muerto `visibleColumns`/
+  `setVisibleColumns` y las entradas de destructure `buildProjectPayload`, `confirmDiscardUnsaved`,
+  `handleCanvasChange`, `currentQueueItem`, `enqueueItems`.
+
+**Verificación:** typecheck 0 · `tsc --noUnusedLocals` sin avisos nuevos en `App.tsx` (quedan solo
+`aiProgress`/`lastAiResult`/`projectLastSaved`, estado vivo cuyos setters sí se cablean) · lint OK ·
+build OK · vitest 712/712 (85 archivos) · audit:orphans 13 (baseline) · `npm run test:gui` 8/8
+(1.1 min, 6 workers).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 710 líneas; el siguiente candidato es el
+bloque de barra lateral + `AppNavigationBar` (ya extraído como componentes) o el grupo de props de
+`AppTabContent` (descartado por no reducir el call site). Frentes no-CLN pendientes: D2 (Web Worker vs
+CSP de Tauri), destino de los 13 huérfanos y `git push` + CI (requiere autorización).
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — modelo de completitud del léxico + limpieza de estado muerto de `App.tsx` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** `App.tsx` guardaba inline el criterio de "pendiente de completar"

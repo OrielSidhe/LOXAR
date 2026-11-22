@@ -17,8 +17,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `3b85470` (modelo de completitud del lexico +
-  limpieza de estado muerto de `App.tsx`); 34 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `a0fd7cc` (limpieza de código muerto de `App.tsx`);
+  36 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -275,9 +275,18 @@ paso `data-folder`) salio a `src/utils/welcomeLayerModel.ts` (`shouldCompleteWiz
 typecheck 0, lint OK, build OK, vitest 700/700 (84 archivos), audit:orphans 13, `npm run test:gui`
 8/8 (48s).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 746 líneas. El siguiente
-candidato son los ~120 líneas de props de `AppTabContent` (agrupar las props por tab en objetos); el
-bloque de barra lateral + `AppNavigationBar` ya está extraído como componentes.
+**[x] CLN — limpieza de código muerto de `App.tsx` (P1, 2026-11-21, commit `a0fd7cc`).** Las
+extracciones de P1 dejaron ~40 imports sin uso (componentes que hoy viven en `AppTabContent`, los siete
+iconos, `Papa`, `plugin-fs`, `projectFile`, `phonologySync`, servicios y tipos), el estado muerto
+`visibleColumns`/`setVisibleColumns` y cinco entradas de destructure sin uso. `App.tsx`: 746 → 710
+líneas. Se verificó con `tsc --noEmit --noUnusedLocals` (el typecheck normal no los marca porque
+`noUnusedLocals: false`). Se descartó agrupar las props de `AppTabContent` por tab: medido sobre el
+árbol real, el call site **aumenta** (105 → 115 líneas) sin ganancia funcional. Validaciones:
+typecheck 0, lint OK, build OK, vitest 712/712 (85 archivos), audit:orphans 13, `npm run test:gui` 8/8.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 710 líneas. El siguiente
+candidato es el bloque de barra lateral + `AppNavigationBar` (ya extraído como componentes); el
+agrupamiento de props de `AppTabContent` quedó descartado (no reduce el call site).
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
