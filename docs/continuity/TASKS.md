@@ -4,6 +4,37 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-21] Checkpoint: CLN — cuerpo principal del `return` a `AppBodyLayer` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el `return` de `App.tsx` seguía con el bloque de barra lateral +
+`AppNavigationBar` + `main` + `AppTabContent` inline (~126 líneas), el siguiente candidato del
+checkpoint anterior.
+
+**Decisión:** envolver el bloque en `src/components/AppBodyLayer.tsx` (`AppBodyLayerProps =
+AppTabContentProps & { onSidebarTabChange, onOpenWidget, onOpenSettings, onGoHome, onNavBack,
+onQuickNav }`), destructurando los extras y reutilizando el contrato tipado de `AppTabContent` (el
+mismo patrón de `AppOverlayLayers`). No se agruparon las props por tab (descartado antes: aumenta el
+call site). `AppNavigationBar` queda condicional a `activeTab !== 'dashboard'`; la barra lateral
+recibe `onStartTour` como `onShowTour`.
+
+**Cambios (commit `df10e77`):**
+- `src/components/AppBodyLayer.tsx` (nuevo): `div.flex flex-1 min-h-0 relative` + `VerticalSidebar` +
+  `main` + `AppNavigationBar` condicional + `AppTabContent`.
+- `src/App.tsx`: 707 → 691 líneas; fuera `VerticalSidebar`/`AppNavigationBar`/`AppTabContent` de los
+  imports directos (entran a través de `AppBodyLayer`).
+- Tests: `src/components/__tests__/appBodyLayer.test.tsx` (5, con los tres hijos mockeados).
+
+**Verificación:** typecheck 0 · `tsc --noEmit --noUnusedLocals` sin avisos nuevos (quedan solo
+`aiProgress`/`lastAiResult`/`projectLastSaved`, estado vivo) · lint OK · build OK · vitest 717/717
+(86 archivos) · audit:orphans 13 (baseline) · `npm run test:gui`: 5/8 y 7/8 en dos corridas
+(comportamiento documentado por contención del chunk lazy); el spec fallido
+(`grammar-import.spec.ts`) pasa 1/1 en aislamiento.
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 691 líneas; el siguiente candidato es
+agrupar `Header` + `AppToolbar` en una capa de cabecera (`AppHeaderLayer`). Frentes no-CLN
+pendientes: D2 (Web Worker vs CSP de Tauri), destino de los 13 huérfanos y `git push` + CI (requiere
+autorización).
+
 
 ## [2026-11-21] Checkpoint: CLN — limpieza de código muerto de `App.tsx` (P1 God Component)
 

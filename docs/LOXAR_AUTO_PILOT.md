@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 712/712 (85 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 717/717 (86 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 48s con el dev server caliente (en paralelo sigue sensible a la
   contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `a0fd7cc` (limpieza de código muerto de `App.tsx`);
-  36 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `df10e77` (cuerpo principal del return a
+  AppBodyLayer); 38 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -284,9 +284,17 @@ líneas. Se verificó con `tsc --noEmit --noUnusedLocals` (el typecheck normal n
 árbol real, el call site **aumenta** (105 → 115 líneas) sin ganancia funcional. Validaciones:
 typecheck 0, lint OK, build OK, vitest 712/712 (85 archivos), audit:orphans 13, `npm run test:gui` 8/8.
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 710 líneas. El siguiente
-candidato es el bloque de barra lateral + `AppNavigationBar` (ya extraído como componentes); el
-agrupamiento de props de `AppTabContent` quedó descartado (no reduce el call site).
+**[x] CLN — cuerpo principal del return a AppBodyLayer (P1, 2026-11-21, commit `df10e77`).** El
+bloque de barra lateral + `AppNavigationBar` + `main` + `AppTabContent` (~126 líneas) salió a
+`src/components/AppBodyLayer.tsx` (`AppBodyLayerProps = AppTabContentProps & { onSidebarTabChange,
+onOpenWidget, onOpenSettings, onGoHome, onNavBack, onQuickNav }`), con el mismo orden de render y
+`AppNavigationBar` condicional a `activeTab !== 'dashboard'`. `App.tsx`: 707 → 691 líneas. Tests:
+`appBodyLayer.test.tsx` (5, con los tres hijos mockeados). Validaciones: typecheck 0, lint OK, build
+OK, vitest 717/717 (86 archivos), audit:orphans 13; `npm run test:gui` 5/8 y 7/8 en dos corridas
+(flake documentado del chunk lazy) con el spec fallido pasando 1/1 en aislamiento.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 691 líneas. El siguiente
+candidato es agrupar `Header` + `AppToolbar` en una capa de cabecera (`AppHeaderLayer`).
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
