@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLexicon } from './hooks/useLexicon';
 import { useWidgetBridge } from './hooks/useWidgetBridge';
 import { useWorkQueue } from './hooks/useWorkQueue';
@@ -18,6 +18,8 @@ import { useAppDerivedState } from './hooks/useAppDerivedState';
 import { useEditorCompletion } from './hooks/useEditorCompletion';
 import { useAppNotifications } from './hooks/useAppNotifications';
 import { useAppTheme } from './hooks/useAppTheme';
+import { usePragmaticDbInit } from './hooks/usePragmaticDbInit';
+import { useWidgetDataSync } from './hooks/useWidgetDataSync';
 // Components
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
@@ -31,7 +33,6 @@ import { MAIN_TOUR_STEPS } from './data/tourSteps';
 import type { TourStep } from './data/tourSteps';
 import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
-import { initPragmaticDb } from './services/grammarDb';
 import { buildDashboardStats } from './utils/dashboardStats';
 import type { LoxarCanvasState } from './services/projectFile';
 
@@ -356,20 +357,18 @@ const App = () => {
     openWidget: () => window.loxarBridge.openWidget(),
   });
 
-  useEffect(() => {
-    if (activeLexicon && lexiconHook.activeInflectionProfile && activeMetadata) {
-      widgetBridge.sendLexiconData({
-        entries: activeLexicon,
-        inflectionProfile: lexiconHook.activeInflectionProfile,
-        metadata: activeMetadata,
-      });
-    }
-  }, [activeLexicon, lexiconHook.activeInflectionProfile, activeMetadata, widgetBridge.sendLexiconData]);
+  // Sincronizacion del lexico con el widget (P1: `useWidgetDataSync`). Sustituye
+  // al `useEffect` inline que enviaba entradas/perfil/metadatos al widget.
+  useWidgetDataSync({
+    entries: activeLexicon,
+    inflectionProfile: lexiconHook.activeInflectionProfile,
+    metadata: activeMetadata,
+    sendLexiconData: widgetBridge.sendLexiconData,
+  });
 
-  // ── Initialize pragmatic grammar database on mount ──
-  useEffect(() => {
-    initPragmaticDb().catch(e => console.error('[App] Failed to init pragmatic DB:', e));
-  }, []);
+  // Inicializacion de la base pragmática (P1: `usePragmaticDbInit`). Sustituye al
+  // `useEffect` inline de arranque.
+  usePragmaticDbInit();
 
   return (
     <ErrorBoundary>
