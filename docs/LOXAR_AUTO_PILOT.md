@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 693/693 (82 archivos) y `npm run test:gui`
-  (6 specs / 8 tests): 8/8 en 1.1 min con el dev server caliente (en paralelo sigue sensible a la
+- Repo limpio, build/typecheck/lint verdes; vitest 700/700 (84 archivos) y `npm run test:gui`
+  (6 specs / 8 tests): 8/8 en 48s con el dev server caliente (en paralelo sigue sensible a la
   contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `e654fe4` (capas superpuestas a
-  `AppOverlayLayers`/`AppFloatingLayers`); 30 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `267a27e` (bienvenida + wizard a
+  `AppWelcomeLayer`); 32 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -158,6 +158,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
   hijos en el mismo orden de render; `table`/`workbench` siguen siempre montados (FASE NAV) y
   `ToolsTab.lexicon` cae a un lexico vacio sin `lexiconData`. Tests propios (8, hijos mockeados).
   `audit:orphans` 13 (baseline).
+- Bienvenida + wizard (2026-11-21): `App.tsx` 762 → 756 líneas al extraer el bloque de bienvenida y
+  el `FirstRunWizard` (`src/components/AppWelcomeLayer.tsx`) con `AppWelcomeLayerProps` tipado; la
+  decision de "Siguiente" salio a `src/utils/welcomeLayerModel.ts` (`shouldCompleteWizardStep`) y
+  `AppWelcomeSection` dejo de aceptar `any[]` (`TourStep[]` exportado desde `src/data/tourSteps.ts`).
+  Tests propios (5 + 2). `audit:orphans` 13 (baseline).
 
 ---
 
@@ -244,6 +249,23 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — bienvenida + wizard del `return` a `AppWelcomeLayer` (P1, 2026-11-21, commit
+`267a27e`).** `App.tsx` montaba inline el `AppWelcomeSection` (splash + pantalla de bienvenida +
+tour) y el `FirstRunWizard` del primer arranque, ~35 líneas con ~20 props. Nuevo
+`src/components/AppWelcomeLayer.tsx` con `AppWelcomeLayerProps` tipado y el mismo orden de render;
+la unica decision de la zona (el boton "Siguiente" del wizard completa el asistente solo en el
+paso `data-folder`) salio a `src/utils/welcomeLayerModel.ts` (`shouldCompleteWizardStep`).
+`AppWelcomeSection` dejo de aceptar `tourSteps: any[]` (ahora `TourStep[]`, exportado desde
+`src/data/tourSteps.ts`). Los efectos de la bienvenida (jingle + cierre de pantalla) siguen en
+`App.tsx` como `onImport`/`onStartTour`. `App.tsx`: 762 → 756 líneas. Tests:
+`appWelcomeLayer.test.tsx` (5, hijos mockeados) y `welcomeLayerModel.test.ts` (2). Validaciones:
+typecheck 0, lint OK, build OK, vitest 700/700 (84 archivos), audit:orphans 13, `npm run test:gui`
+8/8 (48s).
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 756 líneas. El siguiente
+candidato son los ~120 líneas de props de `AppTabContent` (agrupar las props por tab en objetos) o
+el bloque de barra lateral + `AppNavigationBar`.
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,

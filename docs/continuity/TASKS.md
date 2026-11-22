@@ -5,6 +5,38 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — bienvenida + wizard del `return` a `AppWelcomeLayer` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** `App.tsx` seguía con ~35 líneas de bienvenida inline en el `return`
+del contenedor principal: el `AppWelcomeSection` (splash + pantalla de bienvenida + tour) y, justo
+después, el `FirstRunWizard` del primer arranque, con ~20 props cableadas a mano.
+
+**Decisión:** extraer el bloque a un componente presentacional con props tipadas estrictamente y el
+mismo orden de render. La única decisión de esa zona —el botón "Siguiente" del wizard completa el
+asistente solo en el paso `data-folder`— salió a un modelo puro para que no quede inline en el
+componente. Los efectos secundarios de la bienvenida (jingle y cierre de la pantalla) se quedan en
+`App.tsx` como `onImport`/`onStartTour`, porque pertenecen al orquestador.
+
+**Cambios (commit `267a27e`):**
+- `src/components/AppWelcomeLayer.tsx` (NUEVO): `AppWelcomeLayerProps` con los ~20 campos,
+  `AppWelcomeSection` + `FirstRunWizard` en el orden original y la condicional `showWizard`.
+- `src/utils/welcomeLayerModel.ts` (NUEVO): `shouldCompleteWizardStep(step)` (`data-folder` → true).
+- `src/components/AppWelcomeSection.tsx`: `tourSteps` pasa de `any[]` a `TourStep[]`.
+- `src/data/tourSteps.ts`: `TourStep` exportado (era interface local).
+- `src/App.tsx`: 762 → 756 líneas; fuera el import de `FirstRunWizard` y entra `AppWelcomeLayer`.
+- Tests: `src/components/__tests__/appWelcomeLayer.test.tsx` (5, con los dos hijos mockeados):
+  orden de las dos capas, condicional del wizard, propagación de estado de splash/bienvenida/tour,
+  paso/carpeta y resolución de `onComplete`; `src/utils/__tests__/welcomeLayerModel.test.ts` (2).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 700/700 (84 archivos) · audit:orphans 13
+(baseline, sin huérfanos nuevos) · `npm run test:gui` 8/8 (48s, dev server caliente).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 756 líneas; el siguiente candidato son los
+~120 líneas de props de `AppTabContent` (agrupar por tab) o el bloque de barra lateral +
+`AppNavigationBar`. Pendiente por autorización: `git push` + CI con número de run.
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — capas superpuestas del `return` a `AppOverlayLayers` / `AppFloatingLayers` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** `App.tsx` seguía con ~110 líneas de capas superpuestas inline en el
