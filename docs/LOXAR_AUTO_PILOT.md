@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 700/700 (84 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 712/712 (85 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 48s con el dev server caliente (en paralelo sigue sensible a la
   contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `267a27e` (bienvenida + wizard a
-  `AppWelcomeLayer`); 32 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `3b85470` (modelo de completitud del lexico +
+  limpieza de estado muerto de `App.tsx`); 34 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -250,6 +250,18 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — modelo de completitud del léxico + limpieza de estado muerto (P1, 2026-11-21, commit
+`3b85470`).** `App.tsx` guardaba inline el criterio de "pendiente de completar" (el predicado del
+modo completar, que exige `Significado` además de raíz/léxema/categoría), el `useMemo` de
+`completionStats` y el acote del índice de entrada. Nuevo `src/utils/lexiconCompletion.ts`
+(`isEntryPendingCompletion`, `filterPendingCompletion`, `buildLexiconCompletionStats`,
+`clampIncompleteIndex`, tipo `LexiconCompletionStats`); el predicado se movió verbatim, SIN
+unificarlo con `isEntryIncomplete` de `lexiconTableModel.ts` (el de tabla no exige `Significado`:
+son criterios distintos para consumidores distintos). Se eliminó el estado muerto
+`searchColumn`/`setSearchColumn`, el import sin uso `WORD_LISTS` y el `goToStep` del destructure del
+wizard. `App.tsx`: 756 → 746 líneas. Tests: `lexiconCompletion.test.ts` (12). Validaciones:
+typecheck 0, lint OK, build OK, vitest 712/712 (85 archivos), audit:orphans 13.
+
 **[x] CLN — bienvenida + wizard del `return` a `AppWelcomeLayer` (P1, 2026-11-21, commit
 `267a27e`).** `App.tsx` montaba inline el `AppWelcomeSection` (splash + pantalla de bienvenida +
 tour) y el `FirstRunWizard` del primer arranque, ~35 líneas con ~20 props. Nuevo
@@ -263,9 +275,9 @@ paso `data-folder`) salio a `src/utils/welcomeLayerModel.ts` (`shouldCompleteWiz
 typecheck 0, lint OK, build OK, vitest 700/700 (84 archivos), audit:orphans 13, `npm run test:gui`
 8/8 (48s).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 756 líneas. El siguiente
-candidato son los ~120 líneas de props de `AppTabContent` (agrupar las props por tab en objetos) o
-el bloque de barra lateral + `AppNavigationBar`.
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 746 líneas. El siguiente
+candidato son los ~120 líneas de props de `AppTabContent` (agrupar las props por tab en objetos); el
+bloque de barra lateral + `AppNavigationBar` ya está extraído como componentes.
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
@@ -460,10 +472,9 @@ Tests: `grammarOverview.test.tsx` (4). Validaciones: typecheck 0, lint OK, build
 de fonología y morfología, salto Workbench↔Léxico, arranque por léxico). Pendiente: `git push` + CI
 con número de run (requiere autorización).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` quedó en 762 líneas tras extraer
-las capas superpuestas (`e654fe4`). El siguiente candidato es el bloque de bienvenida + wizard
-(`AppWelcomeSection` + `FirstRunWizard`, ~35 líneas con ~15 props) o los ~120 líneas de props de
-`AppTabContent`.
+**[x] CLN — frente siguiente del God Component (P1).** Resuelto en dos pasadas: el bloque de
+bienvenida + wizard salio a `AppWelcomeLayer` (`267a27e`) y el modelo de completitud del lexico +
+limpieza de estado muerto (`3b85470`). `App.tsx`: 762 a 746 lineas.
 
 **[x] CLN — higiene de código muerto y puerta de calidad (2026-11-20).** Cerrado el árbol de
 trabajo sucio: `tests-gui/flow.spec.ts` arrastraba un `type Page` sin uso y `App.tsx` conservaba

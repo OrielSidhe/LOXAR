@@ -5,6 +5,39 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — modelo de completitud del léxico + limpieza de estado muerto de `App.tsx` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** `App.tsx` guardaba inline el criterio de "pendiente de completar"
+(el predicado del modo completar, que exige `Significado` además de raíz/léxema/categoría), el
+`useMemo` de `completionStats` y el acote del índice de entrada; además arrastraba el estado muerto
+`searchColumn`/`setSearchColumn`, el import sin uso `WORD_LISTS` y el `goToStep` del destructure del
+wizard.
+
+**Decisión:** mover el criterio a un modelo puro y NO unificarlo con `isEntryIncomplete` de
+`src/utils/lexiconTableModel.ts`: el de tabla no exige `Significado` (solo raíz/léxema/categoría
+canónica) porque responde al filtro de vista de la tabla, mientras que el del editor responde al modo
+"completar". Son dos criterios legítimos de dos consumidores distintos; unificarlos cambiaría
+comportamiento visible (el filtro de la tabla o el recorrido del editor) y es decisión de producto.
+
+**Cambios (commit `3b85470`):**
+- `src/utils/lexiconCompletion.ts` (NUEVO): `PENDING_COMPLETION_CATEGORIES`, `isEntryPendingCompletion`
+  (verbatim del inline), `filterPendingCompletion`, `buildLexiconCompletionStats`,
+  `clampIncompleteIndex` y el tipo `LexiconCompletionStats`.
+- `src/App.tsx`: 756 → 746 líneas; fuera el `useMemo` de `incompleteEntries`, el de `completionStats`
+  pasa a `buildLexiconCompletionStats` y el efecto de acote usa `clampIncompleteIndex`; se eliminan
+  `searchColumn`/`setSearchColumn`, el import `WORD_LISTS` y `goToStep` del destructure.
+- Tests: `src/utils/__tests__/lexiconCompletion.test.ts` (12): predicado (significado, raíz, léxema,
+  alias `desconocida`/`n/a` en mayúsculas y con espacios), filtro con orden, estadísticas y acote.
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 712/712 (85 archivos) · audit:orphans 13
+(baseline, sin huérfanos nuevos).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 746 líneas; el siguiente candidato son los
+~120 líneas de props de `AppTabContent` (agrupar por tab). Pendiente por autorización: `git push` + CI
+con número de run.
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — bienvenida + wizard del `return` a `AppWelcomeLayer` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** `App.tsx` seguía con ~35 líneas de bienvenida inline en el `return`
