@@ -4,6 +4,42 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto del parser de importación (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado del cuerpo de `App.tsx` eran los `any` que
+quedan fuera de la cadena `App → AppTabContent → WorkbenchTab`. El hook central `useLexicon.ts`
+guardaba `rawData?: any[]` y tres `catch (e: any)`; `services/parser.ts` (el parser de CSV/JSON que
+alimenta el flujo de importación) tenía 12 `any` y era el origen real del tipo.
+
+**Decisión:** `src/services/parser.ts` exporta `LexiconRow` (`Record<string, unknown>`) y
+`RejectedLexiconRow` (`LexiconRow & { _rejectIndex: number }`). `JSON.parse` se tipa como `unknown`
+y pasa por `toRows` (con type guard `isRecord`) en lugar de `Array.isArray(...) ? ... : [...]`;
+`ParseResult.successfulData` es `LexiconRow[]` y `backupData` es `Partial<LexiconData>` (con type
+guard `isLexiconBackup`, que verifica `entries` + `metadata`), así `createImportedLexicon` recibe el
+tipo que ya acepta. `processMappedData` acepta `LexiconRow[]`. Los `catch` de `useLexicon` usan el
+`getErrorMessage` de `entryEditorModel.ts` con el mismo mensaje de respaldo; los `(res: any)` de
+`batchDetermineCategory` se eliminan (el servicio ya devuelve `{ id, categoria }[]`).
+
+**Cambios (commit `efb03fc`):**
+- `src/services/parser.ts`: 12 `any` → 0; nuevos tipos exportados.
+- `src/hooks/useLexicon.ts`: `ImportState.rawData: LexiconRow[]`, 3 `catch` tipados, fuera los
+  `(res: any)`/`(r: any)`.
+- `src/utils/lexiconCompareFile.ts`: `entriesFromRows(rows: LexiconRow[])`.
+- Tests: `src/services/__tests__/parser.test.ts` (12: CSV válido, columna faltante, fila narrativa,
+  archivo vacío, JSON array, JSON sin señales, backup, mapeo con `extraData`, inferencia de raíz,
+  descarte por significado vacío, `inferRootFromLexeme`).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 819/819 (99 archivos) · audit:orphans 13
+(baseline). `npm run test:gui` no se corrió (requiere dev server caliente; el daemon de navegador no
+está garantizado en runs de cron). Deuda `any` de `src/`: 198 → 178.
+
+**Próximo bloque ejecutable (CLN/P1):** los `any` que quedan en `services/` (`grammar/ast-view` 17,
+`grammarDb` 8, `sqlStorage` 5, `normalize` 5, `grammarParser` 3, `grammar/postImportValidator` 3,
+`grammar/ast-builder` 4) y el flujo de auditoría muerto de `useWorkQueue` (decisión de producto:
+cablear o borrar). Frentes no-CLN pendientes: D2, destino de los 13 huérfanos, `git push` + CI
+(requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — tipado estricto de `WorkbenchTab` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el frente documentado del cuerpo de `App.tsx` eran los `any`

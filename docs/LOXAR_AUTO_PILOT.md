@@ -17,8 +17,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `5806782` (tipado estricto de
-  `WorkbenchTab`, P1 God Component); 59 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `efb03fc` (tipado estricto del
+  parser de importación, P1 God Component); 61 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -249,6 +249,25 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — tipado estricto del parser de importación (P1, 2026-11-22, commit `efb03fc`).** El
+frente documentado eran los `any` fuera de la cadena `App → AppTabContent → WorkbenchTab`. El
+hook central `useLexicon.ts` guardaba `rawData?: any[]` y tres `catch (e: any)`; el origen real
+del tipo era `src/services/parser.ts`, con 12 `any` (CSV/JSON de importación, `processMappedData`
+y el type guard del backup). Nuevos `LexiconRow` (`Record<string, unknown>`) y
+`RejectedLexiconRow` (`_rejectIndex`) exportados; `ParseResult.successfulData` es `LexiconRow[]`
+y `backupData` es `Partial<LexiconData>` (type guard `isLexiconBackup`), que es justo lo que
+acepta `createImportedLexicon`. `JSON.parse` pasa a `unknown` + `toRows` con `isRecord`; los
+`catch` usan `getErrorMessage` de `entryEditorModel.ts`; fuera los `(res: any)` de
+`batchDetermineCategory`. `lexiconCompareFile.entriesFromRows` acepta `LexiconRow[]`. Tests:
+`src/services/__tests__/parser.test.ts` (12). Deuda `any` de `src/`: 198 → 178. Validaciones:
+typecheck 0 · lint OK · build OK · vitest 819/819 (99 archivos) · audit:orphans 13.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 651 líneas y su
+`return` ya solo contiene capas. El frente siguiente son los `any` de `services/`
+(`grammar/ast-view` 17, `grammarDb` 8, `sqlStorage` 5, `normalize` 5, `grammarParser` 3,
+`grammar/ast-builder` 4, `grammar/postImportValidator` 3) y el flujo de auditoría muerto de
+`useWorkQueue` (decisión de producto: cablear o borrar).
 
 **[x] CLN — tipado estricto de `WorkbenchTab` (P1, 2026-11-22, commit `5806782`).** Los `any`
 restantes de la capa que pasa props a `EntryEditor`/`WorkbenchRightPanel`: `entryToEdit`,
