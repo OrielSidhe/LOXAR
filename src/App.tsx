@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLexicon } from './hooks/useLexicon';
 import { useWidgetBridge } from './hooks/useWidgetBridge';
 import { useWorkQueue } from './hooks/useWorkQueue';
@@ -17,6 +17,7 @@ import { useLexiconMerge } from './hooks/useLexiconMerge';
 import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
 import { useAppDerivedState } from './hooks/useAppDerivedState';
 import { useEditorCompletion } from './hooks/useEditorCompletion';
+import { useAppNotifications } from './hooks/useAppNotifications';
 // Components
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
@@ -38,7 +39,9 @@ const App = () => {
   const [splashFinished, setSplashFinished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [notifications, setNotifications] = useState<{ id: number; message: string; type: 'success' | 'error' }[]>([]);
+  // Notificaciones (P1: `useAppNotifications`). Sustituye al estado `notifications`
+  // y al `useCallback` de `showNotification` con auto-dismiss.
+  const { notifications, showNotification, dismissNotification } = useAppNotifications();
   // Estado y acciones de modales/settings (P1: `useModalCoordination`).
   const {
     activeModal,
@@ -146,12 +149,6 @@ const App = () => {
   const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
 
   const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
-
-  const showNotification = useCallback((message: string, type: 'success' | 'error' = 'success') => {
-    const id = Date.now();
-    setNotifications(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
-  }, []);
 
   const lexiconHook = useLexicon(showNotification, setIsLoading, setLoadingMessage);
   const { activeLexicon, activeLexiconName, activeProfile, activeMetadata, activeCustomFunctions, lexicons, isDirty, activeGrammar } = lexiconHook;
@@ -630,7 +627,7 @@ const App = () => {
             onBatchDelete={handleBatchDelete}
             onBatchChangeFunction={handleBatchChangeFunction}
             notifications={notifications}
-            onDismissNotification={id => setNotifications(prev => prev.filter(n => n.id !== id))}
+            onDismissNotification={dismissNotification}
             onWidgetAddWord={handleWidgetAddWord}
             onWidgetSearch={handleWidgetSearch}
             onWidgetToggleCapture={() => window.loxarBridge.openWidget()}
