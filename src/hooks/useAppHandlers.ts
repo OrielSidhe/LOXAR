@@ -9,7 +9,8 @@ import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
 import { createEmptyProject } from '../services/projectFile';
 import { audioService } from '../services/audioService';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { MAIN_TOUR_STEPS, COLLECTIONS_TOUR_STEPS, WRITING_TOUR_STEPS, TOOLS_TOUR_STEPS } from '../data/tourSteps';
+import type { TourStep } from '../data/tourSteps';
+import { resolveTourSteps } from '../utils/tourStepsModel';
 import { normalizeText } from '../services/geminiService';
 import type { SoundChangeBatchResult } from '../services/soundChanger';
 import { filterParadigmsForFunction, generateInflectedForms } from '../services/inflectionService';
@@ -21,7 +22,6 @@ export interface UseAppHandlersOptions {
   writeProjectToPath: (path: string, project: LoxarProject) => Promise<void>;
   handleNewProject: () => void;
   handleOpenProject: () => void;
-  markProjectDirty: () => void;
 
   setShowProjectBootstrap: React.Dispatch<React.SetStateAction<boolean>>;
   setBootstrapDismissed: React.Dispatch<React.SetStateAction<boolean>>;
@@ -31,8 +31,7 @@ export interface UseAppHandlersOptions {
   setShowWelcome: React.Dispatch<React.SetStateAction<boolean>>;
   setIsTourActive: React.Dispatch<React.SetStateAction<boolean>>;
   openModal: (modal: AppModalId) => void;
-  setCanvasState: React.Dispatch<React.SetStateAction<{ nodes: any[]; edges: any[] }>>;
-  setCurrentTourSteps: React.Dispatch<React.SetStateAction<any[]>>;
+  setCurrentTourSteps: React.Dispatch<React.SetStateAction<TourStep[]>>;
   setActiveToolView: React.Dispatch<React.SetStateAction<'dashboard' | 'interlinear-gloss' | 'sound-change'>>;
   setIncompleteIndex: React.Dispatch<React.SetStateAction<number>>;
   setEditorMode: React.Dispatch<React.SetStateAction<'add' | 'complete'>>;
@@ -80,7 +79,6 @@ export interface UseAppHandlersResult {
   handleOpenSoundChangeWorkbench: () => void;
   handleApplySoundChangeBatch: (entries: LexiconEntry[], result: SoundChangeBatchResult) => void;
   handleBackToToolDashboard: () => void;
-  handleCanvasChange: (nodes: any[], edges: any[]) => void;
   handleBootstrapOpenFound: (p: string) => Promise<void>;
   handleBootstrapCreate: () => void;
   handleBootstrapOpenOther: () => void;
@@ -111,7 +109,6 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     writeProjectToPath,
     handleNewProject,
     handleOpenProject,
-    markProjectDirty,
     setShowProjectBootstrap,
     setBootstrapDismissed,
     setProjectPath,
@@ -120,7 +117,6 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     setShowWelcome,
     setIsTourActive,
     openModal,
-    setCanvasState,
     setCurrentTourSteps,
     setActiveToolView,
     setIncompleteIndex,
@@ -234,13 +230,9 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
   }, [exportPath, showNotification, lexiconHook, setIsLoading, setLoadingMessage, openModal]);
 
   const handleStartTour = useCallback(() => {
-    let steps = MAIN_TOUR_STEPS;
-    if (activeTab === 'collections') steps = COLLECTIONS_TOUR_STEPS;
-    else if (activeTab === 'writing') steps = WRITING_TOUR_STEPS;
-    else if (activeTab === 'tools') steps = TOOLS_TOUR_STEPS;
-    setCurrentTourSteps(steps);
+    setCurrentTourSteps(resolveTourSteps(activeTab));
     setIsTourActive(true);
-  }, [activeTab]);
+  }, [activeTab, setCurrentTourSteps]);
 
   const onTourEnd = useCallback(() => {
     setIsTourActive(false);
@@ -277,11 +269,6 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
   const handleBackToToolDashboard = useCallback(() => {
     setActiveToolView('dashboard');
   }, [setActiveToolView]);
-
-  const handleCanvasChange = useCallback((nodes: any[], edges: any[]) => {
-    setCanvasState({ nodes, edges });
-    markProjectDirty();
-  }, [setCanvasState, markProjectDirty]);
 
   const handleBootstrapOpenFound = useCallback(async (p: string) => {
     try {
@@ -520,7 +507,6 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     handleOpenSoundChangeWorkbench,
     handleApplySoundChangeBatch,
     handleBackToToolDashboard,
-    handleCanvasChange,
     handleBootstrapOpenFound,
     handleBootstrapCreate,
     handleBootstrapOpenOther,

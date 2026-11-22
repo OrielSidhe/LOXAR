@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
-import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from '../services/projectFile';
+import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject, type LoxarCanvasState } from '../services/projectFile';
 import { loadLexicon, listLexiconNames } from '../services/sqlStorage';
 import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
 import { buildLexiconExport, EXPORT_FORMAT_LABELS, type ExportFormat } from '../utils/lexiconExport';
@@ -19,14 +19,14 @@ export interface UseProjectOperationsOptions {
     projectPath: string | null;
     isProjectDirty: boolean;
     isDirty: boolean;
-    canvasState: { nodes: any[]; edges: any[] };
+    canvasState: LoxarCanvasState;
     sessionCacheData: { tourCompleted?: boolean } | null;
     activeTab: any;
     showNotification: (message: string, type: 'success' | 'error') => void;
     setIsLoading: (loading: boolean) => void;
     setLoadingMessage: (message: string) => void;
     setProjectPath: (path: string | null) => void;
-    setCanvasState: (state: { nodes: any[]; edges: any[] }) => void;
+    setCanvasState: (state: LoxarCanvasState) => void;
     setIsProjectDirty: (dirty: boolean) => void;
     setProjectLastSaved: (date: Date | null) => void;
     setActiveTab: (tab: any) => void;

@@ -1,6 +1,11 @@
 import { LexiconEntry, GenerativeProfile, NeographyProfile, InflectionProfile, LexiconData, GrammarManifest } from '../types';
 import { CorpusEntry } from '../types';
 
+export type LoxarCanvasState = {
+  nodes: unknown[];
+  edges: unknown[];
+};
+
 export type LoxarProject = {
   version: string;
   conlangName: string;
@@ -24,10 +29,7 @@ export type LoxarProject = {
     activeProfile?: string | null;
     tourCompleted?: boolean;
   };
-  canvas?: {
-    nodes?: any[];
-    edges?: any[];
-  };
+  canvas?: LoxarCanvasState;
 };
 
 export const LOXAR_PROJECT_VERSION = '0.1.0';

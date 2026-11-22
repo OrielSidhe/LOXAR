@@ -28,10 +28,12 @@ import AppFloatingLayers from './components/AppFloatingLayers';
 
 // Data & Helpers
 import { MAIN_TOUR_STEPS } from './data/tourSteps';
+import type { TourStep } from './data/tourSteps';
 import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
 import { initPragmaticDb } from './services/grammarDb';
 import { buildDashboardStats } from './utils/dashboardStats';
+import type { LoxarCanvasState } from './services/projectFile';
 
 const App = () => {
   const appVersion = '2.4.0-pro';
@@ -142,11 +144,11 @@ const App = () => {
   const [backups, setBackups] = useState<string[]>([]);
   const [projectLastSaved, setProjectLastSaved] = useState<Date | null>(null);
   const [isProjectDirty, setIsProjectDirty] = useState(false);
-  const [canvasState, setCanvasState] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
+  const [canvasState, setCanvasState] = useState<LoxarCanvasState>({ nodes: [], edges: [] });
   const [isTourActive, setIsTourActive] = useState(false);
   const [activeToolView, setActiveToolView] = useState<'dashboard' | 'interlinear-gloss' | 'sound-change'>('dashboard');
 
-  const [currentTourSteps, setCurrentTourSteps] = useState(MAIN_TOUR_STEPS);
+  const [currentTourSteps, setCurrentTourSteps] = useState<TourStep[]>(MAIN_TOUR_STEPS);
 
   const lexiconHook = useLexicon(showNotification, setIsLoading, setLoadingMessage);
   const { activeLexicon, activeLexiconName, activeProfile, activeMetadata, activeCustomFunctions, lexicons, isDirty, activeGrammar } = lexiconHook;
@@ -202,7 +204,6 @@ const App = () => {
     writeProjectToPath,
     handleNewProject,
     handleOpenProject,
-    markProjectDirty,
     setShowProjectBootstrap,
     setBootstrapDismissed,
     setProjectPath,
@@ -211,7 +212,6 @@ const App = () => {
     setShowWelcome,
     setIsTourActive,
     openModal,
-    setCanvasState,
     setCurrentTourSteps,
     setActiveToolView,
     setIncompleteIndex,
