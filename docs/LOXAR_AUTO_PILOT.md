@@ -17,8 +17,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `5f99137` (tipado estricto de
-  `useProjectOperations`, P1 God Component); 56 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `1a8ad1b` (tipado estricto de la
+  frontera IA/handlers, P1 God Component); 57 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -379,13 +379,25 @@ y `AppTabId`; el cast `project.session.activeTab as any` pasa a `as AppTabId` y 
 muerto `GenerationMode`. `App.tsx` sin cambios. Validaciones: typecheck 0, lint OK, vitest 807/807
 (98 archivos), audit:orphans 13.
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 652 líneas y su `return`
+**[x] CLN — tipado estricto de la frontera IA/handlers (P1, 2026-11-22, commit `1a8ad1b`).** Los
+`any` restantes de `useAppHandlers` (`activeGrammar`, `activeMetadata`, `activeCustomFunctions`,
+`handleWidgetSearch`, `handleInflectRequest`), de `useAiHandlers` (`generativeProfile`,
+`setActiveTab`, `setInitialDataForAdd`, `partialEntry`) y de `useWidgetBridge`/`useWorkQueue`,
+tipados con `GrammarManifest`, `LexiconMetadata | null`, `string[]`, `GenerativeProfile`,
+`AppTabId`, `EntryEditorFormPayload` y `EntryEditorInitialData`; el tipo se propagó por
+`AppTabContent` → `WorkbenchTab` → `EntryEditor`. Nuevo `InflectedParadigmResult`
+(`inflectionService.ts`) y `SuggestionWord` (`MissingWord & { Función?: string }`), fuera los
+`(word as any).Función`. Se eliminó el estado muerto `lastAiResult` (desde el commit inicial solo
+se escribía). Hallazgo: el flujo de auditoría de `useWorkQueue` llamaba `setActiveTab('audit')`,
+un tab inexistente; ahora navega a `workbench`. `App.tsx`: 652 → 651 líneas. Validaciones:
+typecheck 0, lint OK, build OK, vitest 807/807 (98 archivos), audit:orphans 13.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 651 líneas y su `return`
 ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
-`AppFloatingLayers`). El frente siguiente es el cuerpo del componente (hooks/efectos), no el JSX:
-candidatos inmediatos: los `any` restantes de `useAppHandlers` (`activeGrammar`, `activeMetadata`,
-`activeCustomFunctions`, `setLastAiResult`, `handleWidgetSearch`, `handleInflectRequest`) y de
-`useAiHandlers` (`generativeProfile`, `setActiveTab`, `setInitialDataForAdd`, `partialEntry`), más
-los estados `initialDataForAdd` y `lastAiResult` de `App.tsx`.
+`AppFloatingLayers`). El frente siguiente es el cuerpo (hooks/efectos), no el JSX: candidatos
+inmediatos: los `any` restantes de `WorkbenchTab` (`entryToEdit`, `onAddWord`, `onUpdateWord`,
+`activeMetadata`, `activeLexicon`, `suggestions`, `onAddManually`, `onGenerateAI`) y el flujo de
+auditoría muerto de `useWorkQueue` (decisión de producto: cablear o borrar).
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,

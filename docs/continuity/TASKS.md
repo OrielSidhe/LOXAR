@@ -4,6 +4,41 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto de la frontera IA/handlers (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado del cuerpo de `App.tsx` eran los `any`
+restantes de `useAppHandlers` (`activeGrammar`, `activeMetadata`, `activeCustomFunctions`,
+`setLastAiResult`, `handleWidgetSearch`, `handleInflectRequest`) y de `useAiHandlers`
+(`generativeProfile`, `setActiveTab`, `setInitialDataForAdd`, `partialEntry`), más los estados
+`initialDataForAdd` y `lastAiResult` de `App.tsx`.
+
+**Decisión:** tipar con los tipos canónicos (`GrammarManifest`, `LexiconMetadata | null`,
+`string[]`, `GenerativeProfile`, `AppTabId`, `EntryEditorFormPayload`, `EntryEditorInitialData`) y
+propagar el tipo por la cadena de props (`AppTabContent` → `WorkbenchTab` → `EntryEditor`). Nuevo
+`InflectedParadigmResult` en `inflectionService.ts` para el widget de inflexión. El campo legacy
+`Función` de las sugerencias pasa a `SuggestionWord` (`MissingWord & { Función?: string }`), fuera el
+`(word as any)`. Se eliminó el estado muerto `lastAiResult` (verificado con `git log -S`: desde el
+commit inicial solo se escribía, nunca se leyó) y con él `setLastAiResult` del hook.
+
+**Cambios (commit `1a8ad1b`):**
+- `src/hooks/useAppHandlers.ts`, `src/hooks/useAiHandlers.ts`, `src/hooks/useWidgetBridge.ts`,
+  `src/hooks/useWorkQueue.ts`, `src/services/geminiService.ts`, `src/services/inflectionService.ts`,
+  `src/types.ts`, `src/App.tsx`, `src/components/AppTabContent.tsx`,
+  `src/components/WorkbenchTab.tsx`. Cero `any` en los archivos tocados.
+- Hallazgo: `useWorkQueue.handleGeneratePool` llamaba `setActiveTab('audit')`, un tab inexistente
+  (el flujo de auditoría nunca se cableó a la UI); ahora navega a `workbench`, como ya hacía
+  `handleAuditApprove`.
+
+**Verificación:** typecheck 0 · lint OK (`check:esc`) · build OK · vitest 807/807 (98 archivos) ·
+audit:orphans 13 (baseline). Cambio de tipos solamente: no hay comportamiento nuevo que testear.
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 651 líneas. Frentes siguientes: los `any`
+restantes de `WorkbenchTab` (`entryToEdit`, `onAddWord`, `onUpdateWord`, `activeMetadata`,
+`activeLexicon`, `suggestions`, `onAddManually`, `onGenerateAI`) y el flujo de auditoría muerto de
+`useWorkQueue` (decisión de producto: cablear o borrar). Frentes no-CLN pendientes: D2 (Web Worker
+vs CSP de Tauri), destino de los 13 huérfanos y `git push` + CI (requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — tema a `useAppTheme` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** continuar la descomposición del cuerpo de `App.tsx` (el `return` ya
