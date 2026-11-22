@@ -20,10 +20,8 @@ import { useLexiconMerge } from './hooks/useLexiconMerge';
 import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
 // Components
 import { ErrorBoundary } from './components/ErrorBoundary';
-import VerticalSidebar from './components/VerticalSidebar';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
-import AppNavigationBar from './components/AppNavigationBar';
-import AppTabContent from './components/AppTabContent';
+import AppBodyLayer from './components/AppBodyLayer';
 import AppOverlayLayers from './components/AppOverlayLayers';
 import AppFloatingLayers from './components/AppFloatingLayers';
 
@@ -544,132 +542,118 @@ const App = () => {
             projectPath={projectPath}
           />
 
-          <div className="flex flex-1 min-h-0 relative">
-            <VerticalSidebar
-              active={activeTab}
-              onChange={setActiveTab}
-              onOpenWidget={() => window.loxarBridge.openWidget()}
-              onOpenSettings={openSettings}
-              onShowTour={handleStartTour}
-              onGoHome={goHome}
-            />
-
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6 relative z-0 custom-scrollbar scroll-smooth bg-surface-dark/40 backdrop-blur-sm">
-              {activeTab !== 'dashboard' && (
-                <AppNavigationBar
-                  onBack={goBack}
-                  onHome={goHome}
-                  activeTab={activeTab}
-                  onQuickNav={handleQuickNav}
-                />
-              )}
-              <AppTabContent
-                activeTab={activeTab}
-                lexicon={activeLexicon}
-                lexiconName={activeLexiconName}
-                lexiconData={lexicons[activeLexiconName ?? '']}
-                lexiconNames={lexiconHook.lexiconNames}
-                metadata={activeMetadata}
-                profile={activeProfile}
-                grammar={activeGrammar}
-                corpus={lexiconHook.activeCorpus}
-                neographyProfile={lexiconHook.activeNeographyProfile}
-                inflectionProfile={lexiconHook.activeInflectionProfile}
-                customFunctions={activeCustomFunctions}
-                stats={buildDashboardStats({
-                  grammar: activeGrammar,
-                  lexicon: activeLexicon,
-                  incompleteCount: incompleteEntries.length,
-                })}
-                pragmaticEngine={pragmaticEngine}
-                completionStats={completionStats}
-                searchTerm={searchTerm}
-                onSearchTermChange={setSearchTerm}
-                functionFilter={functionFilter}
-                onFunctionFilterChange={setFunctionFilter}
-                viewFilter={viewFilter}
-                onViewFilterChange={setViewFilter}
-                showAffixFormatting={showAffixFormatting}
-                onShowAffixFormattingChange={setShowAffixFormatting}
-                selectedIds={selectedIds}
-                onToggleSelection={handleToggleSelection}
-                onToggleSelectAll={handleToggleSelectAll}
-                queueActive={queueActive}
-                workQueue={workQueue}
-                queueCursor={queueCursor}
-                queuePrev={queuePrev}
-                queueNext={queueAdvance}
-                queueTogglePending={queueTogglePending}
-                queueRemoveCurrent={queueRemoveCurrent}
-                queueClear={queueClear}
-                editorMode={editorMode}
-                onEditorModeChange={setEditorMode}
-                entryBeingEdited={entryBeingEdited}
-                incompleteCount={incompleteEntries.length}
-                incompleteIndex={incompleteIndex}
-                onNavigateIncomplete={handleNavigateIncomplete}
-                onLookup={handleLookupForCompletion}
-                generationModes={generationModes}
-                onGenerationModesChange={setGenerationModes}
-                initialDataForAdd={effectiveInitialDataForAdd}
-                suggestions={suggestions}
-                suggestionListName={suggestionListName}
-                onCloseSuggestions={() => setSuggestions([])}
-                onAddManually={handleAddManuallyFromSuggestion}
-                onGenerateAI={handleGenerateAIFromSuggestion}
-                isLoadingAI={aiStatus === 'working'}
-                onSelectList={(name) => setSuggestionListName(name)}
-                onAnalyzeList={handleAnalyzeForSuggestions}
-                activeToolView={activeToolView}
-                onBackToToolDashboard={handleBackToToolDashboard}
-                onOpenInterlinearGloss={handleOpenInterlinearGloss}
-                onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
-                activeGrammarModule={activeGrammarModule}
-                onModuleChange={setActiveGrammarModule}
-                onOpenTab={setActiveTab}
-                onOpenGrammarModule={handleOpenGrammarModule}
-                onOpenDashboard={openDashboard}
-                onOpenAiSettings={openAiSettings}
-                onStartTour={handleStartTour}
-                onSelectConlang={lexiconHook.setActiveLexicon}
-                onEditWord={lexiconHook.editWord}
-                onDeleteWord={lexiconHook.deleteWord}
-                onAddWord={lexiconHook.addWord}
-                onAddBatchWords={lexiconHook.addBatchWords}
-                onAddCustomFunction={lexiconHook.addCustomFunction}
-                onAddCustomCategory={lexiconHook.addCustomFunction}
-                onUpdateCorpus={lexiconHook.updateCorpus}
-                onUpdateNeographyProfile={lexiconHook.updateNeographyProfile}
-                onUpdateGenerativeProfile={lexiconHook.updateGenerativeProfile}
-                onSaveGrammar={manifest => lexiconHook.updateGrammarManifest(manifest)}
-                onExportGrammar={handleExportGrammar}
-                onAddLexicalException={handleAddLexicalException}
-                onGenerateInflections={entry => {
-                  setEntryToInflect(entry);
-                  handleOpenModal('inflection_generator');
-                }}
-                onSearchLexicon={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
-                onAiCompleteEntry={handleAiCompleteEntry}
-                onAiGenerateRootAndLexeme={handleAiGenerate}
-                onCorrectSignificado={handleCorrectSignificado}
-                onCompleteFunctions={handleAiCompleteFunctions}
-                onFillMissing={handleAiFillMissing}
-                onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
-                onManageFunctions={openFunctions}
-                onManageHyphens={openHyphens}
-                onOpenProfile={openProfile}
-                onOpenNeography={openWriting}
-                onOpenInflection={openGrammar}
-                onOpenTranslator={openTranslator}
-                onEnqueue={handleEnqueue}
-                onGenerateBatch={handleGenerateBatch}
-                onSyncPhonology={p => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
-                onApplySoundChangeBatch={handleApplySoundChangeBatch}
-                showNotification={showNotification}
-                setIsLoading={setIsLoading}
-                setLoadingMessage={setLoadingMessage}
-              />            </main>
-          </div>
+          <AppBodyLayer
+            activeTab={activeTab}
+            lexicon={activeLexicon}
+            lexiconName={activeLexiconName}
+            lexiconData={lexicons[activeLexiconName ?? '']}
+            lexiconNames={lexiconHook.lexiconNames}
+            metadata={activeMetadata}
+            profile={activeProfile}
+            grammar={activeGrammar}
+            corpus={lexiconHook.activeCorpus}
+            neographyProfile={lexiconHook.activeNeographyProfile}
+            inflectionProfile={lexiconHook.activeInflectionProfile}
+            customFunctions={activeCustomFunctions}
+            stats={buildDashboardStats({
+              grammar: activeGrammar,
+              lexicon: activeLexicon,
+              incompleteCount: incompleteEntries.length,
+            })}
+            pragmaticEngine={pragmaticEngine}
+            completionStats={completionStats}
+            searchTerm={searchTerm}
+            onSearchTermChange={setSearchTerm}
+            functionFilter={functionFilter}
+            onFunctionFilterChange={setFunctionFilter}
+            viewFilter={viewFilter}
+            onViewFilterChange={setViewFilter}
+            showAffixFormatting={showAffixFormatting}
+            onShowAffixFormattingChange={setShowAffixFormatting}
+            selectedIds={selectedIds}
+            onToggleSelection={handleToggleSelection}
+            onToggleSelectAll={handleToggleSelectAll}
+            queueActive={queueActive}
+            workQueue={workQueue}
+            queueCursor={queueCursor}
+            queuePrev={queuePrev}
+            queueNext={queueAdvance}
+            queueTogglePending={queueTogglePending}
+            queueRemoveCurrent={queueRemoveCurrent}
+            queueClear={queueClear}
+            editorMode={editorMode}
+            onEditorModeChange={setEditorMode}
+            entryBeingEdited={entryBeingEdited}
+            incompleteCount={incompleteEntries.length}
+            incompleteIndex={incompleteIndex}
+            onNavigateIncomplete={handleNavigateIncomplete}
+            onLookup={handleLookupForCompletion}
+            generationModes={generationModes}
+            onGenerationModesChange={setGenerationModes}
+            initialDataForAdd={effectiveInitialDataForAdd}
+            suggestions={suggestions}
+            suggestionListName={suggestionListName}
+            onCloseSuggestions={() => setSuggestions([])}
+            onAddManually={handleAddManuallyFromSuggestion}
+            onGenerateAI={handleGenerateAIFromSuggestion}
+            isLoadingAI={aiStatus === 'working'}
+            onSelectList={(name) => setSuggestionListName(name)}
+            onAnalyzeList={handleAnalyzeForSuggestions}
+            activeToolView={activeToolView}
+            onBackToToolDashboard={handleBackToToolDashboard}
+            onOpenInterlinearGloss={handleOpenInterlinearGloss}
+            onOpenSoundChangeWorkbench={handleOpenSoundChangeWorkbench}
+            activeGrammarModule={activeGrammarModule}
+            onModuleChange={setActiveGrammarModule}
+            onOpenTab={setActiveTab}
+            onOpenGrammarModule={handleOpenGrammarModule}
+            onOpenDashboard={openDashboard}
+            onOpenAiSettings={openAiSettings}
+            onStartTour={handleStartTour}
+            onSelectConlang={lexiconHook.setActiveLexicon}
+            onEditWord={lexiconHook.editWord}
+            onDeleteWord={lexiconHook.deleteWord}
+            onAddWord={lexiconHook.addWord}
+            onAddBatchWords={lexiconHook.addBatchWords}
+            onAddCustomFunction={lexiconHook.addCustomFunction}
+            onAddCustomCategory={lexiconHook.addCustomFunction}
+            onUpdateCorpus={lexiconHook.updateCorpus}
+            onUpdateNeographyProfile={lexiconHook.updateNeographyProfile}
+            onUpdateGenerativeProfile={lexiconHook.updateGenerativeProfile}
+            onSaveGrammar={manifest => lexiconHook.updateGrammarManifest(manifest)}
+            onExportGrammar={handleExportGrammar}
+            onAddLexicalException={handleAddLexicalException}
+            onGenerateInflections={entry => {
+              setEntryToInflect(entry);
+              handleOpenModal('inflection_generator');
+            }}
+            onSearchLexicon={activeLexiconName ? async (term: string) => (await searchLexicon(lexicons[activeLexiconName], term, activeLexiconName)).map(r => r.entry) : undefined}
+            onAiCompleteEntry={handleAiCompleteEntry}
+            onAiGenerateRootAndLexeme={handleAiGenerate}
+            onCorrectSignificado={handleCorrectSignificado}
+            onCompleteFunctions={handleAiCompleteFunctions}
+            onFillMissing={handleAiFillMissing}
+            onAnalyzeForSuggestions={handleAnalyzeForSuggestions}
+            onManageFunctions={openFunctions}
+            onManageHyphens={openHyphens}
+            onOpenProfile={openProfile}
+            onOpenNeography={openWriting}
+            onOpenInflection={openGrammar}
+            onOpenTranslator={openTranslator}
+            onEnqueue={handleEnqueue}
+            onGenerateBatch={handleGenerateBatch}
+            onSyncPhonology={p => lexiconHook.updateGenerativeProfile({ ...activeProfile, ...p })}
+            onApplySoundChangeBatch={handleApplySoundChangeBatch}
+            showNotification={showNotification}
+            setIsLoading={setIsLoading}
+            setLoadingMessage={setLoadingMessage}
+            onSidebarTabChange={setActiveTab}
+            onOpenWidget={() => window.loxarBridge.openWidget()}
+            onOpenSettings={openSettings}
+            onGoHome={goHome}
+            onNavBack={goBack}
+            onQuickNav={handleQuickNav}
+          />
 
           <AppFloatingLayers
             activeTab={activeTab}
