@@ -4062,7 +4062,33 @@ el bloque de hidratacion de sesion (bienvenida + bootstrap, dos `useEffect` de ~
 grupo de navegacion por tabs (`setActiveTab('writing'/'grammar')` inline). Pendiente por
 autorizacion: `git push` + CI con numero de run.
 
+## [2026-11-22] Checkpoint: CLN — estado presentacional derivado a `useAppDerivedState` (P1 God Component)
 
+**Rama:** `master`. **Motivo:** el `return` de `App.tsx` ya vive en capas (`AppWelcomeLayer`,
+`AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`, `AppFloatingLayers`), asi que el frente
+restante del God Component es el cuerpo: hooks y efectos. Los cuatro `useMemo` de estado
+presentacional (`grammarMetrics`, `pragmaticEngine`, `completionStats`, `entryBeingEdited`)
+concentraban la ultima logica de dominio inline del componente.
 
+**Decision:** la derivacion pura pasa a `src/utils/appDerivedState.ts` (`deriveAppState`,
+`buildPragmaticEngineSummary`, tipos `AppDerivedStateInput`/`AppDerivedState`/`PragmaticEngineSummary`)
+y el hook `src/hooks/useAppDerivedState.ts` la memoiza con las dependencias reales. El resumen
+pragmatico es un SUBCONJUNTO presentacional (no `PragmaticEngineState`: no exige `typology`
+completa ni `slots`); `typologyLabel` sigue derivandose de `morphologyToTypologyProfile` (unica
+fuente) y `rulesCount` reutiliza `getGrammarMetrics`.
 
+**Cambios (commit `f536f27`):**
+- `src/utils/appDerivedState.ts` (nuevo): derivacion + tipo del resumen pragmatico.
+- `src/hooks/useAppDerivedState.ts` (nuevo): `useMemo` sobre `deriveAppState`.
+- `src/App.tsx`: 691 → 672 lineas; fuera `morphologyToTypologyProfile`, `getGrammarMetrics` y
+  `buildLexiconCompletionStats`.
+- Tests: `src/utils/__tests__/appDerivedState.test.ts` (10) y
+  `src/hooks/__tests__/useAppDerivedState.test.tsx` (4).
 
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 770/770 (91 archivos) · audit:orphans
+13 (baseline) · `npm run test:gui`: 8/8 en 2.1 min (1 worker, dev server caliente).
+Pendiente por autorizacion: `git push` + CI con numero de run.
+
+**Proximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 672 lineas; el siguiente candidato es
+el grupo de efectos de sincronizacion del modo completar (`entryToComplete` + clamp del indice) o
+el par `widgetBridge`/init pragmatic DB. Pendiente por autorizacion: `git push` + CI con numero de run.

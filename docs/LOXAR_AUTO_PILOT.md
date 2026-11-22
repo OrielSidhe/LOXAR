@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 756/756 (89 archivos) y `npm run test:gui`
-  (6 specs / 8 tests): 8/8 en 48s con el dev server caliente (en paralelo sigue sensible a la
-  contencion del chunk lazy del importador)
+- Repo limpio, build/typecheck/lint verdes; vitest 770/770 (91 archivos) y `npm run test:gui`
+  (6 specs / 8 tests): 8/8 en 2.1 min con 1 worker y el dev server caliente (en paralelo sigue
+  sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `c7813f1` (editor de morfología `InflectionModule`
-  cableado al léxico); 42 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `f536f27` (estado presentacional derivado a
+  `useAppDerivedState`, P1 God Component); 44 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -692,9 +692,20 @@ se setea recién tras ese load; sin `projectPath` y sin descarte previo se ofrec
 El descarte ahora persiste (`SessionCache.bootstrapDismissed`). `showHomePanel` sigue sin uso (estado
 muerto declarado, no bloqueante). Test nuevo: `appProjectBootstrapLayer.test.tsx` (5 tests).
 
+**[x] CLN — estado presentacional derivado a `useAppDerivedState` (P1, 2026-11-22).** Los cuatro
+`useMemo` inline del cuerpo de `App.tsx` (`grammarMetrics`, `pragmaticEngine`, `completionStats`,
+`entryBeingEdited`) salieron a `src/utils/appDerivedState.ts` (`deriveAppState`,
+`buildPragmaticEngineSummary`, tipo `PragmaticEngineSummary`) y `src/hooks/useAppDerivedState.ts`.
+El resumen pragmático es un subconjunto presentacional, no `PragmaticEngineState`; `typologyLabel`
+sigue derivándose de `morphologyToTypologyProfile` y `rulesCount` reutiliza `getGrammarMetrics`.
+`App.tsx` quedó en 672 líneas. Tests nuevos: `appDerivedState.test.ts` (10) y
+`useAppDerivedState.test.tsx` (4). Validaciones: typecheck 0, lint OK, build OK, vitest 770/770
+(91 archivos), audit:orphans 13, `npm run test:gui` 8/8 (1 worker, dev server caliente).
+Commit `f536f27`.
+
 **[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 15 commits locales** en `master` que no están en `origin` (`git rev-list --count
-origin/master..master`; el más reciente es `b326e34`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
+**Hay 44 commits locales** en `master` que no están en `origin` (`git rev-list --count
+origin/master..master`; el más reciente es `f536f27`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
 `loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
 `repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
 hay número de run y la fase queda formalmente abierta.
