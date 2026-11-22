@@ -59,7 +59,6 @@ import AppOverlayLayers from './components/AppOverlayLayers';
 import AppFloatingLayers from './components/AppFloatingLayers';
 
 // Data & Helpers
-import { WORD_LISTS } from './data/wordLists';
 import { MAIN_TOUR_STEPS, COLLECTIONS_TOUR_STEPS, WRITING_TOUR_STEPS, TOOLS_TOUR_STEPS } from './data/tourSteps';
 import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
@@ -68,6 +67,7 @@ import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSI
 import { initPragmaticDb } from './services/grammarDb';
 import { getGrammarMetrics } from './utils/grammarMetrics';
 import { buildDashboardStats } from './utils/dashboardStats';
+import { buildLexiconCompletionStats, clampIncompleteIndex, filterPendingCompletion } from './utils/lexiconCompletion';
 
 const App = () => {
   const appVersion = '2.4.0-pro';
@@ -94,7 +94,7 @@ const App = () => {
   } = useModalCoordination();
 
   // I1: First-run wizard state
-  const { showWizard, step, dataFolder, goToStep, nextStep, prevStep, skipWizard, completeWizard, updateDataFolder } = useFirstRunWizard();
+  const { showWizard, step, dataFolder, nextStep, prevStep, skipWizard, completeWizard, updateDataFolder } = useFirstRunWizard();
 
   // Handlers del wizard de primer arranque (logica pura en `wizardActionsModel`).
   const {
@@ -166,7 +166,6 @@ const App = () => {
   const [entryToInflect, setEntryToInflect] = useState<LexiconEntry | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchColumn, setSearchColumn] = useState('all');
   const [functionFilter, setFunctionFilter] = useState('all');
   const [viewFilter, setViewFilter] = useState<LexiconFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -240,15 +239,7 @@ const App = () => {
     markProjectDirty,
   } = projectOps;
 
-  const incompleteEntries = useMemo(() => activeLexicon.filter(entry => {
-    const category = entry.Categoría?.trim().toLowerCase();
-    return !entry.Significado?.[0]?.trim()
-      || !category
-      || category === 'desconocida'
-      || category === 'n/a'
-      || !entry.Raíz?.trim()
-      || !entry.Léxema?.[0]?.trim();
-  }), [activeLexicon]);
+  const incompleteEntries = useMemo(() => filterPendingCompletion(activeLexicon), [activeLexicon]);
 
   const appHandlers = useAppHandlers({
     lexiconHook,
@@ -404,14 +395,13 @@ const App = () => {
   }, [editorMode, incompleteIndex, incompleteEntries]);
 
   useEffect(() => {
-    setIncompleteIndex(prev => Math.max(0, Math.min(prev, incompleteEntries.length - 1)));
+    setIncompleteIndex(prev => clampIncompleteIndex(prev, incompleteEntries.length));
   }, [incompleteEntries.length]);
 
-  const completionStats = useMemo(() => ({
-    total: activeLexicon.length,
-    needsFunction: incompleteEntries.filter(e => !e.Categoría || e.Categoría === 'desconocida').length,
-    totalIncomplete: incompleteEntries.length,
-  }), [activeLexicon.length, incompleteEntries]);
+  const completionStats = useMemo(
+    () => buildLexiconCompletionStats(activeLexicon, incompleteEntries),
+    [activeLexicon, incompleteEntries],
+  );
 
   /** Live grammar metrics derived from the canonical manifest shape. */
   const grammarMetrics = useMemo(() => getGrammarMetrics(activeGrammar), [activeGrammar]);
