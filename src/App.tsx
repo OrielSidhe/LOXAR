@@ -14,7 +14,6 @@ import { searchLexicon } from './services/ftsSearch';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode, LexiconFilter } from './types';
 import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
-import { FloatingWidget } from './components/FloatingWidget';
 import FirstRunWizard from './components/FirstRunWizard';
 import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
@@ -38,7 +37,6 @@ import SettingsIcon from './components/icons/SettingsIcon';
 import SparkleIcon from './components/icons/SparkleIcon';
 
 // Components
-import AppLoadingLayer from './components/AppLoadingLayer';
 import EntryEditor from './components/EntryEditor';
 import CollectionsManager from './components/CollectionsManager';
 import WritingAndNeographyTab from './components/WritingAndNeographyTab';
@@ -49,23 +47,17 @@ import WorkbenchRightPanel from './components/WorkbenchRightPanel';
 import WorkQueueBar from './components/WorkQueueBar';
 import WorkbenchTab from './components/WorkbenchTab';
 import ToolsTab from './components/ToolsTab';
-import AppBatchToolbar from './components/AppBatchToolbar';
-import AppOfflineBannerLayer from './components/AppOfflineBannerLayer';
-import ImportJobBanner from './components/ImportJobBanner';
-import AppAmbientLightsLayer from './components/AppAmbientLightsLayer';
-import AppProjectBootstrapLayer from './components/AppProjectBootstrapLayer';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
-import AppSettingsModalLayer from './components/AppSettingsModalLayer';
-import AppModalLayer from './components/AppModalLayer';
 import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
 import DashboardTab from './components/DashboardTab';
 import AppWelcomeSection from './components/AppWelcomeSection';
-import AppToastLayer from './components/AppToastLayer';
 import AppNavigationBar from './components/AppNavigationBar';
 import AppTabContent from './components/AppTabContent';
+import AppOverlayLayers from './components/AppOverlayLayers';
+import AppFloatingLayers from './components/AppFloatingLayers';
 
 // Data & Helpers
 import { WORD_LISTS } from './data/wordLists';
@@ -509,14 +501,10 @@ const App = () => {
         )}
 
         <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished && !showWelcome ? 'opacity-100' : 'opacity-0'}`}>
-          <AppAmbientLightsLayer />
-
-          <AppLoadingLayer isLoading={isLoading} loadingMessage={loadingMessage} />
-          <AppOfflineBannerLayer showOfflineBanner={showOfflineBanner} />
-
-          <ImportJobBanner />
-
-          <AppModalLayer
+          <AppOverlayLayers
+            isLoading={isLoading}
+            loadingMessage={loadingMessage}
+            showOfflineBanner={showOfflineBanner}
             activeModal={activeModal}
             entryToEditInModal={entryToEditInModal}
             entryToInflect={entryToInflect}
@@ -567,8 +555,6 @@ const App = () => {
             }}
             showNotification={showNotification}
             onAiSettingsClose={handleAiSettingsModalClose}
-          />
-          <AppSettingsModalLayer
             showSettings={showSettings}
             onCloseSettings={closeSettings}
             onOpenAiSettings={openAiSettingsFromSettings}
@@ -740,47 +726,33 @@ const App = () => {
               />            </main>
           </div>
 
-          {activeTab === 'table' && selectedIds.size > 0 && (
-            <AppBatchToolbar
-              selectedCount={selectedIds.size}
-              customFunctions={activeCustomFunctions}
-              onClearSelection={() => setSelectedIds(new Set())}
-              onBatchDelete={handleBatchDelete}
-              onBatchChangeFunction={handleBatchChangeFunction}
-            />
-          )}
-
-          <AppToastLayer
+          <AppFloatingLayers
+            activeTab={activeTab}
+            selectedIds={selectedIds}
+            customFunctions={activeCustomFunctions}
+            onClearSelection={() => setSelectedIds(new Set())}
+            onBatchDelete={handleBatchDelete}
+            onBatchChangeFunction={handleBatchChangeFunction}
             notifications={notifications}
             onDismissNotification={id => setNotifications(prev => prev.filter(n => n.id !== id))}
+            onWidgetAddWord={handleWidgetAddWord}
+            onWidgetSearch={handleWidgetSearch}
+            onWidgetToggleCapture={() => window.loxarBridge.openWidget()}
+            showWelcome={showWelcome}
+            showWizard={showWizard}
+            isAppLoaded={isAppLoaded}
+            showProjectBootstrap={showProjectBootstrap}
+            bootstrapDismissed={bootstrapDismissed}
+            projectPath={projectPath}
+            availableProjects={availableProjects}
+            hasLocalData={hasLocalData}
+            onCreate={handleBootstrapCreate}
+            onOpenOther={handleBootstrapOpenOther}
+            onOpenFound={handleBootstrapOpenFound}
+            onImportLocal={handleBootstrapImportLocal}
+            onDismiss={handleBootstrapDismiss}
+            onChooseLocation={() => setShowProjectBootstrap(true)}
           />
-
-          {/* F1: Floating widget — persists position/dock state in localStorage */}
-          <FloatingWidget
-            isCapturing={false}
-            missingWords={[]}
-            onAddWord={handleWidgetAddWord}
-            onSearch={handleWidgetSearch}
-            onToggleCapture={() => window.loxarBridge.openWidget()}
-            lastResult={null}
-          />
-
-          {!showWelcome && !showWizard && (
-            <AppProjectBootstrapLayer
-              isAppLoaded={isAppLoaded}
-              showProjectBootstrap={showProjectBootstrap}
-              bootstrapDismissed={bootstrapDismissed}
-              projectPath={projectPath}
-              availableProjects={availableProjects}
-              hasLocalData={hasLocalData}
-              onCreate={handleBootstrapCreate}
-              onOpenOther={handleBootstrapOpenOther}
-              onOpenFound={handleBootstrapOpenFound}
-              onImportLocal={handleBootstrapImportLocal}
-              onDismiss={handleBootstrapDismiss}
-              onChooseLocation={() => setShowProjectBootstrap(true)}
-            />
-          )}
         </div>
       </div>
     </ErrorBoundary>
