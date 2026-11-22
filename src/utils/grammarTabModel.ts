@@ -9,7 +9,7 @@ import type {
 import type { FlexibleGrammar } from '../types/grammar-flexible';
 import type { ClauseAST, ClauseFeatures, ClauseParticipant } from '../services/grammar/engineTypes';
 import type { SyntaxCanvas } from '../types';
-import { buildClauseAST, realizeClause, validatePhonology } from '../services/grammar';
+import { buildClauseAST, toClauseAST, realizeClause, validatePhonology } from '../services/grammar';
 import { getDefaultPreviewEntries, isMeaningfulTypology, normalizeCategory } from './grammarPreview';
 
 /** Módulos navegables del tab de gramática. */
@@ -204,7 +204,7 @@ export const buildClausePreview = (
 
   let ast: ClauseAST | ClauseFeatures;
   try {
-    ast = buildClauseAST(participants) as ClauseAST;
+    ast = toClauseAST(buildClauseAST(participants));
   } catch {
     ast = { participants };
   }

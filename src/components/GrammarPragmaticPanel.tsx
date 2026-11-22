@@ -34,7 +34,8 @@ import {
   saveClauseType,
   deleteClauseType,
 } from '../services/grammarDb';
-import { buildClauseAST } from '../services/grammar/ast-builder';
+import { buildClauseAST, toClauseAST } from '../services/grammar/ast-builder';
+import type { EditableClauseAST } from '../services/grammar/engineTypes';
 import { realizeClause } from '../services/grammar/syntax';
 import { displayOf, resolveLexicalCategory, isSubcategory } from '../data/taxonomy';
 import InfoHint from './InfoHint';
@@ -241,14 +242,14 @@ const GrammarPragmaticPanel: React.FC<GrammarPragmaticPanelProps> = ({
       }
     }
     if (!participants.some((p) => p.role === 'verb')) return;
-    let ast: any;
+    let ast: EditableClauseAST;
     try {
       ast = buildClauseAST(participants);
     } catch {
       setRealizedResult(null);
       return;
     }
-    const result = realizeClause(ast, effectiveManifestFromEngine);
+    const result = realizeClause(toClauseAST(ast), effectiveManifestFromEngine);
     setRealizedResult({
       sentence: result.sentence,
       gloss: (manifest.typology?.wordOrder || 'SVO').toUpperCase(),

@@ -321,7 +321,7 @@ export interface PhonologyConfig {
 }
 
 // ── AST Types (from the grammar engine) ───────────────────────────────────────
-import type { ClauseAST } from './services/grammar/engineTypes';
+import type { EditableClauseAST } from './services/grammar/engineTypes';
 
 // ── Syntax Canvas Types ──────────────────────────────────────────────────────
 
@@ -395,7 +395,7 @@ export interface GrammarManifest {
     mutationRules: MutationRule[];
     affixInventory?: GrammarAffix[];
     exceptions: GrammarException[];
-    clauseTree?: ClauseAST;
+    clauseTree?: EditableClauseAST;
     syntaxCanvas?: SyntaxCanvas;
     preview?: GrammarPreviewConfig;
     notes: string[];

@@ -4,6 +4,8 @@ import InfoHint from './InfoHint';
 import ASTEditor from './ASTEditor';
 import SyntaxCanvas from './SyntaxCanvas';
 import { buildClauseAST, validatePhonology } from '../services/grammar';
+import type { BuildParticipant } from '../services/grammar/ast-builder';
+import type { EditableClauseAST } from '../services/grammar/engineTypes';
 import { realizeEditedTree } from '../services/grammar/ast-view';
 import { getEntryLabel, getDefaultPreviewEntries, buildPreviewSentence } from '../utils/grammarPreview';
 
@@ -20,7 +22,7 @@ export interface GrammarSyntaxPanelProps {
   effectiveManifest: GrammarManifest;
   lexicon: LexiconEntry[];
   syntaxSubTab: 'canvas' | 'ast' | 'preview';
-  editableAst: any;
+  editableAst: EditableClauseAST | null;
   conlangName?: string;
   aiAvailable?: boolean;
   preview: {
@@ -30,7 +32,7 @@ export interface GrammarSyntaxPanelProps {
     violations: string[];
   };
   onSetSyntaxSubTab: (tab: 'canvas' | 'ast' | 'preview') => void;
-  onSetEditableAst: (ast: any) => void;
+  onSetEditableAst: (ast: EditableClauseAST | null) => void;
   onUpdateManifest: (updates: Partial<GrammarManifest>) => void;
   onUpdatePreview: (updates: Partial<NonNullable<GrammarManifest['preview']>>) => void;
 }
@@ -51,12 +53,13 @@ const GrammarSyntaxPanel = ({
   const entryOptions = lexicon.slice(0, 300);
 
   const regenerateTree = () => {
+    const participants: BuildParticipant[] = [
+      { role: 'subject', lexeme: preview.entries.subject, features: {} },
+      { role: 'verb', lexeme: preview.entries.verb, features: {} },
+      { role: 'object', lexeme: preview.entries.object, features: {} },
+    ].filter((p) => p.lexeme);
     onUpdateManifest({
-      clauseTree: buildClauseAST([
-        { role: 'subject', lexeme: preview.entries.subject, features: {} },
-        { role: 'verb', lexeme: preview.entries.verb, features: {} },
-        { role: 'object', lexeme: preview.entries.object, features: {} },
-      ].filter((p) => p.lexeme) as any),
+      clauseTree: buildClauseAST(participants),
     });
   };
 

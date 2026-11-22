@@ -76,6 +76,31 @@ export interface ClauseAST {
 }
 
 // -------------------------------------------------
+//           ÁRBOL EDITABLE (UI / AST editor)
+// -------------------------------------------------
+/**
+ * Nodo del árbol AST editable en el tab de Sintaxis. Es el mismo shape que
+ * `SyntaxNode`, pero con `role` y `category` como `string`: el editor de
+ * árbol permite roles arbitrarios escritos por el usuario y el motor los
+ * trata como cadena en tiempo de ejecución.
+ */
+export interface EditableSyntaxNode {
+  id: string;
+  role: string;
+  lexeme: { root: string; category: string; Raíz?: string };
+  features: Record<string, string>;
+  dependents: EditableSyntaxNode[];
+  conjugateRoot?: boolean;
+  category?: string;
+}
+
+/** ClauseAST en su forma editable: root con roles/categorías sin restringir. */
+export interface EditableClauseAST {
+  clauseId: string;
+  root: EditableSyntaxNode;
+}
+
+// -------------------------------------------------
 //                ENTRADA PLANE (para retrocompatibilidad)
 // -------------------------------------------------
 export interface OldClauseFeatures {

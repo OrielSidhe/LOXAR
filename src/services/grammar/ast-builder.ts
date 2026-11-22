@@ -11,20 +11,25 @@
  * Keep this file lightweight - it only contains pure TypeScript
  * conversion logic, no side-effects.
  */
-export interface BuildParticipant {
-  role: string;
-  lexeme: any;
-  features: Record<string, string>;
+import type { ClauseAST, EditableClauseAST, EditableSyntaxNode } from './engineTypes';
+
+/**
+ * Lexema de entrada del builder. Acepta la forma canónica (`Raíz`/`Categoría`)
+ * y la forma inglesa interna (`root`/`category`) que usan los tests y el editor.
+ */
+export interface BuildLexeme {
+  root?: string;
+  Raíz?: string;
+  Categoría?: string;
+  category?: string;
 }
 
-export interface GenericNode {
-  id: string;
+export interface BuildParticipant {
   role: string;
-  lexeme: { root: string; category: string };
+  lexeme: BuildLexeme;
   features: Record<string, string>;
-  dependents: GenericNode[];
-  conjugateRoot: boolean;
-  category: string;
+  /** Subárbol pre-construido (cadenas verbales, calificadores anidados). */
+  dependents?: BuildParticipant[];
 }
 
 /**
@@ -38,13 +43,13 @@ export interface GenericNode {
  * @param participants flat array of participants as used by the UI
  * @returns a fresh ClauseAST whose root is the primary verb (conjugateRoot=true)
  */
-export function buildClauseAST(participants: BuildParticipant[]): any {
+export function buildClauseAST(participants: BuildParticipant[]): EditableClauseAST {
   // 1) Identify the main verb (the only entry with role 'verb' or 'root')
   const verbEntry = participants.find((p) => p.role === 'verb' || p.role === 'root');
   if (!verbEntry) throw new Error('No verb participant found in clause build');
 
   // 2) Create the root VerbNode
-  const root: GenericNode = {
+  const root: EditableSyntaxNode = {
     id: `v_${Date.now()}`,
     role: 'root',
     lexeme: {
@@ -58,7 +63,7 @@ export function buildClauseAST(participants: BuildParticipant[]): any {
   };
 
   // 3) Helper to turn a participant into a generic node
-  const makeNode = (role: string, entry: BuildParticipant): GenericNode => {
+  const makeNode = (role: string, entry: BuildParticipant): EditableSyntaxNode => {
     const categoryMap: Record<string, string> = {
       sustantivo: 'noun',
       adjetivo: 'adjective',
@@ -70,7 +75,7 @@ export function buildClauseAST(participants: BuildParticipant[]): any {
     };
     const rawCat = entry.lexeme?.Categoría?.toLowerCase() || 'noun';
     const category = categoryMap[rawCat] || (role.includes('verb') ? 'verb' : 'noun');
-    const node: GenericNode = {
+    const node: EditableSyntaxNode = {
       id: `n_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       role,
       lexeme: {
@@ -83,8 +88,8 @@ export function buildClauseAST(participants: BuildParticipant[]): any {
       category,
     };
     // Si el participante ya trae dependents (árbol pre-construido), cópialos.
-    if (Array.isArray((entry as any).dependents)) {
-      node.dependents = (entry as any).dependents.map((d: any) => makeNode(d.role, d));
+    if (Array.isArray(entry.dependents)) {
+      node.dependents = entry.dependents.map((d) => makeNode(d.role, d));
     }
     return node;
   };
@@ -100,4 +105,14 @@ export function buildClauseAST(participants: BuildParticipant[]): any {
     clauseId: `clause_${Date.now()}`,
     root,
   };
+}
+
+/**
+ * Boundary cast: el árbol editable permite roles/categorías de texto libre, así
+ * que es un superconjunto estructural del `ClauseAST` del motor. El motor solo
+ * lee `id`/`role`/`lexeme`/`dependents`/`features` como cadenas en runtime, por
+ * lo que el cast es seguro y evita propagar `any` por los consumidores.
+ */
+export function toClauseAST(ast: EditableClauseAST): ClauseAST {
+  return ast as unknown as ClauseAST;
 }

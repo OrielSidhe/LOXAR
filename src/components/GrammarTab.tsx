@@ -4,7 +4,7 @@ const GrammarImporterModal = lazy(() => import('./GrammarImporterModal'));
 import { FlexibleGrammar } from '../types/grammar-flexible';
 import GrammarWizard from './GrammarWizard';
 import { isAiAvailable } from '../services/geminiService';
-import { buildClauseAST } from '../services/grammar';
+import { buildClauseAST, type EditableClauseAST } from '../services/grammar';
 import { validatePostImport } from '../services/grammar/postImportValidator';
 import ImportReport from './ImportReport';
 import GrammarOverview from './GrammarOverview';
@@ -59,7 +59,7 @@ const GrammarTab = ({ manifest, onSave, lexicon = [], conlangName, onAddLexicalE
     const [aiAvailable, setAiAvailable] = useState(true);
     const [isWizardOpen, setIsWizardOpen] = useState(false);
     // Editable clause AST for the "Árbol AST" editor (seeded from the preview).
-    const [editableAst, setEditableAst] = useState<any>(null);
+    const [editableAst, setEditableAst] = useState<EditableClauseAST | null>(null);
     const [importReport, setImportReport] = useState<ReturnType<typeof validatePostImport> | null>(null);
 
     useEffect(() => {

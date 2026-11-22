@@ -25,12 +25,13 @@ import {
   updateNode,
   type DiagramNode,
 } from '../services/grammar/ast-view';
+import type { EditableClauseAST, EditableSyntaxNode } from '../services/grammar/engineTypes';
 
 interface Props {
   /** Editable clause AST produced by `buildClauseAST`. */
-  ast: any;
+  ast: EditableClauseAST;
   /** Called whenever the user reshapes the tree. */
-  onChange: (ast: any) => void;
+  onChange: (ast: EditableClauseAST) => void;
   /** Optional callback to inspect (e.g. open a feature panel). */
   onInspect?: (nodeId: string) => void;
 }
@@ -52,11 +53,11 @@ const SIBLING_GAP_Y = 64;
 
 type PositionMap = Record<string, { x: number; y: number }>;
 
-function layoutTree(ast: any): PositionMap {
+function layoutTree(ast: EditableClauseAST): PositionMap {
   const positions: PositionMap = {};
   let leafCursor = 0;
 
-  const place = (node: any, depth: number) => {
+  const place = (node: EditableSyntaxNode, depth: number) => {
     if (!node) return;
     const kids = node.dependents || [];
     if (kids.length === 0) {
@@ -64,8 +65,8 @@ function layoutTree(ast: any): PositionMap {
       leafCursor += 1;
       positions[node.id] = { x: depth * LEVEL_GAP_X + 20, y };
     } else {
-      kids.forEach((k: any) => place(k, depth + 1));
-      const ys = kids.map((k: any) => positions[k.id]?.y ?? 0);
+      kids.forEach((k) => place(k, depth + 1));
+      const ys = kids.map((k) => positions[k.id]?.y ?? 0);
       const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
       positions[node.id] = { x: depth * LEVEL_GAP_X + 20, y: midY };
     }
@@ -75,9 +76,9 @@ function layoutTree(ast: any): PositionMap {
   return positions;
 }
 
-function collectNodes(ast: any): DiagramNode[] {
+function collectNodes(ast: EditableClauseAST): DiagramNode[] {
   const out: DiagramNode[] = [];
-  const walk = (node: any) => {
+  const walk = (node: EditableSyntaxNode) => {
     if (!node) return;
     out.push({
       id: node.id,
@@ -92,11 +93,11 @@ function collectNodes(ast: any): DiagramNode[] {
   return out;
 }
 
-function collectEdges(ast: any): { fromId: string; toId: string }[] {
+function collectEdges(ast: EditableClauseAST): { fromId: string; toId: string }[] {
   const edges: { fromId: string; toId: string }[] = [];
-  const walk = (node: any) => {
+  const walk = (node: EditableSyntaxNode) => {
     if (!node) return;
-    (node.dependents || []).forEach((child: any) => {
+    (node.dependents || []).forEach((child) => {
       edges.push({ fromId: node.id, toId: child.id });
       walk(child);
     });

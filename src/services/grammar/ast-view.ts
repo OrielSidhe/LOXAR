@@ -10,6 +10,18 @@
  * on React internals – they only consume plain data.
  */
 
+import type { GrammarManifest } from '../../types';
+import type { EditableClauseAST, EditableSyntaxNode } from './engineTypes';
+import { toClauseAST } from './ast-builder';
+// Imported lazily to avoid a circular import at module-eval time.
+import { realizeClause } from './syntax';
+
+/** Nodo de diagrama con los campos heredados que el walker tolera. */
+type DiagramSourceNode = EditableSyntaxNode & {
+  form?: string;
+  children?: EditableSyntaxNode[];
+};
+
 export interface DiagramNode {
   id: string;
   label: string;
@@ -28,12 +40,12 @@ export interface DiagramEdge {
  * Every node becomes a diagram node; every dependent becomes an edge
  * from its parent to the child.
  */
-export function astToDiagram(ast: any): { nodes: DiagramNode[]; edges: DiagramEdge[] } {
+export function astToDiagram(ast: EditableClauseAST): { nodes: DiagramNode[]; edges: DiagramEdge[] } {
   const nodes: DiagramNode[] = [];
   const edges: DiagramEdge[] = [];
   const visited = new Set<string>();
 
-  const walk = (node: any, parentId?: string) => {
+  const walk = (node: DiagramSourceNode, parentId?: string) => {
     if (!node) return;
     const id = node.id || `n_${Math.random().toString(36).slice(2, 9)}`;
     if (visited.has(id)) return; // B2.7: cycle detection
@@ -50,7 +62,7 @@ export function astToDiagram(ast: any): { nodes: DiagramNode[]; edges: DiagramEd
     if (parentId) edges.push({ fromId: parentId, toId: id });
 
     const children = node.dependents || node.children || [];
-    children.forEach((child: any) => walk(child, id));
+    children.forEach((child) => walk(child, id));
   };
 
   if (ast?.root) walk(ast.root);
@@ -75,13 +87,14 @@ function freshAstId(): string {
 }
 
 /** Deep clone a ClauseAST (structuredClone with a safe fallback). */
-export function cloneClauseAST(ast: any): any {
+export function cloneClauseAST(ast: EditableClauseAST): EditableClauseAST {
   if (typeof structuredClone === 'function') return structuredClone(ast);
-  return JSON.parse(JSON.stringify(ast));
+  // JSON round-trip: el tipo no puede verificarse en runtime; la forma es la del builder.
+  return JSON.parse(JSON.stringify(ast)) as EditableClauseAST;
 }
 
 /** Build a minimal SyntaxNode for a given role. */
-export function makeNode(role: string, label: string): any {
+export function makeNode(role: string, label: string): EditableSyntaxNode {
   return {
     id: freshAstId(),
     role,
@@ -102,36 +115,36 @@ function guessCategory(role: string): 'verb' | 'noun' | 'adjective' | 'particle'
  *  A5: Returns `null` if adding `child` would create a cycle
  *  (i.e. parentId is already a descendant of child). The caller should
  *  surface visible feedback instead of silently truncating. */
-export function addDependent(ast: any, parentId: string, child: any): any | null {
+export function addDependent(ast: EditableClauseAST, parentId: string, child: EditableSyntaxNode): EditableClauseAST | null {
   // A5: cycle detection — reject if parentId is already inside child's subtree
-  const containsNode = (node: any, targetId: string): boolean => {
+  const containsNode = (node: EditableSyntaxNode, targetId: string): boolean => {
     if (!node) return false;
     if (node.id === targetId) return true;
-    return (node.dependents || []).some((d: any) => containsNode(d, targetId));
+    return (node.dependents || []).some((d) => containsNode(d, targetId));
   };
   if (child && containsNode(child, parentId)) return null; // reject cycle
 
   const next = cloneClauseAST(ast);
-  const attach = (node: any): boolean => {
+  const attach = (node: EditableSyntaxNode): boolean => {
     if (!node) return false;
     if (node.id === parentId) {
       node.dependents = [...(node.dependents || []), child];
       return true;
     }
-    return (node.dependents || []).some((d: any) => attach(d));
+    return (node.dependents || []).some((d) => attach(d));
   };
   attach(next.root);
   return next;
 }
 
 /** Immutably remove the node identified by `nodeId` (and its subtree). */
-export function removeNode(ast: any, nodeId: string): any {
+export function removeNode(ast: EditableClauseAST, nodeId: string): EditableClauseAST {
   const next = cloneClauseAST(ast);
-  const prune = (node: any): any => {
+  const prune = (node: EditableSyntaxNode): EditableSyntaxNode => {
     if (!node) return node;
     node.dependents = (node.dependents || [])
-      .filter((d: any) => d.id !== nodeId)
-      .map((d: any) => prune(d));
+      .filter((d) => d.id !== nodeId)
+      .map((d) => prune(d));
     return node;
   };
   prune(next.root);
@@ -139,9 +152,9 @@ export function removeNode(ast: any, nodeId: string): any {
 }
 
 /** Immutably update a node's label / role. */
-export function updateNode(ast: any, nodeId: string, updates: { label?: string; role?: string }): any {
+export function updateNode(ast: EditableClauseAST, nodeId: string, updates: { label?: string; role?: string }): EditableClauseAST {
   const next = cloneClauseAST(ast);
-  const walk = (node: any) => {
+  const walk = (node: EditableSyntaxNode) => {
     if (!node) return;
     if (node.id === nodeId) {
       if (updates.label !== undefined) node.lexeme = { ...node.lexeme, root: updates.label };
@@ -157,14 +170,11 @@ export function updateNode(ast: any, nodeId: string, updates: { label?: string; 
 }
 
 /** Realize an edited tree back into a sentence using the engine. */
-export function realizeEditedTree(ast: any, manifest: any): string {
+export function realizeEditedTree(ast: EditableClauseAST, manifest: GrammarManifest): string {
   try {
-    const result = realizeClause(ast, manifest);
+    const result = realizeClause(toClauseAST(ast), manifest);
     return result.sentence || '';
   } catch {
     return '';
   }
 }
-
-// Imported lazily to avoid a circular import at module-eval time.
-import { realizeClause } from './syntax';
