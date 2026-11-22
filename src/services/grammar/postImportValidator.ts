@@ -29,8 +29,39 @@ import {
 } from '../../data/taxonomy';
 
 // ---------------------------------------------------------------------------
+// Formas estructurales de la union `DeclarativeManifest | GrammarManifest`
+//
+// El validador acepta ambos formatos y ambos difieren en la forma de la
+// fonología y de la realización de slots. Estos tipos estructurales dejan
+// que el compilador verifique el acceso sin casts ni tipado relajado: ambos
+// miembros de la unión son asignables a ellos.
+// ---------------------------------------------------------------------------
+
+/** Fonología en cualquiera de los dos formatos: `DeclarativeManifest`
+ *  (`{ consonants, vowels }`) y `GrammarManifest` (`{ inventory: { ... } }`). */
+interface PhonologyLike {
+  consonants?: string[];
+  vowels?: string[];
+  inventory?: { consonants?: string[]; vowels?: string[] };
+}
+
+/** Realización de slot en cualquiera de los dos formatos: el declarativo
+ *  (`{ kind, form, when?, position? }`) y el `SlotRealization` discriminado
+ *  del manifiesto legado. */
+interface RealizationLike {
+  kind: string;
+  form?: string;
+  position?: string;
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+
+/** Forma de realización de un slot, sin cast: acepta ambos formatos. */
+function realizationForm(realization: RealizationLike): string | undefined {
+  return realization.form;
+}
 
 const VALID_ENGINE_TYPES = new Set([
   'affix', 'clitic', 'particle', 'tone', 'mutation', 'position', 'auxiliary', 'suppletion'
@@ -75,10 +106,9 @@ export function validatePostImport(manifest: DeclarativeManifest | GrammarManife
   const problems: Problem[] = [];
   const suggestions: string[] = [];
 
-  const phono = manifest.phonology;
-  const phonologyAny = phono as any;
-  const consonants = phonologyAny?.consonants ?? phonologyAny?.inventory?.consonants ?? [];
-  const vowels = phonologyAny?.vowels ?? phonologyAny?.inventory?.vowels ?? [];
+  const phonology: PhonologyLike | undefined = manifest.phonology;
+  const consonants = phonology?.consonants ?? phonology?.inventory?.consonants ?? [];
+  const vowels = phonology?.vowels ?? phonology?.inventory?.vowels ?? [];
   const typo = manifest.typology;
   if (!typo.wordOrder) {
     problems.push({ severity: 'error', location: 'typology.wordOrder', message: 'Orden de palabras no definido', fix: 'Añade wordOrder: SVO|SOV|VSO|VOS|OVS|OSV|Libre' });
@@ -129,8 +159,8 @@ export function validatePostImport(manifest: DeclarativeManifest | GrammarManife
         if (typeof s.order !== 'number') {
           problems.push({ severity: 'warning', location: `paradigms[${idx}].slots[${sIdx}].order`, message: 'Slot sin orden definido' });
         }
-        const realizationAny = s.realization as any;
-        const { kind, position, form } = realizationAny;
+        const realization: RealizationLike = s.realization;
+        const { kind, position, form } = realization;
         if (!kind) {
           problems.push({ severity: 'error', location: `paradigms[${idx}].slots[${sIdx}].realization.kind`, message: 'Slot sin tipo de realización (kind)' });
         } else if (!VALID_MORPHEME_KINDS.has(kind.toLowerCase())) {
@@ -220,7 +250,7 @@ export function validatePostImport(manifest: DeclarativeManifest | GrammarManife
   if (consonants.length > 0 || vowels.length > 0) score += 15;
   if (paradigms.length > 0) {
     score += 20;
-    if (paradigms.some(p => p.slots.some(s => !!(s.realization as any).form))) score += 20;
+    if (paradigms.some(p => p.slots.some(s => Boolean(realizationForm(s.realization))))) score += 20;
   }
   if (strategies.length > 0) score += 10;
   if (manifest.exceptions.length > 0) score += 5;
