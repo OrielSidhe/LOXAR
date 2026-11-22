@@ -9,6 +9,7 @@
  * las columnas no reconocidas viajan a `extraData` vía `processMappedData`.
  */
 import { parseFileContent, processMappedData } from '../services/parser';
+import type { LexiconRow } from '../services/parser';
 import type { LexiconEntry, NewLexiconEntry } from '../types';
 
 type Mapping = { [header: string]: keyof NewLexiconEntry | 'extra' | '' };
@@ -56,7 +57,7 @@ export const buildAutoMapping = (headers: string[]): Mapping => {
 };
 
 /** Convierte filas ya parseadas (objetos con keys = headers) en entradas. */
-export const entriesFromRows = (rows: any[], headers: string[]): LexiconEntry[] => {
+export const entriesFromRows = (rows: LexiconRow[], headers: string[]): LexiconEntry[] => {
   const mapping = buildAutoMapping(headers);
   return processMappedData(rows, mapping).map((entry, index) => ({
     ...entry,

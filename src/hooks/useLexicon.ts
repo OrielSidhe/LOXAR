@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { LexiconEntry, NewLexiconEntry, GenerativeProfile, MissingWord, CategoryOperation, HyphenOperation, NeographyProfile, InflectionProfile, LexiconData, GrammarManifest, CorpusEntry } from '../types';
 import { batchDetermineCategory, generateBatchWords } from '../services/geminiService';
 import { parseFileContent, processMappedData, inferRootFromLexeme } from '../services/parser';
+import type { LexiconRow } from '../services/parser';
+import { getErrorMessage } from '../utils/entryEditorModel';
 import { isTauri, listLexiconNames, loadLexicon, saveLexicon, deleteLexicon as sqlDeleteLexicon } from '../services/sqlStorage';
 import {
   DEFAULT_FUNCTIONS,
@@ -23,7 +25,7 @@ export interface Conflict {
 
 export interface ImportState {
     step: 'idle' | 'map_headers' | 'resolve_conflicts' | 'sanitize_file' | 'repair_characters' | 'error';
-    rawData?: any[];
+    rawData?: LexiconRow[];
     headers?: string[];
     mapping?: { [key: string]: keyof NewLexiconEntry | 'extra' | '' };
     conflicts?: Conflict[];
@@ -332,7 +334,7 @@ export const useLexicon = (
             } else {
                 setImportState({ step: 'map_headers', rawData: successfulData, headers, warnings, mapping: {}, conflicts: [], processedData: [], rawContent: fileContent });
             }
-        } catch (e: any) { setImportState({ step: 'error', error: e.message || 'Error al procesar el archivo.' }); }
+        } catch (e) { setImportState({ step: 'error', error: getErrorMessage(e) || 'Error al procesar el archivo.' }); }
     }, [showNotification, state.lexicons, state.activeLexiconName, createImportedLexicon]);
 
     const proceedWithValidEntries = useCallback(() => {
@@ -353,9 +355,10 @@ export const useLexicon = (
             }
             setImportState(prev => ({ ...prev, step: 'map_headers', rawData: [...(prev.rawData || []), ...successfulData], errorContent: null, parseError: null }));
             return { success: true };
-        } catch (e: any) {
-            setImportState(prev => ({ ...prev, parseError: e.message }));
-            return { success: false, error: e.message };
+        } catch (e) {
+            const message = getErrorMessage(e);
+            setImportState(prev => ({ ...prev, parseError: message }));
+            return { success: false, error: message };
         }
     }, [importState]);
 
@@ -414,8 +417,8 @@ export const useLexicon = (
             } else {
                 setImportState({ step: 'map_headers', rawData: successfulData, headers, warnings, mapping: {}, conflicts: [], processedData: [], rawContent: repairedData });
             }
-        } catch (e: any) {
-            setImportState({ step: 'error', error: e.message || 'Error al procesar el archivo reparado.' });
+        } catch (e) {
+            setImportState({ step: 'error', error: getErrorMessage(e) || 'Error al procesar el archivo reparado.' });
         }
     }, [showNotification]);
 
@@ -427,9 +430,9 @@ export const useLexicon = (
         if (entriesToComplete.length === 0) return { count: 0 };
 
         const results = await batchDetermineCategory(entriesToComplete.map(e => ({ id: e.id, significado: e.significado })), onProgress);
-        const functionsById = new Map(results.map((res: any) => [res.id, res.categoria]));
+        const functionsById = new Map(results.map(res => [res.id, res.categoria]));
         const newEntries = activeLexicon.map(entry => functionsById.has(entry.ID) ? { ...entry, Categoría: functionsById.get(entry.ID) as string } : entry);
-        const newFunctions = new Set(results.map((r: any) => r.categoria).filter(Boolean) as string[]);
+        const newFunctions = new Set(results.map(r => r.categoria).filter(Boolean) as string[]);
 
         updateActiveLexicon({
             entries: sortAndReindex(newEntries),
@@ -450,7 +453,7 @@ export const useLexicon = (
             const entriesToCat = currentEntries.filter(e => e.Significado?.[0] && (!e.Categoría || ['desconocida', 'n/a'].includes(e.Categoría)));
             if (entriesToCat.length > 0) {
                 const results = await batchDetermineCategory(entriesToCat.map(e => ({ id: e.ID, significado: e.Significado[0] })), onProgress);
-                const functionsById = new Map(results.map((r: any) => [r.id, r.categoria]));
+                const functionsById = new Map(results.map(r => [r.id, r.categoria]));
                 currentEntries = currentEntries.map(e => functionsById.has(e.ID) ? { ...e, Categoría: functionsById.get(e.ID) as string } : e);
                 totalFuncs = results.length;
             }

@@ -1,15 +1,35 @@
 import Papa from 'papaparse';
 import { NewLexiconEntry } from '../types';
+import type { LexiconData } from '../types';
 import { cleanseJson } from './geminiService';
 
+/**
+ * Fila parseada de un archivo (JSON o CSV): las claves son los headers y los
+ * valores son heterogéneos (string en CSV, cualquier literal en JSON).
+ */
+export type LexiconRow = Record<string, unknown>;
+
+/** Fila descartada por narrativa/formato, con el número de fila original (cabecera incluida). */
+export type RejectedLexiconRow = LexiconRow & { _rejectIndex: number };
+
+const isRecord = (value: unknown): value is LexiconRow =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const isLexiconBackup = (value: unknown): value is Partial<LexiconData> =>
+    isRecord(value) && 'entries' in value && 'metadata' in value;
+
+/** Normaliza la salida de `JSON.parse` a filas de léxico, descartando primitivos sueltos. */
+const toRows = (value: unknown): LexiconRow[] =>
+    (Array.isArray(value) ? value : [value]).map(entry => (isRecord(entry) ? entry : {}));
+
 export interface ParseResult {
-    successfulData: any[];
+    successfulData: LexiconRow[];
     errorContent: string | null;
     error: string | null;
     headers: string[];
     warnings: string[];
     isLexiconBackup?: boolean;
-    backupData?: any;
+    backupData?: Partial<LexiconData>;
 }
 
 export async function parseFileContent(fileContent: string): Promise<ParseResult> {
@@ -20,8 +40,8 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
 
     // Check if it's a full backup
     try {
-        const parsed = JSON.parse(trimmed);
-        if (parsed && typeof parsed === 'object' && parsed.entries && parsed.metadata) {
+        const parsed: unknown = JSON.parse(trimmed);
+        if (isLexiconBackup(parsed)) {
             return { successfulData: [], errorContent: null, error: null, headers: [], warnings: [], isLexiconBackup: true, backupData: parsed };
         }
     } catch (e) { /* not a JSON backup */ }
@@ -32,8 +52,8 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
     // --- JSON Parsing Path ---
     if (isLikelyJson) {
         try {
-            const parsed = JSON.parse(trimmed);
-            const rawData = Array.isArray(parsed) ? parsed : [parsed];
+            const parsed: unknown = JSON.parse(trimmed);
+            const rawData = toRows(parsed);
             const { valid, rejected } = splitRows(rawData);
             const rejectionMessage = buildRejectionMessage(rejected);
             if (rejectionMessage) {
@@ -60,8 +80,8 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
             warnings.push("Initial JSON parsing failed. Attempting to repair with AI...");
             try {
                 const cleanedJsonString = await cleanseJson(trimmed);
-                const parsed = JSON.parse(cleanedJsonString);
-                const rawData = Array.isArray(parsed) ? parsed : [parsed];
+                const parsed: unknown = JSON.parse(cleanedJsonString);
+                const rawData = toRows(parsed);
                 const headers = Array.from(new Set(rawData.flatMap(row => Object.keys(row))));
                 warnings.push("AI successfully repaired the JSON structure.");
                 return { successfulData: rawData, errorContent: null, error: null, headers, warnings };
@@ -97,9 +117,9 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
     const headers = result.data[0].map(h => h.trim());
     const bodyRows = result.data.slice(1);
 
-    const successfulData: any[] = [];
+    const successfulData: LexiconRow[] = [];
     const errorRows: string[] = [];
-    const narrativeRows: any[] = [];
+    const narrativeRows: RejectedLexiconRow[] = [];
 
     bodyRows.forEach((rowArray, index) => {
         if (rowArray.length !== headers.length) {
@@ -143,15 +163,14 @@ export async function parseFileContent(fileContent: string): Promise<ParseResult
 
 const LEXICON_FIELD_KEYS = ['Léxema', 'Raíz', 'Categoría', 'Significado', 'externalID'];
 
-const hasLexiconSignal = (row: any): boolean => {
-    if (!row || typeof row !== 'object') return false;
+const hasLexiconSignal = (row: LexiconRow): boolean => {
     return LEXICON_FIELD_KEYS.some(key => {
         const value = row[key];
         return typeof value === 'string' ? value.trim().length > 0 : Array.isArray(value) ? value.length > 0 : false;
     });
 };
 
-const looksLikeNarrative = (row: any): boolean => {
+const looksLikeNarrative = (row: LexiconRow): boolean => {
     const rawMeaning = row?.Significado;
     if (typeof rawMeaning === 'string') {
         const meaning = rawMeaning.trim();
@@ -162,14 +181,14 @@ const looksLikeNarrative = (row: any): boolean => {
     return false;
 };
 
-const isLikelyLexiconRow = (row: any): boolean => {
+const isLikelyLexiconRow = (row: LexiconRow): boolean => {
     if (!hasLexiconSignal(row)) return false;
     return !looksLikeNarrative(row);
 };
 
-const splitRows = (rows: any[]) => {
-    const valid: any[] = [];
-    const rejected: any[] = [];
+const splitRows = (rows: LexiconRow[]) => {
+    const valid: LexiconRow[] = [];
+    const rejected: RejectedLexiconRow[] = [];
     rows.forEach((row, index) => {
         if (isLikelyLexiconRow(row)) {
             valid.push(row);
@@ -180,7 +199,7 @@ const splitRows = (rows: any[]) => {
     return { valid, rejected };
 };
 
-const buildRejectionMessage = (rejected: any[]): string | null => {
+const buildRejectionMessage = (rejected: RejectedLexiconRow[]): string | null => {
     if (!rejected.length) return null;
     const samples = rejected.slice(0, 5).map(row => {
         const meaning = typeof row.Significado === 'string' ? row.Significado.trim() : JSON.stringify(row.Significado ?? '');
@@ -198,7 +217,7 @@ export function inferRootFromLexeme(lex: string | null | undefined): string {
     return '';
 }
 
-export function processMappedData(rawData: any[], mapping: { [key: string]: keyof NewLexiconEntry | 'extra' | '' }): NewLexiconEntry[] {
+export function processMappedData(rawData: LexiconRow[], mapping: { [key: string]: keyof NewLexiconEntry | 'extra' | '' }): NewLexiconEntry[] {
     return rawData.map(row => {
         const newEntry: NewLexiconEntry = {
             Raíz: '',
