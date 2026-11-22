@@ -4,6 +4,37 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tema a `useAppTheme` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** continuar la descomposición del cuerpo de `App.tsx` (el `return` ya
+solo contiene capas). El estado de tema era el siguiente frente: un `useState<ThemeId>` sembrado con
+`getStoredTheme()` y un `useEffect` que aplicaba `applyTheme(themes[themeId])` y persistía con
+`saveTheme`.
+
+**Decisión:** hook `src/hooks/useAppTheme.ts` (`UseAppThemeResult`, `useAppTheme`) que conserva el
+contrato verbatim: tema inicial de `getStoredTheme()` (default `midnight`), cada cambio aplica y
+persiste, y `setThemeId` mantiene la firma `Dispatch<SetStateAction<ThemeId>>` que consume
+`AppHeaderLayer` a través de `onThemeChange` (solo se usa el valor en `useProjectOperations`, que
+recibe `themeId: any`).
+
+**Cambios (commit `91da2b5`):**
+- `src/hooks/useAppTheme.ts` (NUEVO) y su test `src/hooks/__tests__/useAppTheme.test.tsx` (6, jsdom
+  manual: default aplicado al DOM con `--color-primary`, hidratación del tema persistido, tema
+  inválido que cae al default, `setThemeId` aplica y persiste, updater function, identidad del
+  setter entre renders).
+- `src/App.tsx`: 655 → 653 líneas; fuera el `useState` de tema, el efecto y el import de
+  `themeService` (`getStoredTheme`/`applyTheme`/`saveTheme`/`themes`/`ThemeId`).
+- `README.md`: contador 790 → 796 (95 archivos).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 796/796 (95 archivos) · audit:orphans 13
+(baseline).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 653 líneas. El frente siguiente del cuerpo
+son los efectos de widget/`initPragmaticDb` o los `any[]` de `canvasState`/`setCurrentTourSteps`.
+Frentes no-CLN pendientes: D2 (Web Worker vs CSP de Tauri), destino de los 13 huérfanos y
+`git push` + CI (requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — notificaciones a `useAppNotifications` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** continuar la descomposición del cuerpo de `App.tsx` (el `return` ya

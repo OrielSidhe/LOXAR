@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 790/790 (94 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 796/796 (95 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `370f28b` (notificaciones a
-  `useAppNotifications`, P1 God Component); 48 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `91da2b5` (tema a
+  `useAppTheme`, P1 God Component); 49 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -340,11 +340,21 @@ mismo milisegundo compartían `id` y el auto-dismiss o el descarte manual se lle
 lint OK, build OK, vitest 790/790 (94 archivos), audit:orphans 13, `npm run test:gui` 8/8 (51 s,
 1 worker, dev server caliente).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 655 líneas y su `return`
+**[x] CLN — tema a `useAppTheme` (P1, 2026-11-22, commit `91da2b5`).** El cuerpo de `App.tsx`
+guardaba el estado `themeId` (`useState(getStoredTheme())`) y el `useEffect` que aplicaba
+`applyTheme(themes[themeId])` y persistía con `saveTheme`. Nuevo `src/hooks/useAppTheme.ts`
+(`UseAppThemeResult`, `useAppTheme`) que conserva el contrato verbatim y mantiene `setThemeId` con la
+firma `Dispatch<SetStateAction<ThemeId>>` que consume `AppHeaderLayer` vía `onThemeChange`.
+`App.tsx`: 655 → 653 líneas; fuera el `useState`, el efecto y el import de `themeService`. Tests:
+`useAppTheme.test.tsx` (6, jsdom manual: default aplicado al DOM, hidratación persistida, tema
+inválido, `setThemeId` aplica y persiste, updater, identidad del setter). Validaciones: typecheck 0,
+lint OK, build OK, vitest 796/796 (95 archivos), audit:orphans 13.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 653 líneas y su `return`
 ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
 `AppFloatingLayers`). El frente siguiente es el cuerpo del componente (hooks/efectos), no el JSX:
-candidatos inmediatos: `useAppTheme` (estado/efecto de tema), los efectos de widget/`initPragmaticDb`
-o los `any[]` de `canvasState`/`setCurrentTourSteps`.
+candidatos inmediatos: los efectos de widget/`initPragmaticDb` o los `any[]` de
+`canvasState`/`setCurrentTourSteps`.
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
