@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useLexicon } from './hooks/useLexicon';
 import { useWidgetBridge } from './hooks/useWidgetBridge';
 import { useWorkQueue } from './hooks/useWorkQueue';
@@ -16,6 +16,7 @@ import { useTabNavigation } from './hooks/useTabNavigation';
 import { useLexiconMerge } from './hooks/useLexiconMerge';
 import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
 import { useAppDerivedState } from './hooks/useAppDerivedState';
+import { useEditorCompletion } from './hooks/useEditorCompletion';
 // Components
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
@@ -30,7 +31,6 @@ import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
 import { initPragmaticDb } from './services/grammarDb';
 import { buildDashboardStats } from './utils/dashboardStats';
-import { clampIncompleteIndex, filterPendingCompletion } from './utils/lexiconCompletion';
 
 const App = () => {
   const appVersion = '2.4.0-pro';
@@ -120,12 +120,9 @@ const App = () => {
     saveTheme(themeId);
   }, [themeId]);
 
-  const [editorMode, setEditorMode] = useState<'add' | 'complete'>('add');
-  const [incompleteIndex, setIncompleteIndex] = useState(0);
   const [initialDataForAdd, setInitialDataForAdd] = useState<any>(null);
   const [generationModes, setGenerationModes] = useState<GenerationMode[]>(['generative']);
 
-  const [entryToComplete, setEntryToComplete] = useState<LexiconEntry | null>(null);
   const [entryToEditInModal, setEntryToEditInModal] = useState<LexiconEntry | null>(null);
   const [entryToInflect, setEntryToInflect] = useState<LexiconEntry | null>(null);
 
@@ -201,7 +198,8 @@ const App = () => {
     markProjectDirty,
   } = projectOps;
 
-  const incompleteEntries = useMemo(() => filterPendingCompletion(activeLexicon), [activeLexicon]);
+  const { editorMode, setEditorMode, incompleteIndex, setIncompleteIndex, incompleteEntries, entryToComplete } =
+    useEditorCompletion(activeLexicon);
 
   const appHandlers = useAppHandlers({
     lexiconHook,
@@ -343,18 +341,6 @@ const App = () => {
   } = workQueueState;
 
   const effectiveInitialDataForAdd = queueActive ? queueInitialData : initialDataForAdd;
-
-  useEffect(() => {
-    if (editorMode === 'complete') {
-      setEntryToComplete(incompleteEntries[incompleteIndex] ?? null);
-    } else {
-      setEntryToComplete(null);
-    }
-  }, [editorMode, incompleteIndex, incompleteEntries]);
-
-  useEffect(() => {
-    setIncompleteIndex(prev => clampIncompleteIndex(prev, incompleteEntries.length));
-  }, [incompleteEntries.length]);
 
   // Estado presentacional derivado (P1: `useAppDerivedState`). Sustituye a los
   // cuatro `useMemo` inline de metricas, resumen pragmatico, completitud y
