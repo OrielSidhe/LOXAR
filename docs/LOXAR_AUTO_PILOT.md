@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 721/721 (87 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 756/756 (89 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 48s con el dev server caliente (en paralelo sigue sensible a la
   contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `259e840` (Header + AppToolbar del return a
-  AppHeaderLayer); 40 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `c7813f1` (editor de morfología `InflectionModule`
+  cableado al léxico); 42 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -302,6 +302,19 @@ solapamiento de nombres); `HeaderProps` pasó a exportarse desde `Header.tsx`. `
 líneas. Tests: `appHeaderLayer.test.tsx` (4, ambos hijos mockeados). Validaciones: typecheck 0,
 lint OK, build OK, vitest 721/721 (87 archivos), audit:orphans 13, `npm run test:gui` 7/8 con
 `grammar-import.spec.ts` 1/1 en aislamiento (flake del chunk lazy).
+
+**[x] CLN — editor de morfología (`InflectionModule`) cableado al léxico (P1, 2026-11-22, commit
+`c7813f1`).** Trabajo de una sesión previa cortada, verificado y cerrado: el `InflectionProfile` se
+persistía por léxico pero no tenía editor en la UI, porque `InflectionModal`/`InflectionView` estaban
+escritos y nunca montados. Nuevo `src/components/InflectionModule.tsx` (paradigmas anidados, reglas
+simples/condicionales y reglas fonológicas con previsualización) con la lógica pura en
+`src/utils/inflectionModuleModel.ts`. Cableado de punta a punta: `AppModalId` + `inflection_module`,
+`useModalCoordination.openInflectionModule`, `ModalManager` (con `activeInflectionProfile`),
+`ToolsDashboard` (tarjeta "Morfología"), `LexiconToolsModal`, `ToolsTab`, `AppTabContent` y `App.tsx`
+(`onUpdateInflectionProfile`). Se eliminó la prop muerta `onOpenInflectionWorkshop`. Tests:
+`InflectionModule.test.tsx` (7) e `inflectionModuleModel.test.ts` (28). Validaciones: typecheck 0,
+lint OK, build OK, vitest 756/756 (89 archivos), audit:orphans 13, `npm run test:gui` 8/8 (1 worker,
+dev server caliente; con 6 workers la suite cae por contención del chunk lazy, no por regresión).
 
 **[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 687 líneas y su `return`
 ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,

@@ -4,6 +4,38 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — editor de morfología (`InflectionModule`) cableado al léxico
+
+**Rama:** `master`. **Motivo:** el árbol de trabajo llegaba con `src/components/InflectionModule.tsx`,
+su modelo y sus tests sin commitear (sesión previa cortada): el cableado del editor de morfología
+que sustituye a los dos huérfanos `InflectionModal`/`InflectionView` (nunca montados) y que dejaba el
+`InflectionProfile` sin forma de editarse desde la UI pese a persistirse por léxico.
+
+**Cambios (commit `c7813f1`):**
+- `src/components/InflectionModule.tsx` (NUEVO, 600 líneas): editor de paradigmas anidados, reglas
+  simples/condicionales y reglas fonológicas con previsualización en vivo; guardado explícito por
+  `onSave` y sincronización cuando `profile` cambia desde fuera (cambio de léxico).
+- `src/utils/inflectionModuleModel.ts` (NUEVO): árbol de paradigmas (`findParadigmGroup`,
+  `mapParadigmTree`, `deleteParadigmGroup`, `updateParadigmGroup`, `addParadigmGroup`), reglas
+  (`buildRuleFromDraft`, `addRuleToGroup`, `deleteRuleFromGroup`, `replaceRuleInGroup`,
+  `renameParadigmGroup`), reglas fonológicas (`addPhonologicalRule`, `deletePhonologicalRule`,
+  `previewPhonologicalRules`, `PHONOLOGICAL_PRESETS`) y `normalizeInflectionProfile`.
+- Cableado: `AppModalId` + `inflection_module`, `useModalCoordination.openInflectionModule`,
+  `ModalManager` (`activeInflectionProfile` + render), `ToolsDashboard` (tarjeta "Morfología"),
+  `LexiconToolsModal`, `ToolsTab`, `AppTabContent` y `App.tsx` (`onUpdateInflectionProfile`).
+- Se elimina la prop muerta `onOpenInflectionWorkshop` (la tarjeta ahora abre el módulo).
+- Tests: `InflectionModule.test.tsx` (7, jsdom) e `inflectionModuleModel.test.ts` (28). El test del
+  preset "Dobles a Simples" ahora usa `String.raw` para el patrón `(.)\1`: el literal con doble
+  backslash disparaba el falso positivo de `npm run check:esc`.
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 756/756 (89 archivos) · audit:orphans 13
+(baseline) · `npm run test:gui` **8/8** (2.3 min, 1 worker, dev server caliente; con 6 workers la suite
+cae por contención del chunk lazy del importador, no por regresión).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 687 líneas; el frente siguiente es el cuerpo
+del componente (hooks/efectos), no el JSX. Frentes no-CLN pendientes: D2 (Web Worker vs CSP de Tauri),
+destino de los 13 huérfanos y `git push` + CI (requiere autorización).
+
 ## [2026-11-22] Checkpoint: CLN — `Header` + `AppToolbar` del `return` a `AppHeaderLayer` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el `return` de `App.tsx` seguía con el `Header` (marca,
