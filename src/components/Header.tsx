@@ -4,7 +4,7 @@ import InfoIcon from './icons/InfoIcon';
 import SettingsIcon from './icons/SettingsIcon';
 import type { ThemeId } from '../services/themeService';
 
-interface HeaderProps {
+export interface HeaderProps {
   wordsAddedCount: number;
   onOpenWidget: () => void;
   onShowTour?: () => void;

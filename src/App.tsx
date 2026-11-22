@@ -1,6 +1,4 @@
 import { useCallback, useState, useEffect, useMemo } from 'react';
-import Header from './components/Header';
-import AppToolbar from './components/AppToolbar';
 import { useLexicon } from './hooks/useLexicon';
 import { useWidgetBridge } from './hooks/useWidgetBridge';
 import { useWorkQueue } from './hooks/useWorkQueue';
@@ -22,6 +20,7 @@ import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
 import AppBodyLayer from './components/AppBodyLayer';
+import AppHeaderLayer from './components/AppHeaderLayer';
 import AppOverlayLayers from './components/AppOverlayLayers';
 import AppFloatingLayers from './components/AppFloatingLayers';
 
@@ -505,16 +504,13 @@ const App = () => {
             onExportFormatsChange={setExportFormats}
           />
 
-          <Header
+          <AppHeaderLayer
             wordsAddedCount={lexiconHook.wordsAddedSinceSave}
             onOpenWidget={() => window.loxarBridge.openWidget()}
             onShowTour={handleStartTour}
             onOpenSettings={openSettings}
             themeId={themeId}
             onThemeChange={id => setThemeId(id)}
-          />
-
-          <AppToolbar
             lexiconNames={lexiconHook.lexiconNames}
             activeLexiconName={activeLexiconName}
             onSelectLexicon={lexiconHook.setActiveLexicon}
