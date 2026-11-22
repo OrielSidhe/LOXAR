@@ -1,6 +1,5 @@
-import React, { useCallback, useState, useEffect, useMemo, ReactNode } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import Header from './components/Header';
-import LexiconTable from './components/LexiconTable';
 import AppToolbar from './components/AppToolbar';
 import { useLexicon } from './hooks/useLexicon';
 import { useWidgetBridge } from './hooks/useWidgetBridge';
@@ -8,50 +7,20 @@ import { useWorkQueue } from './hooks/useWorkQueue';
 import { useAiHandlers } from './hooks/useAiHandlers';
 import { useProjectOperations } from './hooks/useProjectOperations';
 import { useAppHandlers } from './hooks/useAppHandlers';
-import { generateRootAndLexeme, normalizeText, completeEntry, correctSignificado } from './services/geminiService';
-import { filterParadigmsForFunction, generateInflectedForms } from './services/inflectionService';
 import { searchLexicon } from './services/ftsSearch';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
-import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode, LexiconFilter } from './types';
-import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
-import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
+import { LexiconEntry, MissingWord, GenerationMode, LexiconFilter } from './types';
+import { morphologyToTypologyProfile } from './types/pragmaticTypes';
+import { useFirstRunWizard } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
 import { useModalCoordination } from './hooks/useModalCoordination';
 import { useAppSessionHydration } from './hooks/useAppSessionHydration';
 import { useTabNavigation } from './hooks/useTabNavigation';
 import { useLexiconMerge } from './hooks/useLexiconMerge';
 import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
-import InterlinearGlossViewer from './components/InterlinearGlossViewer';
-import SoundChangeWorkbench from './components/SoundChangeWorkbench';
-import { phonologyFromManifest } from './services/grammar/phonologySync';
-import Papa from 'papaparse';
-
-// Icons
-import BookOpenIcon from './components/icons/BookOpenIcon';
-import WandIcon from './components/icons/WandIcon';
-import BarChartIcon from './components/icons/BarChartIcon';
-import TableIcon from './components/icons/TableIcon';
-import PenToolIcon from './components/icons/PenToolIcon';
-import SettingsIcon from './components/icons/SettingsIcon';
-import SparkleIcon from './components/icons/SparkleIcon';
-
 // Components
-import EntryEditor from './components/EntryEditor';
-import CollectionsManager from './components/CollectionsManager';
-import WritingAndNeographyTab from './components/WritingAndNeographyTab';
-import GrammarTab from './components/GrammarTab';
-import TranslationPlayground from './components/TranslationPlayground';
-import SuggestionsWorkbench from './components/SuggestionsWorkbench';
-import WorkbenchRightPanel from './components/WorkbenchRightPanel';
-import WorkQueueBar from './components/WorkQueueBar';
-import WorkbenchTab from './components/WorkbenchTab';
-import ToolsTab from './components/ToolsTab';
 import { ErrorBoundary } from './components/ErrorBoundary';
-
-import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
-import ModulePanel from './components/ModulePanel';
-import DashboardTab from './components/DashboardTab';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
 import AppNavigationBar from './components/AppNavigationBar';
 import AppTabContent from './components/AppTabContent';
@@ -59,11 +28,9 @@ import AppOverlayLayers from './components/AppOverlayLayers';
 import AppFloatingLayers from './components/AppFloatingLayers';
 
 // Data & Helpers
-import { MAIN_TOUR_STEPS, COLLECTIONS_TOUR_STEPS, WRITING_TOUR_STEPS, TOOLS_TOUR_STEPS } from './data/tourSteps';
+import { MAIN_TOUR_STEPS } from './data/tourSteps';
 import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
-import { readTextFile, writeTextFile, exists } from '@tauri-apps/plugin-fs';
-import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSION, type LoxarProject } from './services/projectFile';
 import { initPragmaticDb } from './services/grammarDb';
 import { getGrammarMetrics } from './utils/grammarMetrics';
 import { buildDashboardStats } from './utils/dashboardStats';
@@ -169,7 +136,6 @@ const App = () => {
   const [functionFilter, setFunctionFilter] = useState('all');
   const [viewFilter, setViewFilter] = useState<LexiconFilter>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['Léxema', 'Significado', 'Función', 'Raíz']);
   const [showAffixFormatting, setShowAffixFormatting] = useState(true);
 
   const [aiStatus, setAiStatus] = useState<'idle' | 'working' | 'complete' | 'error'>('idle');
@@ -226,7 +192,6 @@ const App = () => {
   });
 
   const {
-    buildProjectPayload,
     writeProjectToPath,
     handleNewProject,
     handleOpenProject,
@@ -293,7 +258,6 @@ const App = () => {
     handleConfirmCreateLexicon,
     handleRenameLexicon,
     handleDeleteLexicon,
-    confirmDiscardUnsaved,
     handleQuit,
     handleResetApp,
     handleRestoreBackup,
@@ -303,7 +267,6 @@ const App = () => {
     handleOpenSoundChangeWorkbench,
     handleApplySoundChangeBatch,
     handleBackToToolDashboard,
-    handleCanvasChange,
     handleBootstrapCreate,
     handleBootstrapOpenOther,
     handleBootstrapOpenFound,
@@ -372,8 +335,6 @@ const App = () => {
     workQueue,
     queueCursor,
     queueActive,
-    currentQueueItem,
-    enqueueItems,
     queueAdvance,
     queuePrev,
     queueTogglePending,
