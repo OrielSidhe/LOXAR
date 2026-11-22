@@ -6,7 +6,6 @@ import { useAiHandlers } from './hooks/useAiHandlers';
 import { useProjectOperations } from './hooks/useProjectOperations';
 import { useAppHandlers } from './hooks/useAppHandlers';
 import { searchLexicon } from './services/ftsSearch';
-import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, GenerationMode, LexiconFilter } from './types';
 import { useFirstRunWizard } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
@@ -18,6 +17,7 @@ import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
 import { useAppDerivedState } from './hooks/useAppDerivedState';
 import { useEditorCompletion } from './hooks/useEditorCompletion';
 import { useAppNotifications } from './hooks/useAppNotifications';
+import { useAppTheme } from './hooks/useAppTheme';
 // Components
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
@@ -117,11 +117,9 @@ const App = () => {
     openTranslator,
   } = useTabNavigation();
 
-  const [themeId, setThemeId] = useState<ThemeId>(getStoredTheme());
-  useEffect(() => {
-    applyTheme(themes[themeId]);
-    saveTheme(themeId);
-  }, [themeId]);
+  // Tema (P1: `useAppTheme`). Sustituye al `useState` de tema y al efecto que
+  // aplicaba/persistía el tema en `localStorage`.
+  const { themeId, setThemeId } = useAppTheme();
 
   const [initialDataForAdd, setInitialDataForAdd] = useState<any>(null);
   const [generationModes, setGenerationModes] = useState<GenerationMode[]>(['generative']);
