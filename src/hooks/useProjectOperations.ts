@@ -5,23 +5,34 @@ import { createEmptyProject, projectToJson, projectFromJson, LOXAR_PROJECT_VERSI
 import { loadLexicon, listLexiconNames } from '../services/sqlStorage';
 import { loadSessionCache, saveSessionCache } from '../services/sessionCache';
 import { buildLexiconExport, EXPORT_FORMAT_LABELS, type ExportFormat } from '../utils/lexiconExport';
-import type { LexiconEntry, LexiconMetadata, GenerationMode } from '../types';
+import type {
+    LexiconEntry,
+    LexiconMetadata,
+    GenerativeProfile,
+    NeographyProfile,
+    InflectionProfile,
+    LexiconData,
+    GrammarManifest,
+    CorpusEntry,
+} from '../types';
+import type { ThemeId } from '../services/themeService';
+import type { AppTabId } from '../utils/appTabs';
 
 export interface UseProjectOperationsOptions {
     activeLexicon: LexiconEntry[];
     activeLexiconName: string | null;
     activeMetadata: LexiconMetadata | null;
-    activeGrammar: any;
-    activeProfile: any;
-    activeCustomFunctions: any[];
-    themeId: any;
+    activeGrammar: GrammarManifest;
+    activeProfile: GenerativeProfile;
+    activeCustomFunctions: string[];
+    themeId: ThemeId;
     exportPath: string | null;
     projectPath: string | null;
     isProjectDirty: boolean;
     isDirty: boolean;
     canvasState: LoxarCanvasState;
     sessionCacheData: { tourCompleted?: boolean } | null;
-    activeTab: any;
+    activeTab: AppTabId;
     showNotification: (message: string, type: 'success' | 'error') => void;
     setIsLoading: (loading: boolean) => void;
     setLoadingMessage: (message: string) => void;
@@ -29,23 +40,23 @@ export interface UseProjectOperationsOptions {
     setCanvasState: (state: LoxarCanvasState) => void;
     setIsProjectDirty: (dirty: boolean) => void;
     setProjectLastSaved: (date: Date | null) => void;
-    setActiveTab: (tab: any) => void;
+    setActiveTab: (tab: AppTabId) => void;
     setExportPath: (path: string | null) => void;
     setBackups: (backups: string[]) => void;
-    lexicons: Record<string, any>;
+    lexicons: Record<string, LexiconData>;
     lexiconHook: {
         saveChanges: () => void;
-        upsertLexiconData: (name: string, data: any) => void;
-        updateGrammarManifest: (manifest: any) => void;
-        updateGenerativeProfile: (profile: any) => void;
-        updateNeographyProfile: (profile: any) => void;
-        updateInflectionProfile: (profile: any) => void;
-        updateCorpus: (corpus: any[]) => void;
-        addCustomFunction: (fn: any) => void;
+        upsertLexiconData: (name: string, data: LexiconData) => void;
+        updateGrammarManifest: (manifest: GrammarManifest) => void;
+        updateGenerativeProfile: (profile: GenerativeProfile) => void;
+        updateNeographyProfile: (profile: NeographyProfile) => void;
+        updateInflectionProfile: (profile: InflectionProfile) => void;
+        updateCorpus: (corpus: CorpusEntry[]) => void;
+        addCustomFunction: (fn: string) => void;
         startImportProcess: (content: string) => void;
-        activeNeographyProfile: any;
-        activeInflectionProfile: any;
-        activeCorpus: any[];
+        activeNeographyProfile: NeographyProfile;
+        activeInflectionProfile: InflectionProfile;
+        activeCorpus: CorpusEntry[];
     };
 }
 
@@ -132,7 +143,7 @@ export function useProjectOperations(options: UseProjectOperationsOptions) {
             if (project.customFunctions?.length) {
                 project.customFunctions.forEach(fn => lexiconHook.addCustomFunction(fn));
             }
-            if (project.session?.activeTab) setActiveTab(project.session.activeTab as any);
+            if (project.session?.activeTab) setActiveTab(project.session.activeTab as AppTabId);
             if (project.canvas) setCanvasState({ nodes: project.canvas.nodes ?? [], edges: project.canvas.edges ?? [] });
         } catch (e) {
             console.error('Failed to restore project', e);
