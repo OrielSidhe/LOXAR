@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 807/807 (98 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 819/819 (99 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `efb03fc` (tipado estricto del
-  parser de importación, P1 God Component); 61 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `880488a` (tipado estricto del
+  validador post-import, P1 God Component); 63 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -250,6 +250,23 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — tipado estricto del validador post-import (P1, 2026-11-22, commit `880488a`).** El
+frente documentado eran los `any` de `services/`. `validatePostImport` acepta
+`DeclarativeManifest | GrammarManifest` y los tres `as any` salvaban el acceso a la fonología y a
+la realización de slots, con formas distintas en cada formato. Nuevos tipos estructurales
+`PhonologyLike` (`{ consonants, vowels }` | `{ inventory: {...} }`) y `RealizationLike`
+(`{ kind, form?, position? }`), a los que ambos miembros de la unión son asignables, y helper
+`realizationForm()` para leer `form` sin cast. Cero `any`/casts en el archivo. Validaciones:
+typecheck 0 · lint OK · build OK · vitest 819/819 (99 archivos) · audit:orphans 13.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 651 líneas y su `return`
+ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
+`AppFloatingLayers`). Los `any` de `WorkbenchTab` y del validador post-import quedaron resueltos
+(`5806782`, `880488a`); el frente siguiente es el flujo de auditoría muerto de `useWorkQueue`
+(decisión de producto: cablear o borrar) y los `any` que quedan en `services/`
+(`grammar/ast-view` 17, `grammarDb` 8, `sqlStorage` 5, `normalize` 5, `grammarParser` 3,
+`grammar/ast-builder` 4).
+
 **[x] CLN — tipado estricto del parser de importación (P1, 2026-11-22, commit `efb03fc`).** El
 frente documentado eran los `any` fuera de la cadena `App → AppTabContent → WorkbenchTab`. El
 hook central `useLexicon.ts` guardaba `rawData?: any[]` y tres `catch (e: any)`; el origen real
@@ -423,10 +440,11 @@ typecheck 0, lint OK, build OK, vitest 807/807 (98 archivos), audit:orphans 13.
 
 **[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 651 líneas y su `return`
 ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
-`AppFloatingLayers`). Los `any` de `WorkbenchTab` quedaron resueltos (`5806782`); el frente
-siguiente es el flujo de auditoría muerto de `useWorkQueue` (decisión de producto: cablear o
-borrar) y los `any` que quedan fuera de la cadena `App → AppTabContent → WorkbenchTab`
-(`services/`, `utils/`, `hooks/useLexicon.ts`).
+`AppFloatingLayers`). Los `any` de `WorkbenchTab` y del validador post-import quedaron resueltos
+(`5806782`, `880488a`); el frente siguiente es el flujo de auditoría muerto de `useWorkQueue`
+(decisión de producto: cablear o borrar) y los `any` que quedan en `services/`
+(`grammar/ast-view` 17, `grammarDb` 8, `sqlStorage` 5, `normalize` 5, `grammarParser` 3,
+`grammar/ast-builder` 4).
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,

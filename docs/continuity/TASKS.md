@@ -4,6 +4,29 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto del validador post-import (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`. El validador
+post-import acepta `DeclarativeManifest | GrammarManifest` y los tres `as any` salvaban el acceso
+a la fonología y a la realización de slots, cuyas formas difieren entre ambos formatos.
+
+**Decisión:** tipos estructurales `PhonologyLike` (`{ consonants, vowels }` | `{ inventory: {...} }`)
+y `RealizationLike` (`{ kind, form?, position? }`), a los que ambos miembros de la unión son
+asignables; helper `realizationForm()` para leer `form` sin cast. Cero `any`/casts en el archivo.
+
+**Cambios (commit `880488a`):**
+- `src/services/grammar/postImportValidator.ts`: 3 `as any` → 0; nuevos `PhonologyLike`/
+  `RealizationLike` y `realizationForm`.
+
+**Verificación:** typecheck 0 · lint OK (`check:esc`) · build OK · vitest 819/819 (99 archivos) ·
+audit:orphans 13 (baseline). Cambio de tipos solamente: no hay comportamiento nuevo que testear.
+
+**Próximo bloque ejecutable (CLN/P1):** los `any` que quedan en `services/` (`grammar/ast-view` 17,
+`grammarDb` 8, `sqlStorage` 5, `normalize` 5, `grammarParser` 3, `grammar/ast-builder` 4) y el flujo de
+auditoría muerto de `useWorkQueue` (decisión de producto: cablear o borrar). Frentes no-CLN
+pendientes: D2, destino de los 13 huérfanos y `git push` + CI (requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — tipado estricto del parser de importación (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el frente documentado del cuerpo de `App.tsx` eran los `any` que
