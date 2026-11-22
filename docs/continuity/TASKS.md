@@ -4184,3 +4184,42 @@ Pendiente por autorizacion: `git push` + CI con numero de run.
 **Proximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 672 lineas; el siguiente candidato es
 el grupo de efectos de sincronizacion del modo completar (`entryToComplete` + clamp del indice) o
 el par `widgetBridge`/init pragmatic DB. Pendiente por autorizacion: `git push` + CI con numero de run.
+
+## [2026-11-22] Checkpoint: CLN — tipado estricto de `canvasState` y tour steps (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el cuerpo de `App.tsx` seguia arrastrando dos `any[]` de frontera:
+el estado `canvasState` (`{ nodes: any[]; edges: any[] }`) y el setter `setCurrentTourSteps`
+(`Dispatch<SetStateAction<any[]>>`). El frente documentado del God Component despues de
+`useAppTheme` era justamente ese par.
+
+**Decision:** `LoxarProject.canvas` pasa de `{ nodes?: any[]; edges?: any[] }` a un tipo exportado
+`LoxarCanvasState` (`src/services/projectFile.ts`, `unknown[]`: es JSON persistido sin productor
+tipado en el arbol) y `canvasState`/`setCanvasState` se tipan con el en `App.tsx`,
+`useProjectOperations` y `useAppHandlers`. La lista de pasos del tour se tipa con `TourStep[]`
+(`src/data/tourSteps.ts`) y la seleccion por tab sale del hook al modelo puro
+`src/utils/tourStepsModel.ts` (`resolveTourSteps`). Se retira el handler muerto `handleCanvasChange`
+(declarado y devuelto por `useAppHandlers`, sin ningun consumidor en `src/` ni `tests-gui/`) y con
+el las opciones `setCanvasState`/`markProjectDirty`, que quedaron sin uso.
+
+**Cambios (commit `22aed12`):**
+- `src/services/projectFile.ts`: nuevo `LoxarCanvasState`; `canvas?: LoxarCanvasState`.
+- `src/utils/tourStepsModel.ts` (nuevo): `resolveTourSteps(activeTab: AppTabId): TourStep[]`.
+- `src/hooks/useAppHandlers.ts`: `setCurrentTourSteps: Dispatch<SetStateAction<TourStep[]>>`;
+  `handleStartTour` usa `resolveTourSteps`; fuera `handleCanvasChange` y las opciones
+  `setCanvasState`/`markProjectDirty`.
+- `src/hooks/useProjectOperations.ts`: `canvasState`/`setCanvasState` tipados con `LoxarCanvasState`.
+- `src/App.tsx`: `useState<LoxarCanvasState>` y `useState<TourStep[]>`; fuera `setCanvasState`/
+  `markProjectDirty` del call de `useAppHandlers`. `App.tsx` se mantiene en 653 lineas (entran 2
+  imports de tipos, salen 2 props).
+- Tests: `src/utils/__tests__/tourStepsModel.test.ts` (4; totalidad sobre los 8 tabs + forma de
+  `TourStep`).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 800/800 (96 archivos) · audit:orphans
+13 (baseline) · `npm run test:gui` 8/8 (3.1 min, 1 worker, dev server gestionado por el config).
+Pendiente por autorizacion: `git push` + CI con numero de run.
+
+**Proximo bloque ejecutable (CLN/P1):** `App.tsx` sigue en 653 lineas y su `return` ya solo contiene
+capas; el frente siguiente del cuerpo son los efectos de `widgetBridge`/`initPragmaticDb` o los `any`
+restantes de `useAppHandlers`/`useProjectOperations` (`activeGrammar`, `activeMetadata`,
+`activeCustomFunctions`, `themeId`, `activeTab`, `lexicons`, `setLastAiResult`). Pendiente por
+autorizacion: `git push` + CI con numero de run.
