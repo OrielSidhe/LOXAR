@@ -4,6 +4,35 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto de `WorkbenchTab` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado del cuerpo de `App.tsx` eran los `any`
+restantes de `WorkbenchTab` (`entryToEdit`, `onAddWord`, `onUpdateWord`, `activeMetadata`,
+`activeLexicon`, `suggestions`, `onAddManually`, `onGenerateAI`, `generativeProfile`,
+`onSaveGenerativeProfile`, `manifest`, `onSyncPhonology`), la capa que pasa props a `EntryEditor`
+y `WorkbenchRightPanel` (ambos ya tipados).
+
+**Decisión:** alinear `WorkbenchTabProps` con los tipos canónicos que ya usan `AppTabContent` y
+`WorkbenchRightPanel`: `LexiconEntry | null` para `entryToEdit` (normalizado a `undefined` en la
+frontera con `EntryEditor`, cuyo modelo acepta `LexiconEntry | undefined`),
+`LexiconEntry | NewLexiconEntry` para `onAddWord`, `LexiconEntry` para `onUpdateWord`,
+`LexiconMetadata | null`, `LexiconEntry[]`, `MissingWord[]` y `MissingWord` en las sugerencias,
+`GenerativeProfile` en el perfil y `Partial<GenerativeProfile>` en `onSyncPhonology` (asignable al
+`PhonologySyncPayload` de `GenerativeProfileEditor` por controversividad). Cero `any`.
+
+**Cambios (commit `5806782`):**
+- `src/components/WorkbenchTab.tsx`: 11 props tipadas; `entryToEdit={props.entryToEdit ?? undefined}`.
+
+**Verificación:** typecheck 0 · lint OK (`check:esc`) · vitest 807/807 (98 archivos) ·
+audit:orphans 13 (baseline). Cambio de tipos solamente: no hay comportamiento nuevo que testear.
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` se mantiene en 651 líneas. Frentes siguientes:
+el flujo de auditoría muerto de `useWorkQueue` (decisión de producto: cablear o borrar) y los `any`
+que quedan fuera de la cadena `App → AppTabContent → WorkbenchTab` (`services/`, `utils/`,
+`hooks/useLexicon.ts`). Frentes no-CLN pendientes: D2 (Web Worker vs CSP de Tauri), destino de los
+13 huérfanos y `git push` + CI (requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — tipado estricto de la frontera IA/handlers (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el frente documentado del cuerpo de `App.tsx` eran los `any`

@@ -17,8 +17,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `1a8ad1b` (tipado estricto de la
-  frontera IA/handlers, P1 God Component); 57 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `5806782` (tipado estricto de
+  `WorkbenchTab`, P1 God Component); 59 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -250,6 +250,16 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — tipado estricto de `WorkbenchTab` (P1, 2026-11-22, commit `5806782`).** Los `any`
+restantes de la capa que pasa props a `EntryEditor`/`WorkbenchRightPanel`: `entryToEdit`,
+`onAddWord`, `onUpdateWord`, `activeMetadata`, `activeLexicon`, `suggestions`, `onAddManually`,
+`onGenerateAI`, `generativeProfile`, `onSaveGenerativeProfile`, `manifest` y `onSyncPhonology`
+quedaron alineados con los tipos canónicos de `AppTabContent`/`WorkbenchRightPanel`
+(`LexiconEntry | null` normalizado a `undefined` en la frontera, `LexiconEntry | NewLexiconEntry`,
+`LexiconMetadata | null`, `MissingWord[]`, `GenerativeProfile`, `Partial<GenerativeProfile>`).
+`App.tsx` se mantiene en 651 líneas. Validaciones: typecheck 0, lint OK, vitest 807/807
+(98 archivos), audit:orphans 13.
+
 **[x] CLN — modelo de completitud del léxico + limpieza de estado muerto (P1, 2026-11-21, commit
 `3b85470`).** `App.tsx` guardaba inline el criterio de "pendiente de completar" (el predicado del
 modo completar, que exige `Significado` además de raíz/léxema/categoría), el `useMemo` de
@@ -394,10 +404,10 @@ typecheck 0, lint OK, build OK, vitest 807/807 (98 archivos), audit:orphans 13.
 
 **[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 651 líneas y su `return`
 ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
-`AppFloatingLayers`). El frente siguiente es el cuerpo (hooks/efectos), no el JSX: candidatos
-inmediatos: los `any` restantes de `WorkbenchTab` (`entryToEdit`, `onAddWord`, `onUpdateWord`,
-`activeMetadata`, `activeLexicon`, `suggestions`, `onAddManually`, `onGenerateAI`) y el flujo de
-auditoría muerto de `useWorkQueue` (decisión de producto: cablear o borrar).
+`AppFloatingLayers`). Los `any` de `WorkbenchTab` quedaron resueltos (`5806782`); el frente
+siguiente es el flujo de auditoría muerto de `useWorkQueue` (decisión de producto: cablear o
+borrar) y los `any` que quedan fuera de la cadena `App → AppTabContent → WorkbenchTab`
+(`services/`, `utils/`, `hooks/useLexicon.ts`).
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
