@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 800/800 (96 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 807/807 (98 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `22aed12` (tipado estricto de
-  `canvasState`/tour steps, P1 God Component); 52 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `5f99137` (tipado estricto de
+  `useProjectOperations`, P1 God Component); 56 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -363,12 +363,29 @@ líneas (entran 2 imports de tipos, salen 2 props). Tests: `tourStepsModel.test.
 typecheck 0, lint OK, build OK, vitest 800/800 (96 archivos), audit:orphans 13, `npm run test:gui`
 8/8 (3.1 min, 1 worker, dev server gestionado por el config).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 653 líneas y su `return`
+**[x] CLN — efectos de arranque a `usePragmaticDbInit` y `useWidgetDataSync` (P1, 2026-11-22, commit
+`82bc5d3`).** Últimos dos `useEffect` inline del cuerpo de `App.tsx`: la sincronización del léxico
+con el widget y la inicialización de la base pragmática. Nuevos `src/hooks/usePragmaticDbInit.ts` y
+`src/hooks/useWidgetDataSync.ts` (`UseWidgetDataSyncOptions`), con el contrato verbatim (envía solo
+si existen entradas, perfil de inflexión y metadatos; la DB degrada en silencio). `App.tsx`: 653 →
+652 líneas. Tests: `usePragmaticDbInit.test.tsx` y `useWidgetDataSync.test.tsx`. Validaciones:
+typecheck 0, lint OK, build OK, vitest 807/807 (98 archivos), audit:orphans 13.
+
+**[x] CLN — tipado estricto de `useProjectOperations` (P1, 2026-11-22, commit `5f99137`).** El mayor
+cluster de `any` del cuerpo de `App.tsx`: `activeGrammar`, `activeProfile`, `activeCustomFunctions`,
+`themeId`, `activeTab`, `lexicons` y seis firmas de `lexiconHook`. Tipados con `GrammarManifest`,
+`GenerativeProfile`, `NeographyProfile`, `InflectionProfile`, `LexiconData`, `CorpusEntry`, `ThemeId`
+y `AppTabId`; el cast `project.session.activeTab as any` pasa a `as AppTabId` y se elimina el import
+muerto `GenerationMode`. `App.tsx` sin cambios. Validaciones: typecheck 0, lint OK, vitest 807/807
+(98 archivos), audit:orphans 13.
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` sigue en 652 líneas y su `return`
 ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
 `AppFloatingLayers`). El frente siguiente es el cuerpo del componente (hooks/efectos), no el JSX:
-candidatos inmediatos: los efectos de `widgetBridge`/`initPragmaticDb` o los `any` restantes de
-`useAppHandlers`/`useProjectOperations` (`activeGrammar`, `activeMetadata`, `activeCustomFunctions`,
-`themeId`, `activeTab`, `lexicons`, `setLastAiResult`).
+candidatos inmediatos: los `any` restantes de `useAppHandlers` (`activeGrammar`, `activeMetadata`,
+`activeCustomFunctions`, `setLastAiResult`, `handleWidgetSearch`, `handleInflectRequest`) y de
+`useAiHandlers` (`generativeProfile`, `setActiveTab`, `setInitialDataForAdd`, `partialEntry`), más
+los estados `initialDataForAdd` y `lastAiResult` de `App.tsx`.
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,

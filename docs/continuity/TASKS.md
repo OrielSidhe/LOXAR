@@ -4223,3 +4223,51 @@ capas; el frente siguiente del cuerpo son los efectos de `widgetBridge`/`initPra
 restantes de `useAppHandlers`/`useProjectOperations` (`activeGrammar`, `activeMetadata`,
 `activeCustomFunctions`, `themeId`, `activeTab`, `lexicons`, `setLastAiResult`). Pendiente por
 autorizacion: `git push` + CI con numero de run.
+
+## [2026-11-22] Checkpoint: CLN — efectos de arranque a `usePragmaticDbInit` y `useWidgetDataSync` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el cuerpo de `App.tsx` seguia con dos `useEffect` inline: el de
+sincronizacion del lexico con el widget y el de inicializacion de la base pragramatica. Eran los
+ultimos efectos inline del componente.
+
+**Decision:** `src/hooks/usePragmaticDbInit.ts` (corre `initPragmaticDb()` una sola vez, degrada en
+silencio) y `src/hooks/useWidgetDataSync.ts` (envia `entries`/`inflectionProfile`/`metadata` al widget
+solo cuando los tres existen, con las dependencias reales). Contrato verbatim.
+
+**Cambios (commit `82bc5d3`):**
+- `src/hooks/usePragmaticDbInit.ts` (nuevo) y `src/hooks/useWidgetDataSync.ts` (nuevo, con
+  `UseWidgetDataSyncOptions`).
+- `src/App.tsx`: fuera `useEffect` y el import de `initPragmaticDb`; 653 → 652 lineas.
+- Tests: `src/hooks/__tests__/usePragmaticDbInit.test.tsx` y
+  `src/hooks/__tests__/useWidgetDataSync.test.tsx`.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 807/807 (98 archivos) · audit:orphans 13
+(baseline). Pendiente por autorizacion: `git push` + CI con numero de run.
+
+**Proximo bloque ejecutable (CLN/P1):** el frente siguiente del cuerpo son los `any` restantes de
+`useAppHandlers`/`useProjectOperations`. Pendiente por autorizacion: `git push` + CI con numero de run.
+
+## [2026-11-22] Checkpoint: CLN — tipado estricto de `useProjectOperations` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** `UseProjectOperationsOptions` era el mayor cluster de `any` del cuerpo
+de `App.tsx`: `activeGrammar`, `activeProfile`, `activeCustomFunctions`, `themeId`, `activeTab`,
+`lexicons` y seis firmas del objeto `lexiconHook` sin tipar.
+
+**Decision:** tipar con los tipos canonicos: `GrammarManifest`, `GenerativeProfile`,
+`NeographyProfile`, `InflectionProfile`, `LexiconData`, `CorpusEntry` (`src/types.ts`), `ThemeId`
+(`src/services/themeService.ts`) y `AppTabId` (`src/utils/appTabs.ts`). El cast
+`project.session.activeTab as any` pasa a `as AppTabId`. Se elimina el import muerto `GenerationMode`.
+
+**Cambios (commit `5f99137`):**
+- `src/hooks/useProjectOperations.ts`: interfaz tipada; 0 `any`.
+- `src/App.tsx`: sin cambios (ya pasaba los valores tipados).
+
+**Validaciones:** typecheck 0 · lint OK · vitest 807/807 (98 archivos) · audit:orphans 13 (baseline).
+Cambio de tipos solamente: no hay comportamiento nuevo que testear. Pendiente por autorizacion:
+`git push` + CI con numero de run.
+
+**Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `useAppHandlers`
+(`activeGrammar`, `activeMetadata`, `activeCustomFunctions`, `setLastAiResult`,
+`handleWidgetSearch`, `handleInflectRequest`) y de `useAiHandlers` (`generativeProfile`,
+`setActiveTab`, `setInitialDataForAdd`, `partialEntry`), mas los estados `initialDataForAdd` y
+`lastAiResult` de `App.tsx`. Pendiente por autorizacion: `git push` + CI con numero de run.
