@@ -8,7 +8,6 @@ import { useAppHandlers } from './hooks/useAppHandlers';
 import { searchLexicon } from './services/ftsSearch';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, GenerationMode, LexiconFilter } from './types';
-import { morphologyToTypologyProfile } from './types/pragmaticTypes';
 import { useFirstRunWizard } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
 import { useModalCoordination } from './hooks/useModalCoordination';
@@ -16,6 +15,7 @@ import { useAppSessionHydration } from './hooks/useAppSessionHydration';
 import { useTabNavigation } from './hooks/useTabNavigation';
 import { useLexiconMerge } from './hooks/useLexiconMerge';
 import { useOfflineBannerStatus } from './hooks/useOfflineBannerStatus';
+import { useAppDerivedState } from './hooks/useAppDerivedState';
 // Components
 import { ErrorBoundary } from './components/ErrorBoundary';
 import AppWelcomeLayer from './components/AppWelcomeLayer';
@@ -29,9 +29,8 @@ import { MAIN_TOUR_STEPS } from './data/tourSteps';
 import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
 import { initPragmaticDb } from './services/grammarDb';
-import { getGrammarMetrics } from './utils/grammarMetrics';
 import { buildDashboardStats } from './utils/dashboardStats';
-import { buildLexiconCompletionStats, clampIncompleteIndex, filterPendingCompletion } from './utils/lexiconCompletion';
+import { clampIncompleteIndex, filterPendingCompletion } from './utils/lexiconCompletion';
 
 const App = () => {
   const appVersion = '2.4.0-pro';
@@ -357,34 +356,16 @@ const App = () => {
     setIncompleteIndex(prev => clampIncompleteIndex(prev, incompleteEntries.length));
   }, [incompleteEntries.length]);
 
-  const completionStats = useMemo(
-    () => buildLexiconCompletionStats(activeLexicon, incompleteEntries),
-    [activeLexicon, incompleteEntries],
-  );
-
-  /** Live grammar metrics derived from the canonical manifest shape. */
-  const grammarMetrics = useMemo(() => getGrammarMetrics(activeGrammar), [activeGrammar]);
-
-  /**
-   * B2: Derive the live PragmaticEngine summary from activeGrammar.
-   * typologyLabel comes from morphologyToTypologyProfile (single source of
-   * truth — never hardcoded). rulesCount reuses the shared grammar metrics.
-   * activeClauseType propagates from the saved manifest.
-   */
-  const pragmaticEngine = useMemo(() => {
-    if (!activeGrammar?.typology) return undefined;
-    const label = morphologyToTypologyProfile(activeGrammar.typology.morphology);
-    return {
-      typologyLabel: label,
-      rulesCount: grammarMetrics.rules,
-      alignment: activeGrammar.typology.alignment || 'nominative',
-      wordOrder: activeGrammar.typology.wordOrder || '',
-      headDirection: activeGrammar.typology.headDirection || '',
-      activeClauseType: activeGrammar.pragmaticEngine?.activeClauseType ?? null,
-    };
-  }, [activeGrammar, grammarMetrics]);
-
-  const entryBeingEdited = useMemo(() => (editorMode === 'complete' ? entryToComplete : null), [editorMode, entryToComplete]);
+  // Estado presentacional derivado (P1: `useAppDerivedState`). Sustituye a los
+  // cuatro `useMemo` inline de metricas, resumen pragmatico, completitud y
+  // entrada en edicion.
+  const { grammarMetrics, pragmaticEngine, completionStats, entryBeingEdited } = useAppDerivedState({
+    activeGrammar,
+    activeLexicon,
+    incompleteEntries,
+    editorMode,
+    entryToComplete,
+  });
 
   const widgetBridge = useWidgetBridge({
     onAddWord: handleWidgetAddWord,
