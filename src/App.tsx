@@ -55,6 +55,7 @@ const App = () => {
     openCompare,
     openRestore,
     openAbout,
+    openInflectionModule,
   } = useModalCoordination();
 
   // I1: First-run wizard state
@@ -474,6 +475,7 @@ const App = () => {
             onManageFunctions={handleManageFunctions}
             onManageHyphens={handleManageHyphens}
             onUpdateGenerativeProfile={lexiconHook.updateGenerativeProfile}
+            onUpdateInflectionProfile={lexiconHook.updateInflectionProfile}
             onGenerateLanguageSample={async (profile, _sampleList) => generateLanguageSample(profile, lexiconHook.activeLexicon)}
             onAddWord={lexiconHook.addWord}
             onEditWord={lexiconHook.editWord}
@@ -484,6 +486,7 @@ const App = () => {
             onOpenProfile={openProfile}
             onOpenNeography={openWriting}
             onOpenInflection={openGrammar}
+            onOpenInflectionModule={openInflectionModule}
             onOpenCompare={openCompare}
             onLoadLexiconEntries={loadLexiconEntries}
             onMergeLexiconEntries={mergeLexiconEntries}
@@ -635,6 +638,7 @@ const App = () => {
             onOpenProfile={openProfile}
             onOpenNeography={openWriting}
             onOpenInflection={openGrammar}
+            onOpenInflectionModule={openInflectionModule}
             onOpenTranslator={openTranslator}
             onEnqueue={handleEnqueue}
             onGenerateBatch={handleGenerateBatch}

@@ -19,6 +19,7 @@ const ALL_MODALS: AppModalId[] = [
   'functions',
   'hyphens',
   'inflection_generator',
+  'inflection_module',
   'create_lexicon',
   'ai_settings',
 ];

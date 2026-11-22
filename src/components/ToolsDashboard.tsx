@@ -17,7 +17,8 @@ interface ToolsDashboardProps {
     listName: string;
     onOpenProfile: () => void;
     onOpenNeography: () => void;
-    onOpenInflectionWorkshop: () => void;
+    /** Abre el editor de morfología (paradigmas) como modal de pantalla completa. */
+    onOpenInflectionModule: () => void;
     onManageFunctions: () => void;
     onManageHyphens: () => void;
     onCompleteFunctions: (listName: string) => Promise<void>;
@@ -53,7 +54,7 @@ const ToolCard = ({ icon, title, description, onClick, disabled, accentColor = '
 
 const ToolsDashboard = ({
     listName,
-    onOpenProfile, onOpenNeography, onOpenInflectionWorkshop, onManageFunctions, onManageHyphens,
+    onOpenProfile, onOpenNeography, onOpenInflectionModule, onManageFunctions, onManageHyphens,
     onCompleteFunctions, onFillMissing, onAnalyzeForSuggestions, onOpenGrammar, onOpenTranslator,
     onOpenInterlinearGloss, onOpenSoundChangeWorkbench, stats, disabled, onStartTour
 }: ToolsDashboardProps) => {
@@ -134,7 +135,7 @@ const ToolsDashboard = ({
                         icon={<GitMergeIcon className="w-6 h-6" />}
                         title="Morfología"
                         description="Define paradigmas de conjugación, declinación y reglas fonológicas."
-                        onClick={onOpenInflectionWorkshop}
+                        onClick={onOpenInflectionModule}
                         disabled={disabled}
                         accentColor="text-emerald-400"
                         tooltip="Define y edita paradigmas de flexión y reglas fonológicas para el léxico."

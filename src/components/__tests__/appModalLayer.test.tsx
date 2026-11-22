@@ -78,6 +78,7 @@ const baseProps = (overrides: Partial<AppModalLayerProps> = {}): AppModalLayerPr
   onManageFunctions: () => {},
   onManageHyphens: () => {},
   onUpdateGenerativeProfile: () => {},
+  onUpdateInflectionProfile: () => {},
   onGenerateLanguageSample: async () => null,
   onAddWord: () => {},
   onEditWord: () => {},

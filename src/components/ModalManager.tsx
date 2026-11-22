@@ -8,6 +8,7 @@ import AnalysisReportModal from './AnalysisReportModal';
 import FunctionManagerModal from './FunctionManagerModal';
 import HyphenManagerModal from './HyphenManagerModal';
 import InflectionGeneratorModal from './InflectionGeneratorModal';
+import InflectionModule from './InflectionModule';
 import CreateLexiconModal from './CreateLexiconModal';
 import AboutModal from './AboutModal';
 import EditEntryModal from './EditEntryModal';
@@ -50,6 +51,7 @@ export interface ModalManagerProps {
     onManageFunctions: (ops: FunctionOperation[]) => void;
     onManageHyphens: (op: HyphenOperation) => void;
     onUpdateGenerativeProfile: (p: GenerativeProfile) => void;
+    onUpdateInflectionProfile: (p: InflectionProfile) => void;
     onGenerateLanguageSample: (p: GenerativeProfile, s: LexiconEntry[]) => Promise<any>;
     onAddWord: (entry: NewLexiconEntry) => void;
     onEditWord: (id: string, entry: LexiconEntry) => void;
@@ -59,8 +61,9 @@ export interface ModalManagerProps {
     onOpenFunctions: () => void;
     onOpenHyphens: () => void;
     onOpenProfile: () => void;
-    onOpenNeography: () => void;
     onOpenInflection: () => void;
+    onOpenInflectionModule: () => void;
+    onOpenNeography: () => void;
     onOpenCompare: () => void;
     onLoadLexiconEntries: (name: string) => Promise<LexiconEntry[] | null>;
     onMergeLexiconEntries: (entries: LexiconEntry[]) => void;
@@ -101,6 +104,7 @@ const ModalManager = ({
     onManageFunctions,
     onManageHyphens,
     onUpdateGenerativeProfile,
+    onUpdateInflectionProfile,
     onGenerateLanguageSample,
     onAddWord,
     onEditWord,
@@ -111,6 +115,7 @@ const ModalManager = ({
     onOpenProfile,
     onOpenNeography,
     onOpenInflection,
+    onOpenInflectionModule,
     onOpenCompare,
     onLoadLexiconEntries,
     onMergeLexiconEntries,
@@ -141,6 +146,7 @@ const ModalManager = ({
                 onGenerateReport={() => onClose()}
                 onOpenNeography={onOpenNeography}
                 onOpenGrammar={onOpenInflection}
+                onOpenInflectionModule={onOpenInflectionModule}
                 onOpenTranslation={onClose}
                 onOpenCompare={onOpenCompare}
             />}
@@ -173,6 +179,14 @@ const ModalManager = ({
             {activeModal === 'hyphens' && <HyphenManagerModal onApply={onManageHyphens} onClose={onClose} />}
 
             {activeModal === 'inflection_generator' && <InflectionGeneratorModal entry={entryToInflect} profile={activeInflectionProfile} onClose={onClose} />}
+
+            {activeModal === 'inflection_module' && (
+                <InflectionModule
+                    profile={activeInflectionProfile}
+                    onSave={onUpdateInflectionProfile}
+                    onClose={onClose}
+                />
+            )}
 
             {activeModal === 'create_lexicon' && <CreateLexiconModal onCreate={onConfirmCreateLexicon} onClose={onClose} />}
 

@@ -190,6 +190,7 @@ const baseProps = (overrides: Partial<AppBodyLayerProps> = {}): AppBodyLayerProp
   onOpenProfile: () => {},
   onOpenNeography: () => {},
   onOpenInflection: () => {},
+  onOpenInflectionModule: () => {},
   onOpenTranslator: () => {},
   onEnqueue: () => {},
   onGenerateBatch: () => {},

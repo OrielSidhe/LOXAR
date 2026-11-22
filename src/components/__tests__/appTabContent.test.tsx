@@ -213,6 +213,7 @@ const baseProps = (overrides: Partial<AppTabContentProps> = {}): AppTabContentPr
   onOpenProfile: () => {},
   onOpenNeography: () => {},
   onOpenInflection: () => {},
+  onOpenInflectionModule: () => {},
   onOpenTranslator: () => {},
   onEnqueue: () => {},
   onGenerateBatch: () => {},

@@ -191,6 +191,8 @@ export interface AppTabContentProps {
   onOpenProfile: () => void;
   onOpenNeography: () => void;
   onOpenInflection: () => void;
+  /** Abre el editor de morfología (paradigmas) como modal de pantalla completa. */
+  onOpenInflectionModule: () => void;
   onOpenTranslator: () => void;
   onEnqueue: (items: MissingWord[]) => void;
   onGenerateBatch: (items: MissingWord[], modes: GenerationMode[]) => void;
@@ -295,6 +297,7 @@ const AppTabContent: React.FC<AppTabContentProps> = ({
   onOpenProfile,
   onOpenNeography,
   onOpenInflection,
+  onOpenInflectionModule,
   onOpenTranslator,
   onEnqueue,
   onGenerateBatch,
@@ -471,7 +474,7 @@ const AppTabContent: React.FC<AppTabContentProps> = ({
           onManageHyphens={onManageHyphens}
           onOpenProfile={onOpenProfile}
           onOpenNeography={onOpenNeography}
-          onOpenInflectionWorkshop={onOpenInflection}
+          onOpenInflectionModule={onOpenInflectionModule}
           onOpenGrammar={onOpenInflection}
           onOpenTranslator={onOpenTranslator}
           onStartTour={onStartTour}

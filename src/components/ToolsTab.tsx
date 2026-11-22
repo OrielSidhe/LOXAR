@@ -29,7 +29,8 @@ export interface ToolsTabProps {
   onManageHyphens: () => void;
   onOpenProfile: () => void;
   onOpenNeography: () => void;
-  onOpenInflectionWorkshop: () => void;
+  /** Abre el editor de morfología (paradigmas) como modal de pantalla completa. */
+  onOpenInflectionModule: () => void;
   onOpenGrammar: () => void;
   onOpenTranslator: () => void;
   onStartTour: () => void;
@@ -59,7 +60,7 @@ const ToolsTab = (props: ToolsTabProps) => {
               onStartTour={props.onStartTour}
               onOpenProfile={props.onOpenProfile}
               onOpenNeography={props.onOpenNeography}
-              onOpenInflectionWorkshop={props.onOpenInflectionWorkshop}
+              onOpenInflectionModule={props.onOpenInflectionModule}
               onOpenGrammar={props.onOpenGrammar}
               onOpenTranslator={props.onOpenTranslator}
               onOpenInterlinearGloss={props.onOpenInterlinearGloss}

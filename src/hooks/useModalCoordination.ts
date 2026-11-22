@@ -35,6 +35,8 @@ export interface UseModalCoordinationResult extends ModalCoordinationState {
   openCompare: () => void;
   openRestore: () => void;
   openAbout: () => void;
+  /** Abre el editor de morfología (paradigmas) del léxico activo. */
+  openInflectionModule: () => void;
 }
 
 export function useModalCoordination(): UseModalCoordinationResult {
@@ -59,6 +61,7 @@ export function useModalCoordination(): UseModalCoordinationResult {
   const openCompare = useCallback(() => openModal('lexicon_compare'), [openModal]);
   const openRestore = useCallback(() => openModal('restore'), [openModal]);
   const openAbout = useCallback(() => openModal('about'), [openModal]);
+  const openInflectionModule = useCallback(() => openModal('inflection_module'), [openModal]);
 
   return useMemo(
     () => ({
@@ -75,6 +78,7 @@ export function useModalCoordination(): UseModalCoordinationResult {
       openCompare,
       openRestore,
       openAbout,
+      openInflectionModule,
     }),
     [
       state,
@@ -90,6 +94,7 @@ export function useModalCoordination(): UseModalCoordinationResult {
       openCompare,
       openRestore,
       openAbout,
+      openInflectionModule,
     ],
   );
 }
