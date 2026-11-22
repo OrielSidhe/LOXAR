@@ -1,7 +1,37 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-11-21 
+**Última actualización:** 2026-11-22 
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
+
+---
+## [2026-11-22] Checkpoint: CLN — estado del modo "completar" a `useEditorCompletion` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** continuar la descomposición del cuerpo de `App.tsx` (el `return` ya
+solo contiene capas). El bloque inline que resolvía las entradas pendientes
+(`filterPendingCompletion`), el índice acotado (`clampIncompleteIndex`) y la entrada objetivo del
+modo "completar" — con sus dos `useEffect` — era el siguiente frente de hooks/efectos.
+
+**Decisión:** modelo puro `src/utils/editorCompletionModel.ts` (`EditorMode`,
+`resolveEntryToComplete`, `resolveEntryToCompleteForMode`) + hook `src/hooks/useEditorCompletion.ts`
+que memoiza `incompleteEntries`, conserva `editorMode`/`incompleteIndex` y expone los setters con la
+firma `Dispatch<SetStateAction<T>>` que reciben `useAppHandlers` y `AppBodyLayer`. La semántica es
+verbatim: `entryToComplete` solo existe en modo `complete` y el índice se acota cuando el lote
+pendiente cambia de tamaño.
+
+**Cambios (commit `ef6b390`):**
+- `src/utils/editorCompletionModel.ts` (NUEVO) y `src/hooks/useEditorCompletion.ts` (NUEVO).
+- `src/App.tsx`: 672 → 658 líneas; fuera el `useMemo` de `incompleteEntries`, los tres `useState`
+  (`editorMode`, `incompleteIndex`, `entryToComplete`), los dos efectos y los imports de
+  `lexiconCompletion`/`useMemo`.
+- Tests: `editorCompletionModel.test.ts` (5) y `useEditorCompletion.test.tsx` (7).
+- `README.md`: contador 686 → 782 (93 archivos) y estado E2E 8/8.
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 782/782 (93 archivos) · audit:orphans 13
+(baseline) · `npm run test:gui` **8/8** (1.2 min, 1 worker, dev server caliente).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 658 líneas. El frente siguiente del cuerpo
+son los efectos de widget/pragmatic-db o el estado de notificaciones/tema. Frentes no-CLN pendientes:
+D2 (Web Worker vs CSP de Tauri), destino de los 13 huérfanos y `git push` + CI (requiere autorización).
 
 ---
 ## [2026-11-22] Checkpoint: CLN — editor de morfología (`InflectionModule`) cableado al léxico

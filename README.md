@@ -71,11 +71,10 @@ Esto permite que un agente de coding IA retome el proyecto desde cualquier punto
 ## Estado actual
 
 - **Frontend modularizado:** `App.tsx` reducido mediante extracciones controladas (`AppWelcomeSection`, `AppToastLayer`, `AppOfflineBannerLayer`, `AppSettingsModalLayer`, etc.).
-- **Suite de tests:** 686/686 tests unitarios/integración en Vitest (81 archivos).
+- **Suite de tests:** 782/782 tests unitarios/integración en Vitest (93 archivos).
 - **E2E web:** `npm run test:gui` 8 specs en Playwright (arranque, flujo completo de léxico, importador
-  de gramática, sound change, salto Workbench ↔ Léxico y canvas); 7/8 en suite completa — el fallo de
-  `grammar-import` es contención de 8 workers sobre el chunk lazy del importador y se reproduce en el
-  árbol limpio (en aislamiento pasan 2/2).
+  de gramática, sound change, salto Workbench ↔ Léxico y canvas); 8/8 en 1.2 min con `--workers=1` y
+  el dev server caliente (en paralelo la suite es sensible a la contención del chunk lazy del importador).
 - **Build estable:** `npm run typecheck`, `npm run lint` y `npm run build` en verde.
 - **Licencia:** MIT (`LICENSE`).
 - **Continuidad:** Fase J del Gauntlet v3.12 cerrada (commit `ee2a505`) y limpieza CLN aplicada

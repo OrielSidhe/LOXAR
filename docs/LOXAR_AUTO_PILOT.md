@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 770/770 (91 archivos) y `npm run test:gui`
-  (6 specs / 8 tests): 8/8 en 2.1 min con 1 worker y el dev server caliente (en paralelo sigue
+- Repo limpio, build/typecheck/lint verdes; vitest 782/782 (93 archivos) y `npm run test:gui`
+  (6 specs / 8 tests): 8/8 en 1.2 min con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `f536f27` (estado presentacional derivado a
-  `useAppDerivedState`, P1 God Component); 44 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `ef6b390` (estado del modo "completar" a
+  `useEditorCompletion`, P1 God Component); 47 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -316,9 +316,23 @@ simples/condicionales y reglas fonológicas con previsualización) con la lógic
 lint OK, build OK, vitest 756/756 (89 archivos), audit:orphans 13, `npm run test:gui` 8/8 (1 worker,
 dev server caliente; con 6 workers la suite cae por contención del chunk lazy, no por regresión).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 687 líneas y su `return`
+**[x] CLN — estado del modo "completar" a `useEditorCompletion` (P1, 2026-11-22, commit
+`ef6b390`).** El cuerpo de `App.tsx` resolvía inline las entradas pendientes
+(`filterPendingCompletion`), el índice acotado (`clampIncompleteIndex`) y la entrada objetivo del
+modo "completar", con dos `useEffect`. Nuevo `src/utils/editorCompletionModel.ts`
+(`resolveEntryToComplete`, `resolveEntryToCompleteForMode`, tipo `EditorMode`) y
+`src/hooks/useEditorCompletion.ts`, que memoiza `incompleteEntries` y expone `editorMode`/
+`setEditorMode`, `incompleteIndex`/`setIncompleteIndex`, `incompleteEntries` y `entryToComplete`
+con los setters en la firma `Dispatch<SetStateAction<T>>` que reciben `useAppHandlers` y
+`AppBodyLayer`. `App.tsx`: 672 → 658 líneas. Tests: `editorCompletionModel.test.ts` (5) y
+`useEditorCompletion.test.tsx` (7). Validaciones: typecheck 0, lint OK, build OK, vitest 782/782
+(93 archivos), audit:orphans 13, `npm run test:gui` 8/8 (1 worker, dev server caliente).
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 658 líneas y su `return`
 ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
-`AppFloatingLayers`). El frente siguiente es el cuerpo del componente (hooks/efectos), no el JSX.
+`AppFloatingLayers`). El frente siguiente es el cuerpo del componente (hooks/efectos), no el JSX:
+candidatos inmediatos: `useAppNotifications` (estado de toasts + auto-dismiss), `useAppTheme`
+(estado/efecto de tema) o los efectos de widget/`initPragmaticDb`.
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
