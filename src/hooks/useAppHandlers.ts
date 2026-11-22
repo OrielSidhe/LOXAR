@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useLexicon } from './useLexicon';
-import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, GenerationMode } from '../types';
+import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, GenerationMode, GrammarManifest, LexiconMetadata } from '../types';
 import type { AppTabId } from '../utils/appTabs';
 import type { AppModalId } from '../utils/wizardActionsModel';
 import { LoxarProject } from '../services/projectFile';
@@ -14,6 +14,7 @@ import { resolveTourSteps } from '../utils/tourStepsModel';
 import { normalizeText } from '../services/geminiService';
 import type { SoundChangeBatchResult } from '../services/soundChanger';
 import { filterParadigmsForFunction, generateInflectedForms } from '../services/inflectionService';
+import type { InflectedParadigmResult } from '../services/inflectionService';
 
 export interface UseAppHandlersOptions {
   lexiconHook: ReturnType<typeof useLexicon>;
@@ -43,7 +44,6 @@ export interface UseAppHandlersOptions {
   setEntryToInflect: React.Dispatch<React.SetStateAction<LexiconEntry | null>>;
   setAiStatus: React.Dispatch<React.SetStateAction<'idle' | 'working' | 'complete' | 'error'>>;
   setAiProgress: React.Dispatch<React.SetStateAction<{ processed: number; total: number } | null>>;
-  setLastAiResult: React.Dispatch<React.SetStateAction<any>>;
 
   activeTab: AppTabId;
   exportPath: string | null;
@@ -52,9 +52,9 @@ export interface UseAppHandlersOptions {
   sessionCacheData: { tourCompleted?: boolean } | null;
   generationModes: GenerationMode[];
   activeLexicon: LexiconEntry[];
-  activeGrammar: any;
-  activeMetadata: any;
-  activeCustomFunctions: any[];
+  activeGrammar: GrammarManifest;
+  activeMetadata: LexiconMetadata | null;
+  activeCustomFunctions: string[];
   incompleteEntries: LexiconEntry[];
   selectedIds: Set<string>;
 
@@ -86,8 +86,8 @@ export interface UseAppHandlersResult {
   handleBootstrapImportLocal: () => Promise<void>;
   handleWidgetAddWord: (word: string) => void;
   handleWidgetAddInflection: (payload: { word: string; originalMeaning: string; formName: string }) => void;
-  handleWidgetSearch: (term: string) => any;
-  handleInflectRequest: (entry: LexiconEntry) => any[];
+  handleWidgetSearch: (term: string) => LexiconEntry | null;
+  handleInflectRequest: (entry: LexiconEntry) => InflectedParadigmResult[];
   handleLookupForCompletion: (term: string) => void;
   handleManageFunctions: (ops: FunctionOperation[]) => void;
   handleManageHyphens: (op: HyphenOperation) => void;
@@ -142,7 +142,6 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     showNotification,
     setAiStatus,
     setAiProgress,
-    setLastAiResult,
   } = options;
 
   const handleOpenModal = useCallback((modal: AppModalId) => openModal(modal), [openModal]);
@@ -465,29 +464,27 @@ export const useAppHandlers = (options: UseAppHandlersOptions): UseAppHandlersRe
     try {
       setAiStatus('working');
       setAiProgress(null);
-      const res = await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
-      setLastAiResult(res.count);
+      await lexiconHook.aiCompleteFunctions(activeCustomFunctions, (p, t) => setAiProgress({ processed: p, total: t }));
       setAiStatus('complete');
       showNotification(successMessage, 'success');
     } catch (e) {
       setAiStatus('error');
       setAiProgress(null);
     }
-  }, [lexiconHook, activeCustomFunctions, showNotification, setAiStatus, setAiProgress, setLastAiResult]);
+  }, [lexiconHook, activeCustomFunctions, showNotification, setAiStatus, setAiProgress]);
 
   const handleAiFillMissing = useCallback(async (listName: string, successMessage = 'Campos completados') => {
     try {
       setAiStatus('working');
       setAiProgress(null);
-      const result = await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
-      setLastAiResult(result);
+      await lexiconHook.aiFillMissingFields((p, t) => setAiProgress({ processed: p, total: t }));
       setAiStatus('complete');
       showNotification(successMessage, 'success');
     } catch (e) {
       setAiStatus('error');
       setAiProgress(null);
     }
-  }, [lexiconHook, showNotification, setAiStatus, setAiProgress, setLastAiResult]);
+  }, [lexiconHook, showNotification, setAiStatus, setAiProgress]);
 
   return {
     handleOpenModal,

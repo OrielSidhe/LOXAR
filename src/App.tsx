@@ -34,6 +34,7 @@ import type { TourStep } from './data/tourSteps';
 import { audioService } from './services/audioService';
 import { generateLanguageSample } from './services/geminiService';
 import { buildDashboardStats } from './utils/dashboardStats';
+import type { EntryEditorInitialData } from './utils/entryEditorModel';
 import type { LoxarCanvasState } from './services/projectFile';
 
 const App = () => {
@@ -124,7 +125,7 @@ const App = () => {
   // aplicaba/persistía el tema en `localStorage`.
   const { themeId, setThemeId } = useAppTheme();
 
-  const [initialDataForAdd, setInitialDataForAdd] = useState<any>(null);
+  const [initialDataForAdd, setInitialDataForAdd] = useState<EntryEditorInitialData | null>(null);
   const [generationModes, setGenerationModes] = useState<GenerationMode[]>(['generative']);
 
   const [entryToEditInModal, setEntryToEditInModal] = useState<LexiconEntry | null>(null);
@@ -138,7 +139,6 @@ const App = () => {
 
   const [aiStatus, setAiStatus] = useState<'idle' | 'working' | 'complete' | 'error'>('idle');
   const [aiProgress, setAiProgress] = useState<{ processed: number; total: number } | null>(null);
-  const [lastAiResult, setLastAiResult] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<MissingWord[]>([]);
   const [suggestionListName, setSuggestionListName] = useState('');
 
@@ -238,7 +238,6 @@ const App = () => {
     showNotification,
     setAiStatus,
     setAiProgress,
-    setLastAiResult,
   });
 
   const {

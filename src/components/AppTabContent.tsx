@@ -37,6 +37,7 @@ import type {
   NewLexiconEntry,
   WorkQueueItem,
 } from '../types';
+import type { EntryEditorFormPayload, EntryEditorInitialData } from '../utils/entryEditorModel';
 import type { AppTabId } from '../utils/appTabs';
 import type { GrammarModule } from '../utils/grammarTabModel';
 import type { DashboardStats } from '../utils/dashboardStats';
@@ -133,7 +134,7 @@ export interface AppTabContentProps {
   onLookup: (significado: string) => void;
   generationModes: GenerationMode[];
   onGenerationModesChange: (modes: GenerationMode[]) => void;
-  initialDataForAdd: unknown;
+  initialDataForAdd: EntryEditorInitialData | null;
 
   // ── Sugerencias / IA ────────────────────────────────────────────
   suggestions: MissingWord[];
@@ -176,7 +177,7 @@ export interface AppTabContentProps {
   onAddLexicalException: (entryId: string, featureKey: string, surfaceForm: string) => void;
   onGenerateInflections: (entry: LexiconEntry) => void;
   onSearchLexicon: ((term: string) => Promise<LexiconEntry[]>) | undefined;
-  onAiCompleteEntry: (entry: LexiconEntry) => Promise<unknown>;
+  onAiCompleteEntry: (entry: EntryEditorFormPayload) => Promise<Record<string, unknown> | null>;
   onAiGenerateRootAndLexeme: (
     significado: string,
     categoria: string,

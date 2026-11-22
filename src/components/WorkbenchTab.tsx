@@ -3,6 +3,7 @@ import EntryEditor from './EntryEditor';
 import WorkQueueBar from './WorkQueueBar';
 import WorkbenchRightPanel from './WorkbenchRightPanel';
 import { GenerationMode, MissingWord, WorkQueueItem, LexiconEntry } from '../types';
+import type { EntryEditorFormPayload, EntryEditorInitialData } from '../utils/entryEditorModel';
 
 export interface WorkbenchTabProps {
   queueActive: boolean;
@@ -22,12 +23,12 @@ export interface WorkbenchTabProps {
   onLookup: (significado: string) => void;
   onAddWord: (entry: any) => void;
   onUpdateWord: (id: string, entry: any) => void;
-  onAiCompleteEntry: (entry: any) => Promise<any>;
+  onAiCompleteEntry: (entry: EntryEditorFormPayload) => Promise<Record<string, unknown> | null>;
   onAiGenerateRootAndLexeme: (significado: string, categoria: string, modes: GenerationMode[]) => Promise<{ raiz: string; lexema: string } | null>;
   onCorrectSignificado: (significado: string) => Promise<string>;
   showNotification: (message: string, type: 'success' | 'error') => void;
   disabled: boolean;
-  initialDataForAdd?: any;
+  initialDataForAdd?: EntryEditorInitialData | null;
   setIsLoading: (loading: boolean) => void;
   setLoadingMessage: (message: string) => void;
   customCategories: string[];

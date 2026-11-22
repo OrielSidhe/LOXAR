@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
-import type { LexiconEntry, WorkQueueItem, GenerationMode, MissingWord } from '../types';
+import type { Dispatch, SetStateAction } from 'react';
+import type { LexiconEntry, WorkQueueItem, GenerationMode, MissingWord, GenerativeProfile, InflectionProfile } from '../types';
+import type { AppTabId } from '../utils/appTabs';
 import { generateRootAndLexeme } from '../services/geminiService';
 import { generateWordPool } from '../services/phoneticGenerator';
 import { loadCoreLexicon, assignSemantics } from '../data/coreLexicon';
@@ -7,11 +9,11 @@ import type { AssignedWord } from '../types/coreLexicon';
 
 export function useWorkQueue(options: {
     getLexiconSample: (count: number) => LexiconEntry[];
-    activeInflectionProfile: any;
+    activeInflectionProfile: InflectionProfile;
     activeLexicon: LexiconEntry[];
-    generativeProfile: any;
+    generativeProfile: GenerativeProfile;
     showNotification: (message: string, type: 'success' | 'error') => void;
-    setActiveTab: (tab: any) => void;
+    setActiveTab: Dispatch<SetStateAction<AppTabId>>;
     setAiStatus: (status: 'idle' | 'working' | 'complete' | 'error') => void;
 }) {
     const { getLexiconSample, activeLexicon, generativeProfile, showNotification, setActiveTab, setAiStatus } = options;
@@ -125,7 +127,8 @@ export function useWorkQueue(options: {
 
             // 4. Presentar para auditoría
             setAuditPreview(assigned);
-            setActiveTab('audit');
+            // 'audit' nunca fue un tab valido de `AppTabId`; el pool se revisa en el workbench.
+            setActiveTab('workbench');
             showNotification(
                 `Pool generado: ${pool.generated} palabras con asignaciones semánticas`,
                 'success'

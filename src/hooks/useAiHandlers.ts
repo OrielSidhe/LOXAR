@@ -1,19 +1,22 @@
 import { useCallback } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { generateRootAndLexeme, completeEntry, correctSignificado } from '../services/geminiService';
 import { normalizeText } from '../services/geminiService';
 import { WORD_LISTS } from '../data/wordLists';
-import type { MissingWord, GenerationMode, LexiconEntry, LexiconMetadata } from '../types';
+import type { MissingWord, SuggestionWord, GenerationMode, LexiconEntry, LexiconMetadata, GenerativeProfile } from '../types';
+import type { AppTabId } from '../utils/appTabs';
+import type { EntryEditorFormPayload, EntryEditorInitialData } from '../utils/entryEditorModel';
 
 export interface UseAiHandlersOptions {
     activeLexicon: LexiconEntry[];
     showNotification: (message: string, type: 'success' | 'error') => void;
     getLexiconSample: (count: number) => LexiconEntry[];
-    generativeProfile: any;
+    generativeProfile: GenerativeProfile;
     setAiStatus: (status: 'idle' | 'working' | 'complete' | 'error') => void;
     setSuggestionListName: (name: string) => void;
-    setActiveTab: (tab: any) => void;
+    setActiveTab: Dispatch<SetStateAction<AppTabId>>;
     setSuggestions: (suggestions: MissingWord[] | ((prev: MissingWord[]) => MissingWord[])) => void;
-    setInitialDataForAdd: (data: any) => void;
+    setInitialDataForAdd: Dispatch<SetStateAction<EntryEditorInitialData | null>>;
     setEditorMode: (mode: 'add' | 'complete') => void;
 }
 
@@ -69,13 +72,14 @@ export function useAiHandlers(options: UseAiHandlersOptions) {
         }
     }, [getLexiconSample, generativeProfile, activeLexicon, setAiStatus]);
 
-    const handleAiCompleteEntry = useCallback(async (partialEntry: any) => {
+    const handleAiCompleteEntry = useCallback(async (partialEntry: EntryEditorFormPayload): Promise<Record<string, unknown> | null> => {
         setAiStatus('working');
         try {
             const sample = getLexiconSample(30);
             const res = await completeEntry(partialEntry, sample, generativeProfile);
             setAiStatus('complete');
-            return res;
+            // `completeEntry` devuelve JSON de IA sin forma garantizada; `EntryEditor` lo mapea con `mapAiEntryResult`.
+            return (res ?? null) as Record<string, unknown> | null;
         } catch (e) {
             setAiStatus('error');
             return null;
@@ -90,8 +94,8 @@ export function useAiHandlers(options: UseAiHandlersOptions) {
         }
     }, []);
 
-    const handleGenerateAIFromSuggestion = useCallback(async (word: MissingWord) => {
-        const category = word.Categoría || (word as any).Función || 'desconocida';
+    const handleGenerateAIFromSuggestion = useCallback(async (word: SuggestionWord) => {
+        const category = word.Categoría || word.Función || 'desconocida';
         const result = await handleAiGenerate(word.Significado, category, ['generative', 'etymological']);
         if (result) {
             setInitialDataForAdd({
@@ -107,8 +111,8 @@ export function useAiHandlers(options: UseAiHandlersOptions) {
         }
     }, [handleAiGenerate, setInitialDataForAdd, setEditorMode, setActiveTab, setSuggestions]);
 
-    const handleAddManuallyFromSuggestion = useCallback((word: MissingWord) => {
-        const category = word.Categoría || (word as any).Función || 'desconocida';
+    const handleAddManuallyFromSuggestion = useCallback((word: SuggestionWord) => {
+        const category = word.Categoría || word.Función || 'desconocida';
         setInitialDataForAdd({ Significado: [word.Significado], Categoría: category });
         setEditorMode('add');
         setActiveTab('workbench');

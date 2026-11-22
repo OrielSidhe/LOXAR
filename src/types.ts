@@ -54,6 +54,9 @@ export type MissingWord = {
     Categoría: string;
 };
 
+/** Las sugerencias pueden conservar el campo legacy `Función` de listas antiguas. */
+export type SuggestionWord = MissingWord & { Función?: string };
+
 /** Un elemento de la "cola de trabajo" del workbench. Es una semilla de
  *  palabra (Significado/Categoría) que puede llevar ya Raíz/Léxema generados. */
 export type WorkQueueItem = {

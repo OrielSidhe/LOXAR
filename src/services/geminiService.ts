@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { LexiconEntry, MissingWord, NewLexiconEntry, GenerativeProfile, GenerationMode, GrammarManifest } from '../types';
+import type { EntryEditorFormPayload } from '../utils/entryEditorModel';
 import { FlexibleGrammar } from '../types/grammar-flexible';
 import {
     buildModeInstructions, buildRootLexemePrompt, buildCompleteEntryPrompt, buildConlangAgentPrompt,
@@ -455,13 +456,14 @@ const parseJsonSafely = <T>(text: string, fallback: T): T => {
 };
 
 export const completeEntry = async (
-    partialEntry: any,
+    partialEntry: EntryEditorFormPayload,
     _lexiconSample: LexiconEntry[],
     profile: GenerativeProfile
-): Promise<any> => {
+): Promise<Record<string, unknown>> => {
     const prompt = buildCompleteEntryPrompt(partialEntry, profile);
     const responseText = await callAi(prompt, partialEntry);
-    return parseJsonSafely(responseText, partialEntry);
+    // El JSON de IA no tiene forma garantizada: se tipa en la frontera del consumidor.
+    return parseJsonSafely(responseText, partialEntry) as unknown as Record<string, unknown>;
 };
 
 export const conlangAgentChat = async (

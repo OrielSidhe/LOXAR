@@ -1,5 +1,11 @@
 import { InflectionParadigm, InflectionRule, InflectionProfile, LexiconEntry } from '../types';
 
+/** Resultado del widget de inflexion: paradigma aplicado + formas generadas. */
+export interface InflectedParadigmResult {
+    paradigmName: string;
+    forms: { name: string; result: string }[];
+}
+
 export const filterParadigmsForFunction = (paradigms: InflectionParadigm[], targetFunction: string): InflectionParadigm[] => {
     if (!paradigms) return [];
     const results: InflectionParadigm[] = [];
