@@ -4,6 +4,34 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — `Header` + `AppToolbar` del `return` a `AppHeaderLayer` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el `return` de `App.tsx` seguía con el `Header` (marca,
+widget, ajustes y tema) y el `AppToolbar` (selector de léxico, archivo, proyecto y sesión)
+inline, el siguiente candidato del checkpoint anterior.
+
+**Decisión:** envolver ambos bloques en `src/components/AppHeaderLayer.tsx`
+(`AppHeaderLayerProps = HeaderProps & AppToolbarProps`), con el destructure exhaustivo de las
+seis props de `Header` y el resto propagado íntegro a `AppToolbar` (no hay solapamiento de
+nombres). `HeaderProps` pasó a exportarse desde `Header.tsx` para tipar la capa sin duplicar
+la interfaz.
+
+**Cambios (commit `259e840`):**
+- `src/components/AppHeaderLayer.tsx` (nuevo): `Header` → `AppToolbar`, mismo orden de render.
+- `src/components/Header.tsx`: `HeaderProps` exportada.
+- `src/App.tsx`: 691 → 687 líneas; fuera los dos imports directos de `Header`/`AppToolbar`.
+- Tests: `src/components/__tests__/appHeaderLayer.test.tsx` (4, ambos hijos mockeados).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 721/721 (87 archivos) ·
+audit:orphans 13 (baseline) · `npm run test:gui`: 7/8 en suite completa (flake documentado del
+chunk lazy del importador); `grammar-import.spec.ts` pasa 1/1 en aislamiento.
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 687 líneas y su `return` ya solo
+contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
+`AppFloatingLayers`). El frente siguiente es el cuerpo del componente (hooks/efectos), no el
+JSX. Frentes no-CLN pendientes: D2 (Web Worker vs CSP de Tauri), destino de los 13 huérfanos y
+`git push` + CI (requiere autorización).
+
 ## [2026-11-21] Checkpoint: CLN — cuerpo principal del `return` a `AppBodyLayer` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el `return` de `App.tsx` seguía con el bloque de barra lateral +

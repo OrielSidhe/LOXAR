@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 717/717 (86 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 721/721 (87 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 48s con el dev server caliente (en paralelo sigue sensible a la
   contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `df10e77` (cuerpo principal del return a
-  AppBodyLayer); 38 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `259e840` (Header + AppToolbar del return a
+  AppHeaderLayer); 40 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -293,8 +293,19 @@ onOpenWidget, onOpenSettings, onGoHome, onNavBack, onQuickNav }`), con el mismo 
 OK, vitest 717/717 (86 archivos), audit:orphans 13; `npm run test:gui` 5/8 y 7/8 en dos corridas
 (flake documentado del chunk lazy) con el spec fallido pasando 1/1 en aislamiento.
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 691 líneas. El siguiente
-candidato es agrupar `Header` + `AppToolbar` en una capa de cabecera (`AppHeaderLayer`).
+**[x] CLN — `Header` + `AppToolbar` a `AppHeaderLayer` (P1, 2026-11-22, commit `259e840`).** El
+`return` de `App.tsx` montaba el `Header` (marca, widget, ajustes y tema) y el `AppToolbar`
+(selector de léxico, archivo, proyecto y sesión) en dos bloques con ~36 props. Nuevo
+`src/components/AppHeaderLayer.tsx` con `AppHeaderLayerProps = HeaderProps & AppToolbarProps` y el
+destructure exhaustivo de las seis props de `Header` (el resto va íntegro al toolbar, sin
+solapamiento de nombres); `HeaderProps` pasó a exportarse desde `Header.tsx`. `App.tsx`: 691 → 687
+líneas. Tests: `appHeaderLayer.test.tsx` (4, ambos hijos mockeados). Validaciones: typecheck 0,
+lint OK, build OK, vitest 721/721 (87 archivos), audit:orphans 13, `npm run test:gui` 7/8 con
+`grammar-import.spec.ts` 1/1 en aislamiento (flake del chunk lazy).
+
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` queda en 687 líneas y su `return`
+ya solo contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
+`AppFloatingLayers`). El frente siguiente es el cuerpo del componente (hooks/efectos), no el JSX.
 
 **[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
 montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
