@@ -5,6 +5,42 @@
 
 ---
 
+## [2026-11-21] Checkpoint: CLN — capas superpuestas del `return` a `AppOverlayLayers` / `AppFloatingLayers` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** `App.tsx` seguía con ~110 líneas de capas superpuestas inline en el
+`return` del contenedor principal: seis antes del `Header` (luces ambientales, overlay de carga,
+banner offline, banner del trabajo de importación, capa de modales con ~40 props y capa de ajustes)
+y cuatro después del área de contenido (toolbar de lote, toasts, widget flotante y capa de bootstrap).
+
+**Decisión:** extraer dos componentes presentacionales con props tipadas estrictamente y el mismo
+orden de render. No se movieron de posición las capas en flujo (`OfflineBanner`, `ImportJobBanner`):
+cambiar su orden alteraría el layout del contenedor flex. `AppOverlayLayers` reutiliza el contrato
+`AppModalLayerProps` por intersección de tipos y destructura los extras para no duplicar los ~40
+campos; `AppFloatingLayers` hace lo propio con `AppProjectBootstrapLayerProps`.
+
+**Cambios (commit `e654fe4`):**
+- `src/components/AppOverlayLayers.tsx` (NUEVO): `AppOverlayLayersProps = AppModalLayerProps & {...}`
+  (isLoading, loadingMessage, showOfflineBanner, showSettings, onCloseSettings, onOpenAiSettings,
+  exportFormats, onExportFormatsChange). Renderiza las seis capas en el orden original.
+- `src/components/AppFloatingLayers.tsx` (NUEVO): `AppFloatingLayersProps =
+  AppProjectBootstrapLayerProps & {...}` (activeTab, selectedIds, customFunctions, onClearSelection,
+  onBatchDelete, onBatchChangeFunction, notifications, onDismissNotification, onWidgetAddWord,
+  onWidgetSearch, onWidgetToggleCapture, showWelcome, showWizard). Conserva las dos condicionales
+  (`table` + selección, `!showWelcome && !showWizard`).
+- `src/App.tsx`: 790 → 762 líneas; fuera 10 imports de capas y entran los dos nuevos.
+- Tests: `src/components/__tests__/appOverlayLayers.test.tsx` (7, con los diez hijos mockeados):
+  orden de las seis capas, propagación de estado de carga/banner offline, props de modales y de
+  ajustes, condicional de la toolbar de lote, condicional de bootstrap y callbacks del widget.
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 693/693 (82 archivos) · audit:orphans 13
+(baseline, sin huérfanos nuevos) · `npm run test:gui` 8/8 (1.1 min, dev server caliente).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 762 líneas; el siguiente candidato es el
+bloque de bienvenida + wizard (`AppWelcomeSection` + `FirstRunWizard`, ~35 líneas con ~15 props) o
+los ~120 líneas de props de `AppTabContent`. Pendiente por autorización: `git push` + CI con número de run.
+
+---
+
 ## [2026-11-21] Checkpoint: CLN — switch de tabs a `AppTabContent` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el arbol de trabajo llegaba con `src/App.tsx` modificado y

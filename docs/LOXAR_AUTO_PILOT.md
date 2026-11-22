@@ -11,15 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 686/686 (81 archivos) y `npm run test:gui`
-  (6 specs / 8 tests): en aislamiento los specs de navegacion pasan; la suite completa en
-  paralelo es inestable por contencion del chunk lazy del importador (5/8 con estos cambios,
-  6/8 en el arbol limpio, con specs distintos fallando en cada corrida)
+- Repo limpio, build/typecheck/lint verdes; vitest 693/693 (82 archivos) y `npm run test:gui`
+  (6 specs / 8 tests): 8/8 en 1.1 min con el dev server caliente (en paralelo sigue sensible a la
+  contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit `6ef5337` (switch de tabs a `AppTabContent`);
-  27 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit `e654fe4` (capas superpuestas a
+  `AppOverlayLayers`/`AppFloatingLayers`); 30 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -246,6 +245,18 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — capas superpuestas del `return` (P1, 2026-11-21, commit `e654fe4`).** `App.tsx`
+montaba inline seis capas antes del `Header` (luces ambientales, overlay de carga, banner offline,
+banner del trabajo de importación, capa de modales con ~40 props y capa de ajustes) y cuatro después
+del área de contenido (toolbar de lote, toasts, widget flotante y bootstrap). Nuevos
+`src/components/AppOverlayLayers.tsx` (`AppOverlayLayersProps = AppModalLayerProps & {...}`) y
+`src/components/AppFloatingLayers.tsx` (`AppFloatingLayersProps = AppProjectBootstrapLayerProps &
+{...}`), ambos con el mismo orden de render y las dos condicionales preservadas (`table` + selección;
+`!showWelcome && !showWizard`). No se reordenaron las capas en flujo (`OfflineBanner`,
+`ImportJobBanner`): moverlas alteraría el layout. `App.tsx`: 790 → 762 líneas. Tests:
+`appOverlayLayers.test.tsx` (7, con los diez hijos mockeados). Validaciones: typecheck 0, lint OK,
+build OK, vitest 693/693 (82 archivos), audit:orphans 13, `npm run test:gui` 8/8.
+
 **[x] CLN — switch de tabs a `AppTabContent` (P1, 2026-11-21, commit `6ef5337`).** Trabajo de
 una sesion previa cortada, verificado y cerrado: el `return` de `App.tsx` guardaba ~393 de JSX
 con ocho ramas de tab y ~30 props por rama. Nuevo `src/components/AppTabContent.tsx` (489
@@ -273,9 +284,8 @@ Trabajo de una sesion previa cortada, verificado y cerrado: `handleLoadLexiconEn
 modelo (5) y hook (6). Validaciones: typecheck 0, lint OK, build OK, vitest 669/669
 (78 archivos), audit:orphans 13.
 
-**[ ] CLN — capas superpuestas del `return` de `App.tsx` (P1).** `App.tsx` queda en 790 lineas;
-siguen inline las capas de welcome/toast/offline/bootstrap/settings y el `ModalManager` del area
-principal. Candidato: agruparlas en un `AppOverlayLayers.tsx` con props tipadas estrictas.
+**[x] CLN — capas superpuestas del `return` de `App.tsx` (P1).** Resuelto en `e654fe4`: nuevas
+`AppOverlayLayers` y `AppFloatingLayers` con props tipadas estrictamente; `App.tsx` 790 → 762 lineas.
 
 **[x] CLN — tipado estricto de navegación (`AppTabId` + `dashboardNavigation`, 2026-11-20).** La
 unión de tabs estaba duplicada en `App.tsx`, `DashboardTab.tsx` y `useAppHandlers.ts`, y los casts
@@ -339,9 +349,8 @@ lint OK, build OK, vitest 652/652 (76 archivos), audit:orphans 13; `test:gui` co
 caliente: `flow.spec.ts` y `workbench-lexicon-jump.spec.ts` pasan en aislamiento (la suite
 completa en paralelo es inestable por contencion del chunk lazy, igual que en el arbol limpio).
 
-**[ ] CLN — handlers de comparacion/merge inline (P1).** `handleLoadLexiconEntries` y
-`handleMergeLexiconEntries` siguen inline en `App.tsx` (881 lineas); son el siguiente bloque
-candidato a un hook propio con su modelo puro.
+**[x] CLN — handlers de comparacion/merge inline (P1).** Resuelto en `7026051`: salieron a
+`src/utils/lexiconMergeModel.ts` + `src/hooks/useLexiconMerge.ts`; ya no quedan inline en `App.tsx`.
 
 **[x] CLN — handlers del wizard de primer arranque a `useFirstRunWizardActions` (P1, 2026-11-20).**
 Los cinco handlers inline de `App.tsx` (`handleWizardConfigureAi`, `handleAiSettingsModalClose`,
@@ -429,9 +438,10 @@ Tests: `grammarOverview.test.tsx` (4). Validaciones: typecheck 0, lint OK, build
 de fonología y morfología, salto Workbench↔Léxico, arranque por léxico). Pendiente: `git push` + CI
 con número de run (requiere autorización).
 
-**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` quedó en 881 líneas tras
-cablear el escaneo de `.loxar` (`a804a8c`). El siguiente bloque lo define la pasada siguiente:
-los handlers de comparacion/merge siguen inline y son el candidato natural.
+**[ ] CLN — frente siguiente del God Component (P1).** `App.tsx` quedó en 762 líneas tras extraer
+las capas superpuestas (`e654fe4`). El siguiente candidato es el bloque de bienvenida + wizard
+(`AppWelcomeSection` + `FirstRunWizard`, ~35 líneas con ~15 props) o los ~120 líneas de props de
+`AppTabContent`.
 
 **[x] CLN — higiene de código muerto y puerta de calidad (2026-11-20).** Cerrado el árbol de
 trabajo sucio: `tests-gui/flow.spec.ts` arrastraba un `type Page` sin uso y `App.tsx` conservaba
