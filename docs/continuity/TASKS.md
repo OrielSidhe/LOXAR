@@ -4,6 +4,37 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — notificaciones a `useAppNotifications` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** continuar la descomposición del cuerpo de `App.tsx` (el `return` ya
+solo contiene capas). El estado de notificaciones era el siguiente frente: un `useState` de toasts,
+un `useCallback` de `showNotification` con auto-dismiss a 5 s y el `setNotifications` inline del
+`onDismissNotification` del `return`.
+
+**Decisión:** hook `src/hooks/useAppNotifications.ts` con los tipos `AppNotification`/
+`AppNotificationType`, la constante `NOTIFICATION_DURATION_MS` y `useAppNotifications()`, que
+memoiza `showNotification` (misma identidad entre renders, porque `useLexicon` y
+`useProjectOperations` la reciben como dependencia) y expone `dismissNotification`. El `id` pasa de
+`Date.now()` a un contador monótono por montaje (`useRef`): dos notificaciones creadas en el mismo
+milisegundo compartían `id`, así que el auto-dismiss o el descarte manual eliminaban ambas.
+
+**Cambios (commit `370f28b`):**
+- `src/hooks/useAppNotifications.ts` (NUEVO) y su test `src/hooks/__tests__/useAppNotifications.test.tsx`
+  (8: arranque vacío, tipo por defecto, tipo `error`, apilado ordenado con ids distintos,
+  auto-dismiss en el límite exacto, descarte selectivo, id inexistente e identidad memoizada).
+- `src/App.tsx`: 658 → 655 líneas; fuera el `useState` de notificaciones, el `useCallback` de
+  `showNotification` y el `useCallback` del import de React (queda `useState`/`useEffect`).
+- `README.md`: contador 782 → 790 (94 archivos).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 790/790 (94 archivos) · audit:orphans 13
+(baseline) · `npm run test:gui` **8/8** (51 s, 1 worker, dev server caliente).
+
+**Próximo bloque ejecutable (CLN/P1):** `App.tsx` queda en 655 líneas. El frente siguiente del cuerpo
+son `useAppTheme` (estado/efecto de tema), los efectos de widget/`initPragmaticDb` o los `any[]` de
+`canvasState`/`setCurrentTourSteps`. Frentes no-CLN pendientes: D2 (Web Worker vs CSP de Tauri),
+destino de los 13 huérfanos y `git push` + CI (requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — estado del modo "completar" a `useEditorCompletion` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** continuar la descomposición del cuerpo de `App.tsx` (el `return` ya
