@@ -14,7 +14,6 @@ import { searchLexicon } from './services/ftsSearch';
 import { getStoredTheme, applyTheme, saveTheme, themes, type ThemeId } from './services/themeService';
 import { LexiconEntry, MissingWord, FunctionOperation, HyphenOperation, WorkQueueItem, GenerationMode, LexiconFilter } from './types';
 import { morphologyToTypologyProfile, type TypologyProfile } from './types/pragmaticTypes';
-import FirstRunWizard from './components/FirstRunWizard';
 import { useFirstRunWizard, checkIsFirstRun } from './hooks/useFirstRunWizard';
 import { useFirstRunWizardActions } from './hooks/useFirstRunWizardActions';
 import { useModalCoordination } from './hooks/useModalCoordination';
@@ -53,7 +52,7 @@ import ToolsDashboard from './components/ToolsDashboard';
 import VerticalSidebar from './components/VerticalSidebar';
 import ModulePanel from './components/ModulePanel';
 import DashboardTab from './components/DashboardTab';
-import AppWelcomeSection from './components/AppWelcomeSection';
+import AppWelcomeLayer from './components/AppWelcomeLayer';
 import AppNavigationBar from './components/AppNavigationBar';
 import AppTabContent from './components/AppTabContent';
 import AppOverlayLayers from './components/AppOverlayLayers';
@@ -464,10 +463,11 @@ const App = () => {
   return (
     <ErrorBoundary>
       <div className="flex flex-col h-screen bg-background-dark text-text-primary bg-grid-pattern overflow-hidden relative selection:bg-primary/30 selection:text-white">
-        <AppWelcomeSection
+        <AppWelcomeLayer
           splashFinished={splashFinished}
           onSplashFinish={() => setSplashFinished(true)}
           showWelcome={showWelcome}
+          showWizard={showWizard}
           onCreateLexicon={handleCreateNewLexicon}
           onContinue={handleContinueToDashboard}
           onImport={content => {
@@ -483,22 +483,16 @@ const App = () => {
           isTourActive={isTourActive}
           tourSteps={currentTourSteps}
           onTourEnd={onTourEnd}
-          />
-
-        {/* I1-I5: First-run wizard */}
-        {showWizard && (
-          <FirstRunWizard
-            step={step}
-            dataFolder={dataFolder}
-            onNext={nextStep}
-            onPrev={prevStep}
-            onSkip={handleWizardSkip}
-            onComplete={step === 'data-folder' ? handleWizardComplete : nextStep}
-            onConfigureAi={handleWizardConfigureAi}
-            onChooseDataFolder={handleChooseDataFolder}
-            onDataFolderChange={updateDataFolder}
-          />
-        )}
+          step={step}
+          dataFolder={dataFolder}
+          onWizardNext={nextStep}
+          onWizardPrev={prevStep}
+          onWizardSkip={handleWizardSkip}
+          onWizardComplete={handleWizardComplete}
+          onConfigureAi={handleWizardConfigureAi}
+          onChooseDataFolder={handleChooseDataFolder}
+          onDataFolderChange={updateDataFolder}
+        />
 
         <div className={`flex flex-col h-full transition-opacity duration-1000 ${splashFinished && !showWelcome ? 'opacity-100' : 'opacity-0'}`}>
           <AppOverlayLayers

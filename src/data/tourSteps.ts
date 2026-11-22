@@ -1,7 +1,7 @@
 // Tour steps for the GuidedTour component
 // Each step highlights a UI element via its CSS selector
 
-interface TourStep {
+export interface TourStep {
     selector: string;
     title: string;
     content: string;

@@ -2,6 +2,7 @@ import React from 'react';
 import SplashScreen from './SplashScreen';
 import WelcomeScreen from './WelcomeScreen';
 import GuidedTour from './GuidedTour';
+import type { TourStep } from '../data/tourSteps';
 
 type AppWelcomeSectionProps = {
   splashFinished: boolean;
@@ -12,7 +13,7 @@ type AppWelcomeSectionProps = {
   onImport: (content: string) => void;
   onStartTour: () => void;
   isTourActive: boolean;
-  tourSteps: any[];
+  tourSteps: TourStep[];
   onTourEnd: () => void;
 };
 
