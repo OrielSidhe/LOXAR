@@ -2,7 +2,16 @@ import React from 'react';
 import EntryEditor from './EntryEditor';
 import WorkQueueBar from './WorkQueueBar';
 import WorkbenchRightPanel from './WorkbenchRightPanel';
-import { GenerationMode, MissingWord, WorkQueueItem, LexiconEntry } from '../types';
+import {
+  GenerationMode,
+  GenerativeProfile,
+  GrammarManifest,
+  LexiconEntry,
+  LexiconMetadata,
+  MissingWord,
+  NewLexiconEntry,
+  WorkQueueItem,
+} from '../types';
 import type { EntryEditorFormPayload, EntryEditorInitialData } from '../utils/entryEditorModel';
 
 export interface WorkbenchTabProps {
@@ -16,13 +25,13 @@ export interface WorkbenchTabProps {
   queueClear: () => void;
   editorMode: 'add' | 'complete';
   onEditorModeChange: (mode: 'add' | 'complete') => void;
-  entryToEdit?: any;
+  entryToEdit?: LexiconEntry | null;
   incompleteCount: number;
   incompleteIndex: number;
   onNavigateIncomplete: (direction: 'next' | 'prev') => void;
   onLookup: (significado: string) => void;
-  onAddWord: (entry: any) => void;
-  onUpdateWord: (id: string, entry: any) => void;
+  onAddWord: (entry: LexiconEntry | NewLexiconEntry) => void;
+  onUpdateWord: (id: string, entry: LexiconEntry) => void;
   onAiCompleteEntry: (entry: EntryEditorFormPayload) => Promise<Record<string, unknown> | null>;
   onAiGenerateRootAndLexeme: (significado: string, categoria: string, modes: GenerationMode[]) => Promise<{ raiz: string; lexema: string } | null>;
   onCorrectSignificado: (significado: string) => Promise<string>;
@@ -33,26 +42,26 @@ export interface WorkbenchTabProps {
   setLoadingMessage: (message: string) => void;
   customCategories: string[];
   onAddCustomCategory: (category: string) => void;
-  activeMetadata: any;
-  activeLexicon: any[];
+  activeMetadata: LexiconMetadata | null;
+  activeLexicon: LexiconEntry[];
   generationModes: GenerationMode[];
   onGenerationModesChange: (modes: GenerationMode[]) => void;
   onQueueAdvance?: () => void;
-  suggestions: any[];
+  suggestions: MissingWord[];
   suggestionListName: string;
   onCloseSuggestions: () => void;
-  onAddManually: (suggestion: any) => void;
-  onGenerateAI: (suggestion: any) => void;
+  onAddManually: (suggestion: MissingWord) => void;
+  onGenerateAI: (suggestion: MissingWord) => void;
   isLoadingAI: boolean;
   onSelectList: (name: string) => void;
   onAnalyzeList: (name: string) => void;
-  generativeProfile: any;
+  generativeProfile: GenerativeProfile;
   generativeLexicon: LexiconEntry[];
-  onSaveGenerativeProfile: (profile: any) => void;
+  onSaveGenerativeProfile: (profile: GenerativeProfile) => void;
   onEnqueue: (items: MissingWord[]) => void;
   onGenerateBatch: (items: MissingWord[], modes: GenerationMode[]) => void;
-  manifest: any;
-  onSyncPhonology: (phonology: any) => void;
+  manifest: GrammarManifest;
+  onSyncPhonology: (phonology: Partial<GenerativeProfile>) => void;
 }
 
 const WorkbenchTab = (props: WorkbenchTabProps) => {
@@ -74,7 +83,7 @@ const WorkbenchTab = (props: WorkbenchTabProps) => {
           <EntryEditor
             mode={props.editorMode}
             onModeChange={props.onEditorModeChange}
-            entryToEdit={props.entryToEdit}
+            entryToEdit={props.entryToEdit ?? undefined}
             incompleteCount={props.incompleteCount}
             incompleteIndex={props.incompleteIndex}
             onNavigateIncomplete={props.onNavigateIncomplete}
