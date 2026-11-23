@@ -14,10 +14,22 @@
  *   - sentence_templates (plantillas por tipología)
  *
  * No reemplaza `sqlStorage.ts` (léxico). Complementa.
+ *
+ * TIPADO ESTRICTO (P1 God Component):
+ *   - La frontera con el plugin SQL usa el tipo real `Database` declarado por
+ *     `@tauri-apps/plugin-sql` (`import type`: se borra en compilación, así que
+ *     el bundle web nunca resuelve el módulo; el `import()` dinámico de `getDb`
+ *     sigue siendo el único acceso runtime).
+ *   - Cada consulta `select` declara su tipo de fila (`db.select<XRow[]>`), de
+ *     modo que las columnas se leen con tipo en lugar de `Record<string, any>`.
+ *   - Las columnas JSON pasan por guards (`parseStringArray`, `parseBlockIds`,
+ *     `parseBlockRefs`, `parseTemplates`, `isPragmaticClauseType`) en lugar de
+ *     `JSON.parse(...) as any`.
  */
 
 import type {
   PragmaticClauseType,
+  PragmaticClauseTypeId,
   PragmaticBlockId,
   PragmaticBlock,
   PragmaticBlockRef,
@@ -26,20 +38,47 @@ import type {
   PragmaticSlotState,
 } from './grammar/pragmaticTypes';
 import { PRAGMATIC_BLOCKS } from './grammar/pragmaticTypes';
+import type Database from '@tauri-apps/plugin-sql';
 import { isTauri } from './sqlStorage';
 
 const DB_PATH = 'sqlite:loxar.db';
 const PRAG_PREFIX = 'loxar_prag_';
 
-type Row = Record<string, any>;
+// ── Row contracts (SQLite column → TS) ──────────────────
+// Declared per query so `db.select<XRow[]>()` yields typed columns.
 
-let dbPromise: Promise<any> | null = null;
+type CountRow = { c: number };
+type FunctionRow = {
+  id: string;
+  label: string;
+  category: string;
+  fills_slots: string | null;
+  common_in: string | null;
+};
+type ClauseTypeRow = {
+  id: string;
+  label: string;
+  description: string | null;
+  blocks: string;
+  templates: string;
+};
+type BlockRow = {
+  id: string;
+  label: string;
+  description: string | null;
+  required: number;
+  morphology_override: string | null;
+};
+type FillerRow = { block_id: string; function_id: string };
+type TemplateRow = { template: string };
 
-async function getDb(): Promise<any> {
+let dbPromise: Promise<Database> | null = null;
+
+async function getDb(): Promise<Database> {
   if (!dbPromise) {
-    dbPromise = import('@tauri-apps/plugin-sql').then((m: any) =>
+    dbPromise = import('@tauri-apps/plugin-sql').then((m) =>
       m.default.load(DB_PATH),
-    ).catch((err) => {
+    ).catch((err: unknown) => {
       // Reset cache so the next call retries instead of returning a
       // permanently-rejected promise (Finding 2.4: cache poisoning).
       dbPromise = null;
@@ -54,7 +93,7 @@ export function _resetDbCache(): void {
   dbPromise = null;
 }
 
-async function ensureSchema(db: any): Promise<void> {
+async function ensureSchema(db: Database): Promise<void> {
   // Enable foreign key constraints first
   await db.execute(`PRAGMA foreign_keys = ON`);
   
@@ -131,10 +170,9 @@ async function ensureSchema(db: any): Promise<void> {
   `);
 }
 
-// ── Helpers JSON ─────────────────────────────────────────
-
-const j = (v: any) => JSON.stringify(v);
-const pj = (s: string | null): any => { try { return JSON.parse(s ?? '[]'); } catch { return []; } };
+/** Serialize a JSON column. `unknown` is the honest input type: callers pass
+ *  already-typed domain values, but the column itself carries arbitrary JSON. */
+const j = (v: unknown): string => JSON.stringify(v);
 
 // ── Seeds ────────────────────────────────────────────────
 
@@ -244,6 +282,114 @@ const SEED_CLAUSE_TYPES: PragmaticClauseType[] = [
   },
 ];
 
+// ── JSON column guards ───────────────────────────────────
+// Persisted JSON columns carry no compile-time guarantee: parse to `unknown`
+// and narrow with a guard before the value reaches the domain types.
+
+const PRAGMATIC_BLOCK_IDS = Object.keys(PRAGMATIC_BLOCKS) as PragmaticBlockId[];
+const PRAGMATIC_CLAUSE_TYPE_IDS = SEED_CLAUSE_TYPES.map((ct) => ct.id);
+const TYPOLOGY_PROFILES: readonly TypologyProfile[] = ['flexive', 'agglutinative', 'isolating'];
+const GRAMMATICAL_FUNCTION_CATEGORIES = [
+  'noun', 'verb', 'adjective', 'adverb', 'particle', 'morpheme', 'phrase',
+] as const;
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+const isTemplateRecord = (value: unknown): value is Record<TypologyProfile, string[]> => {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return TYPOLOGY_PROFILES.every((t) => isStringArray(record[t]));
+};
+
+export const isPragmaticBlockId = (value: unknown): value is PragmaticBlockId =>
+  typeof value === 'string' && (PRAGMATIC_BLOCK_IDS as string[]).includes(value);
+
+export const isPragmaticClauseTypeId = (value: unknown): value is PragmaticClauseTypeId =>
+  typeof value === 'string' && (PRAGMATIC_CLAUSE_TYPE_IDS as string[]).includes(value);
+
+export const isGrammaticalFunctionCategory = (
+  value: unknown,
+): value is GrammaticalFunction['category'] =>
+  typeof value === 'string'
+  && (GRAMMATICAL_FUNCTION_CATEGORIES as readonly string[]).includes(value);
+
+export const isPragmaticBlockRef = (value: unknown): value is PragmaticBlockRef => {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return isPragmaticBlockId(record.blockId) && typeof record.order === 'number';
+};
+
+export const isPragmaticClauseType = (value: unknown): value is PragmaticClauseType => {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  // The id is NOT restricted to the seeded union: `saveClauseType` persists
+  // user-created types with arbitrary ids (localStorage / SQLite), so the
+  // guard validates the shape (non-empty string) rather than catalog membership.
+  return typeof record.id === 'string'
+    && record.id.length > 0
+    && typeof record.label === 'string'
+    && typeof record.description === 'string'
+    && Array.isArray(record.blocks)
+    && record.blocks.every(isPragmaticBlockRef)
+    && isTemplateRecord(record.templates);
+};
+
+/** Parse a JSON array-of-strings column; corrupt JSON or a non-string array
+ *  yields `[]` instead of propagating `any`. */
+export const parseStringArray = (serialized: string | null | undefined): string[] => {
+  try {
+    const parsed: unknown = JSON.parse(serialized ?? '[]');
+    return isStringArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+/** Same as `parseStringArray`, narrowed to valid block ids. */
+export const parseBlockIds = (serialized: string | null | undefined): PragmaticBlockId[] =>
+  parseStringArray(serialized).filter(isPragmaticBlockId);
+
+/** Same as `parseStringArray`, narrowed to valid clause-type ids. */
+export const parseClauseTypeIds = (serialized: string | null | undefined): PragmaticClauseTypeId[] =>
+  parseStringArray(serialized).filter(isPragmaticClauseTypeId);
+
+/** Parse the `blocks` column; entries missing `blockId`/`order` are dropped. */
+export const parseBlockRefs = (serialized: string | null | undefined): PragmaticBlockRef[] => {
+  try {
+    const parsed: unknown = JSON.parse(serialized ?? '[]');
+    return Array.isArray(parsed) ? parsed.filter(isPragmaticBlockRef) : [];
+  } catch {
+    return [];
+  }
+};
+
+const emptyTemplates = (): Record<TypologyProfile, string[]> => ({
+  flexive: [],
+  agglutinative: [],
+  isolating: [],
+});
+
+/** Parse the `templates` column; each typology falls back to an empty array
+ *  when it is missing or malformed (never a record with missing keys). */
+export const parseTemplates = (
+  serialized: string | null | undefined,
+): Record<TypologyProfile, string[]> => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(serialized ?? '{}');
+  } catch {
+    return emptyTemplates();
+  }
+  if (typeof parsed !== 'object' || parsed === null) return emptyTemplates();
+  const record = parsed as Record<string, unknown>;
+  const result = {} as Record<TypologyProfile, string[]>;
+  for (const typology of TYPOLOGY_PROFILES) {
+    result[typology] = isStringArray(record[typology]) ? record[typology] : [];
+  }
+  return result;
+};
+
 // ── Init ─────────────────────────────────────────────────
 
 export async function initPragmaticDb(): Promise<void> {
@@ -252,7 +398,7 @@ export async function initPragmaticDb(): Promise<void> {
   await ensureSchema(db);
 
   // Seed functions if empty
-  const fnCount = (await db.select('SELECT COUNT(*) as c FROM grammatical_functions')) as Row[];
+  const fnCount = await db.select<CountRow[]>('SELECT COUNT(*) as c FROM grammatical_functions');
   if (fnCount[0].c === 0) {
     for (const fn of SEED_FUNCTIONS) {
       await db.execute(
@@ -264,7 +410,7 @@ export async function initPragmaticDb(): Promise<void> {
   }
 
   // Seed blocks if empty
-  const blkCount = (await db.select('SELECT COUNT(*) as c FROM construction_blocks')) as Row[];
+  const blkCount = await db.select<CountRow[]>('SELECT COUNT(*) as c FROM construction_blocks');
   if (blkCount[0].c === 0) {
     for (const [id, blk] of Object.entries(PRAGMATIC_BLOCKS)) {
       await db.execute(
@@ -275,7 +421,7 @@ export async function initPragmaticDb(): Promise<void> {
   }
 
   // Seed block_slot_fillers if empty
-  const fillerCount = (await db.select('SELECT COUNT(*) as c FROM block_slot_fillers')) as Row[];
+  const fillerCount = await db.select<CountRow[]>('SELECT COUNT(*) as c FROM block_slot_fillers');
   if (fillerCount[0].c === 0) {
     for (const [id, blk] of Object.entries(PRAGMATIC_BLOCKS)) {
       for (const fnId of blk.allowedFunctions) {
@@ -288,7 +434,7 @@ export async function initPragmaticDb(): Promise<void> {
   }
 
   // Seed clause types if empty
-  const ctCount = (await db.select('SELECT COUNT(*) as c FROM pragmatic_clause_types')) as Row[];
+  const ctCount = await db.select<CountRow[]>('SELECT COUNT(*) as c FROM pragmatic_clause_types');
   if (ctCount[0].c === 0) {
     for (const ct of SEED_CLAUSE_TYPES) {
       await db.execute(
@@ -314,13 +460,15 @@ export async function getGrammaticalFunctions(): Promise<GrammaticalFunction[]> 
   if (!isTauri()) return SEED_FUNCTIONS;
   const db = await getDb();
   await initPragmaticDb();
-  const rows = (await db.select('SELECT * FROM grammatical_functions ORDER BY label')) as Row[];
+  const rows = await db.select<FunctionRow[]>('SELECT * FROM grammatical_functions ORDER BY label');
   return rows.map((r) => ({
     id: r.id,
     label: r.label,
-    category: r.category,
-    fillsSlots: pj(r.fills_slots),
-    commonInClauseTypes: pj(r.common_in),
+    // Column is seeded from `GrammaticalFunction.category`; a corrupt value
+    // falls back to the neutral 'morpheme' instead of leaking an invalid union member.
+    category: isGrammaticalFunctionCategory(r.category) ? r.category : 'morpheme',
+    fillsSlots: parseBlockIds(r.fills_slots),
+    commonInClauseTypes: parseClauseTypeIds(r.common_in),
   }));
 }
 
@@ -332,22 +480,23 @@ export async function getPragmaticClauseTypes(): Promise<PragmaticClauseType[]> 
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key?.startsWith('loxar_custom_clause_type_')) {
-        try {
-          custom.push(JSON.parse(localStorage.getItem(key) ?? ''));
-        } catch { /* skip corrupt entries */ }
+        const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? '');
+        if (isPragmaticClauseType(parsed)) custom.push(parsed);
       }
     }
-    return [...SEED_CLAUSE_TYPES, ...custom] as PragmaticClauseType[];
+    return [...SEED_CLAUSE_TYPES, ...custom];
   }
   const db = await getDb();
   await initPragmaticDb();
-  const rows = (await db.select('SELECT * FROM pragmatic_clause_types ORDER BY id')) as Row[];
+  const rows = await db.select<ClauseTypeRow[]>('SELECT * FROM pragmatic_clause_types ORDER BY id');
   return rows.map((r) => ({
-    id: r.id,
+    // Primary key seeded from SEED_CLAUSE_TYPES / saveClauseType; the union is
+    // asserted at this persistence boundary.
+    id: r.id as PragmaticClauseTypeId,
     label: r.label,
-    description: r.description,
-    blocks: pj(r.blocks),
-    templates: JSON.parse(r.templates ?? '{}'),
+    description: r.description ?? '',
+    blocks: parseBlockRefs(r.blocks),
+    templates: parseTemplates(r.templates),
   }));
 }
 
@@ -399,15 +548,16 @@ export async function getConstructionBlocks(): Promise<Record<PragmaticBlockId, 
   }
   const db = await getDb();
   await initPragmaticDb();
-  const rows = (await db.select('SELECT * FROM construction_blocks')) as Row[];
+  const rows = await db.select<BlockRow[]>('SELECT * FROM construction_blocks');
   const result: Record<string, PragmaticBlock> = {};
   for (const r of rows) {
     result[r.id] = {
-      id: r.id,
+      // Primary key seeded from Object.keys(PRAGMATIC_BLOCKS).
+      id: r.id as PragmaticBlockId,
       label: r.label,
-      description: r.description,
+      description: r.description ?? '',
       required: !!r.required,
-      morphologyOverride: r.morphology_override,
+      morphologyOverride: r.morphology_override ?? undefined,
       allowedFunctions: [],
     };
   }
@@ -421,7 +571,7 @@ export async function getConstructionBlocks(): Promise<Record<PragmaticBlockId, 
 
 async function getBlockFillers(): Promise<Record<string, string[]>> {
   const db = await getDb();
-  const rows = (await db.select('SELECT block_id, function_id FROM block_slot_fillers ORDER BY block_id')) as Row[];
+  const rows = await db.select<FillerRow[]>('SELECT block_id, function_id FROM block_slot_fillers ORDER BY block_id');
   const result: Record<string, string[]> = {};
   for (const r of rows) {
     if (!result[r.block_id]) result[r.block_id] = [];
@@ -438,14 +588,14 @@ export async function getTemplates(
 ): Promise<string[]> {
   if (!isTauri()) {
     const ct = SEED_CLAUSE_TYPES.find((t) => t.id === clauseTypeId);
-    return (ct as any)?.templates?.[typology] ?? [];
+    return ct?.templates[typology] ?? [];
   }
   const db = await getDb();
   await initPragmaticDb();
-  const rows = (await db.select(
+  const rows = await db.select<TemplateRow[]>(
     'SELECT template FROM sentence_templates WHERE clause_type_id = $1 AND typology = $2 ORDER BY id',
     [clauseTypeId, typology],
-  )) as Row[];
+  );
   return rows.map((r) => r.template);
 }
 
