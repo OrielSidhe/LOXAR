@@ -4,6 +4,42 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto de la frontera `DeclarativeManifest` → `GrammarManifest` → motor (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`; el siguiente
+cluster era la cadena de conversión de gramática: `grammarParser.ts` (3 casts `as any`),
+`grammar/morphology.ts` (2), `grammar/syntax.ts` (2) y la vista relajada del lexema del motor.
+
+**Decisión:** alinear los tres extremos de la frontera con los tipos canónicos de `types.ts`.
+`grammarParser.convertToLegacy` tenía un `mapStrategyType` que devolvía claves de catálogo
+(`suffix`, `tone_change`, `positional`, `auxiliary_periphrastic`) incompatibles con el
+`StrategyType` del manifiesto canónico, y lo salvaba con `as any`; ahora usa
+`STRATEGY_TYPE_MAP: Record<DeclarativeStrategyType, StrategyType>` (`suppletion` → `affix`: no
+tiene realización morfológica propia en el motor). La realización declarativa pasaba con
+`kind`/`position` en `as any`; nueva `toSlotRealization` que narrows por `kind` y construye el
+miembro exacto de `SlotRealization` (`position` por defecto `suffix` en `affix`). En
+`morphology.ts`, `chooseRealization` se tipa con `InflectionSlot`/`AllomorphCondition` y el acceso
+a la forma sale al helper `realizationForm` (narrows `SlotRealization`: `form`/`replace`/`ruleId`
+según el miembro). En `syntax.ts`, el fallback `node.lexeme ?? ({} as any)` pasa al nuevo
+`EngineLexemeLike` (`engineTypes.ts`) y `exceptions` se tipa como `GrammarException[]`.
+
+**Cambios (commit `edf2239`):**
+- `src/services/grammar/morphology.ts`: `chooseRealization(slot: InflectionSlot, ...): SlotRealization`
+  + helper `realizationForm`.
+- `src/services/grammar/syntax.ts`: `EngineLexemeLike` para el fallback; `exceptions: GrammarException[]`.
+- `src/services/grammar/engineTypes.ts`: nuevo `EngineLexemeLike`.
+- `src/services/grammarParser.ts`: fuera los tres `as any`; `STRATEGY_TYPE_MAP` + `toSlotRealization`.
+- Tests: `src/services/grammar/__tests__/grammarParser.test.ts` (nuevo, 4).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 832/832 (101 archivos) · `any`
+(anotaciones) de `services/`: 52 → 45. Pendiente por autorización: `git push` + CI con número de run.
+
+**Próximo bloque ejecutable (CLN/P1):** el mayor cluster restante es `normalize.ts` (19 `z.any()`
++ firmas `any`); le siguen `sqlStorage` (5), `jsonWorker` (4), `sessionCache` (2), `geminiService`
+(2), `ftsSearch` (2). El flujo de auditoría muerto de `useWorkQueue` sigue como decisión de
+producto (cablear o borrar). Pendiente por autorización: `git push` + CI con número de run.
+
+---
 ## [2026-11-22] Checkpoint: CLN — tipado estricto de `grammarDb` (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`; el mayor
