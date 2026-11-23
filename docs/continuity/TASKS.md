@@ -4,6 +4,50 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto del árbol AST editable (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`; el mayor
+cluster era `src/services/grammar/ast-view.ts` (17), junto con `ast-builder.ts` (4). Todo el
+árbol AST que siembra `buildClauseAST`, edita `ASTEditor` y realiza `realizeEditedTree` viajaba
+como `any`, y la frontera se propagaba a `GrammarTab` (`useState<any>`), `GrammarSyntaxPanel`
+(`editableAst: any`, `onSetEditableAst: (ast: any) => void`) y `GrammarPragmaticPanel`
+(`let ast: any`).
+
+**Decisión:** new types `EditableSyntaxNode`/`EditableClauseAST` en `engineTypes.ts`. Son el mismo
+shape que `SyntaxNode`/`ClauseAST` pero con `role` y `category` como `string`, porque el editor de
+árbol acepta roles arbitrarios escritos por el usuario y el motor los lee como cadena en runtime.
+`buildClauseAST` devuelve `EditableClauseAST`; `ast-view` tipa `astToDiagram`, `cloneClauseAST`,
+`makeNode`, `addDependent`, `removeNode`, `updateNode` y `realizeEditedTree` (este último con
+`manifest: GrammarManifest`). Un único cast documentado en la frontera del motor:
+`toClauseAST(ast: EditableClauseAST): ClauseAST` (`ast-builder.ts`), consumido por
+`realizeEditedTree`, `GrammarPragmaticPanel` y `grammarTabModel` (que antes hacía
+`buildClauseAST(...) as ClauseAST`). `GrammarManifest.clauseTree` pasa de `ClauseAST` a
+`EditableClauseAST` (lo escribe el builder y solo lo lee `grammarMetrics` por veracidad).
+`BuildParticipant.lexeme` es ahora un `BuildLexeme` estructural (`root`/`Raíz`/`Categoría`/
+`category`) y `dependents?` es `BuildParticipant[]`; se eliminó `GenericNode`.
+
+**Cambios (commit `8a56728`):**
+- `src/services/grammar/engineTypes.ts`: +`EditableSyntaxNode`, +`EditableClauseAST`.
+- `src/services/grammar/ast-builder.ts`: `BuildLexeme`, `BuildParticipant` tipado, `buildClauseAST`
+  → `EditableClauseAST`, nuevo `toClauseAST`; fuera `GenericNode` y los `as any`.
+- `src/services/grammar/ast-view.ts`: 17 `any` → 0.
+- `src/services/grammar/index.ts`: exporta `toClauseAST`.
+- `src/types.ts`: `clauseTree?: EditableClauseAST`.
+- `src/components/ASTEditor.tsx`, `GrammarSyntaxPanel.tsx`, `GrammarTab.tsx`,
+  `GrammarPragmaticPanel.tsx`, `src/utils/grammarTabModel.ts`: frontera tipada.
+
+**Verificación:** typecheck 0 · lint OK (`check:esc`) · build OK · vitest 819/819 (99 archivos) ·
+audit:orphans 13 (baseline). `any` de `services/`: 59 → 42. Cambio de tipos solamente: no hay
+comportamiento nuevo que testear. Pendiente por autorización: `git push` + CI con número de run.
+
+**Próximo bloque ejecutable (CLN/P1):** los `any` que quedan en `services/` (`grammarDb` 8,
+`sqlStorage` 5, `normalize` 5, `jsonWorker` 4, `grammarParser` 3, `sessionCache` 2,
+`grammar/syntax` 2, `grammar/morphology` 2, `geminiService` 2, `ftsSearch` 2, `prompts` 1,
+`audioService` 1, `aiProviderRegistry` 1) y el flujo de auditoría muerto de `useWorkQueue`
+(decisión de producto: cablear o borrar). Frentes no-CLN pendientes: D2, destino de los 13
+huérfanos y `git push` + CI (requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — tipado estricto del validador post-import (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`. El validador

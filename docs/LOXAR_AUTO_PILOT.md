@@ -17,8 +17,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `880488a` (tipado estricto del
-  validador post-import, P1 God Component); 63 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `8a56728` (tipado estricto del árbol AST
+  editable, P1 God Component); 64 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -249,6 +249,27 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — tipado estricto del árbol AST editable (P1, 2026-11-22, commit `8a56728`).** El
+frente documentado eran los `any` de `services/`; el mayor cluster era `ast-view.ts` (17) más
+`ast-builder.ts` (4), y la frontera `any` se propagaba a `GrammarTab` (`useState<any>`),
+`GrammarSyntaxPanel` (`editableAst`/`onSetEditableAst`) y `GrammarPragmaticPanel` (`let ast: any`).
+Nuevos `EditableSyntaxNode`/`EditableClauseAST` en `engineTypes.ts` (mismo shape que
+`SyntaxNode`/`ClauseAST` pero con `role`/`category` como `string`: el editor acepta roles
+arbitrarios del usuario y el motor los lee como cadena); `buildClauseAST` devuelve
+`EditableClauseAST` y `ast-view` queda con 0 `any`. Único cast documentado en la frontera del
+motor: `toClauseAST()` (`ast-builder.ts`), consumido por `realizeEditedTree`, `GrammarPragmaticPanel`
+y `grammarTabModel`. `GrammarManifest.clauseTree` pasa a `EditableClauseAST`; fuera `GenericNode`.
+`any` de `services/`: 59 → 42. Validaciones: typecheck 0 · lint OK · build OK · vitest 819/819
+(99 archivos) · audit:orphans 13.
+
+**[ ] CLN — frente siguiente del God Component (P1).** Los `any` que quedan en `services/`
+(`grammarDb` 8, `sqlStorage` 5, `normalize` 5, `jsonWorker` 4, `grammarParser` 3, `sessionCache` 2,
+`grammar/syntax` 2, `grammar/morphology` 2, `geminiService` 2, `ftsSearch` 2, `prompts` 1,
+`audioService` 1, `aiProviderRegistry` 1) y el flujo de auditoría muerto de `useWorkQueue`
+(decisión de producto: cablear o borrar). `App.tsx` queda en 651 líneas y su `return` ya solo
+contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
+`AppFloatingLayers`).
 
 **[x] CLN — tipado estricto del validador post-import (P1, 2026-11-22, commit `880488a`).** El
 frente documentado eran los `any` de `services/`. `validatePostImport` acepta
