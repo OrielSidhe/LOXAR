@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { getErrorMessage } from '../utils/entryEditorModel';
 
 export interface SessionCache {
   activeTab?: string;
@@ -59,8 +60,9 @@ export async function loadSessionCache(): Promise<SessionCache> {
       path,
     });
     return JSON.parse(result.data) as SessionCache;
-  } catch (e: any) {
-    if (e.message?.toLowerCase().includes('not found') || e.message?.toLowerCase().includes('forbidden')) {
+  } catch (e: unknown) {
+    const message = getErrorMessage(e).toLowerCase();
+    if (message.includes('not found') || message.includes('forbidden')) {
       return { activeTab: 'dashboard' };
     }
     throw e;
@@ -86,9 +88,10 @@ export async function saveSessionCache(state: SessionCache): Promise<void> {
       path,
       contents: JSON.stringify(merged, null, 2),
     });
-  } catch (e: any) {
+  } catch (e: unknown) {
     // Silently ignore permission errors - session cache is not critical
-    if (!e.message?.toLowerCase().includes('forbidden') && !e.message?.toLowerCase().includes('permission')) {
+    const message = getErrorMessage(e).toLowerCase();
+    if (!message.includes('forbidden') && !message.includes('permission')) {
       throw e;
     }
   }

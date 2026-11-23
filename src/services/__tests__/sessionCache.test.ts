@@ -79,4 +79,32 @@ describe('sessionCache persistence', () => {
     const state = await browser.loadSessionCache();
     expect(state).toEqual({ activeTab: 'table', exportPath: '/tmp' });
   });
+
+  it('should rethrow unexpected read errors in Tauri', async () => {
+    tauriMock.mockRejectedValueOnce(new Error('disk corrupted'));
+
+    await expect(loadSessionCache()).rejects.toThrow('disk corrupted');
+  });
+
+  it('should treat thrown strings as error messages', async () => {
+    tauriMock.mockRejectedValueOnce('FORBIDDEN by policy');
+
+    await expect(loadSessionCache()).resolves.toEqual({ activeTab: 'dashboard' });
+  });
+
+  it('should ignore permission errors on write but rethrow real failures', async () => {
+    tauriMock.mockImplementation((command: string) =>
+      command === 'plugin:fs|read_text_file'
+        ? Promise.resolve({ data: JSON.stringify({ activeTab: 'dashboard' }) })
+        : Promise.reject(new Error('permission denied')),
+    );
+    await expect(saveSessionCache({ activeTab: 'editor' })).resolves.toBeUndefined();
+
+    tauriMock.mockImplementation((command: string) =>
+      command === 'plugin:fs|read_text_file'
+        ? Promise.resolve({ data: JSON.stringify({ activeTab: 'dashboard' }) })
+        : Promise.reject(new Error('disk full')),
+    );
+    await expect(saveSessionCache({ activeTab: 'editor' })).rejects.toThrow('disk full');
+  });
 });
