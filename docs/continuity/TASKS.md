@@ -28,8 +28,10 @@ devuelve el tipo canónico).
 - `src/services/__tests__/grammarDbSerialization.test.ts` (nuevo, 12 tests).
 
 **Verificación:** typecheck 0 · lint OK (`check:esc`) · build OK · vitest 828/828 (100 archivos) ·
-audit:orphans 13 (baseline). `any` (anotaciones) de `services/`: 42 → 32. Cambio de tipos
-solamente: no hay comportamiento nuevo que testear. Hallazgo: `isPragmaticClauseTypeId` no puede
+audit:orphans 13 (baseline) · `npm run test:gui` 8/8 (1 worker, 3.4 min, dev server gestionado por
+el config). `any` (anotaciones) de `services/`: 38 → 32 con el mismo criterio de grep, excluyendo
+`__tests__` (en `grammarDb` quedan 2 menciones en comentarios). Cambio de tipos solamente: no hay
+comportamiento nuevo que testear. Hallazgo: `isPragmaticClauseTypeId` no puede
 gobernar el id de `PragmaticClauseType` (los tipos de usuario tienen ids arbitrarios). Pendiente por
 autorización: `git push` + CI con número de run.
 

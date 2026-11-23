@@ -258,8 +258,9 @@ compilación: el bundle web sigue sin resolver el plugin; el `import()` dinámic
 único acceso runtime) + `db.select<XRow[]>` con un tipo de fila por tabla + guards exportados
 (`parseStringArray`, `parseBlockIds`, `parseClauseTypeIds`, `parseBlockRefs`, `parseTemplates`,
 `isPragmaticClauseType`). Fuera el `as any` de `getTemplates`. Tests:
-`grammarDbSerialization.test.ts` (12). `any` de `services/`: 42 → 32. Validaciones: typecheck 0 ·
-lint OK · build OK · vitest 828/828 (100 archivos) · audit:orphans 13.
+`grammarDbSerialization.test.ts` (12). `any` de `services/`: 38 → 32 (anotaciones, excluyendo
+`__tests__`). Validaciones: typecheck 0 · lint OK · build OK · vitest 828/828 (100 archivos) ·
+audit:orphans 13 · `npm run test:gui` 8/8 (1 worker, 3.4 min).
 
 **[ ] CLN — frente siguiente del God Component (P1).** Los `any` que quedan en `services/`
 (`sqlStorage` 5, `normalize` 5, `jsonWorker` 4, `grammarParser` 3, `sessionCache` 2,
