@@ -4543,3 +4543,37 @@ Cambio de tipos solamente: no hay comportamiento nuevo que testear. Pendiente po
 `handleWidgetSearch`, `handleInflectRequest`) y de `useAiHandlers` (`generativeProfile`,
 `setActiveTab`, `setInitialDataForAdd`, `partialEntry`), mas los estados `initialDataForAdd` y
 `lastAiResult` de `App.tsx`. Pendiente por autorizacion: `git push` + CI con numero de run.
+
+## [2026-11-23] Checkpoint: CLN — tipado estricto de la API de `normalize` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente accionable del checkpoint anterior era `normalize.ts`,
+el mayor cluster de `any` en la frontera de normalización (única fuente de verdad de todo dato
+que entra a la app desde storage o importación).
+
+**Decisión:** tipar las tres firmas públicas sin alterar el parseo en runtime. Nuevo
+`LegacyEntryInput` (variantes históricas: `Raíz/raiz`, `Léxema/lexema`,
+`Categoría/Función/Categoria/categoria`, `Significado/significado`;
+`extraData?: Record<string, unknown>`) y helper `toLegacyStringArray` que preserva
+exactamente el comportamiento previo (array → array, string no vacío → `[string]`, vacío → `[]`).
+`normalizeGrammarManifest(grammar?: unknown)` y `normalizeLexiconData(data: unknown, ...)`
+entregan el valor a `Schema.parse`, que ya acepta `unknown`.
+
+Los 19 `z.any()` de los schemas anidados se dejan intactos a propósito: son tolerancia a
+datos legacy y sustituirlos por schemas reales cambiaría el parseo (stripping/validación) en
+runtime, fuera de un cambio atómico. Los 2 `as any` restantes en `.default()` quedan
+documentados: las factories devuelven tipos canónicos con campos opcionales (`guideLines?`,
+`preview?`) mientras Zod exige esos campos presentes en la salida.
+
+**Cambios (commit `f2021da`):**
+- `src/services/normalize.ts`: 3 firmas `any` → `LegacyEntryInput`/`unknown`; `any` del archivo 5 → 2.
+- `src/services/__tests__/normalizeLegacyEntry.test.ts` (nuevo, 2 tests): fija las variantes
+  legacy, los arreglos canónicos y los campos vacíos.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 838/838 (103 archivos) ·
+audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`jsonWorker` 4,
+`sessionCache` 2, `geminiService` 2, `ftsSearch` 2, `prompts` 1, `audioService` 1,
+`aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts` (requieren schemas dedicados con
+cuidado de no romper la tolerancia legacy). El flujo de auditoría muerto de `useWorkQueue`
+sigue como decisión de producto. Pendiente por autorización: `git push` + CI con número de run.
