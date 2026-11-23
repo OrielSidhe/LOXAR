@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 832/832 (101 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 836/836 (102 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `edf2239` (tipado estricto de la frontera
-  `DeclarativeManifest` → `GrammarManifest` → motor, P1 God Component); 70 commits locales sin push
+- Git inicializado y con commits; último commit de código `b2ecfca` (tipado estricto de `sqlStorage` + transacciones SQLite
+  explícitas, P1 God Component); 72 commits locales sin push
   (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
@@ -250,6 +250,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — tipado estricto de `sqlStorage` + transacciones SQLite explícitas (P1, 2026-11-22, commit `b2ecfca`).** El siguiente cluster de `any` de `services/` era `src/services/sqlStorage.ts` (5 anotaciones). Ahora `import type Database` de `@tauri-apps/plugin-sql` y `db.select<Row[]>` / `BackupRow[]` / `{ id: number }[]` en los seis sitios, sin casts. El tipado destapó un bug real: `Database` no expone `transaction()`, así que el `db.transaction(...)` anterior (sobre un `any`) habría lanzado `db.transaction is not a function` en runtime Tauri; nuevo `runInTransaction` con BEGIN/COMMIT/ROLLBACK explícitos. Tests: `src/services/__tests__/sqlStorageTransaction.test.ts` (4). `any` de `services/`: 45 → 40. Validaciones: typecheck 0, lint OK, build OK, vitest 836/836 (102 archivos), audit:orphans 13. Próximo frente: `normalize.ts` (19 `z.any()` + firmas `any`).
 
 **[x] CLN — tipado estricto de la frontera `DeclarativeManifest` → `GrammarManifest` → motor (P1, 2026-11-22, commit `edf2239`).** El frente documentado eran los `any` de `services/`; el siguiente cluster era la cadena de conversión de gramática. `grammarParser.convertToLegacy` tenía un `mapStrategyType` que devolvía claves de catálogo (`suffix`, `tone_change`, `positional`, `auxiliary_periphrastic`) incompatibles con el `StrategyType` canónico y lo salvaba con `as any`: ahora `STRATEGY_TYPE_MAP` (`suppletion` → `affix`). La realización declarativa pasaba con `kind`/`position` en `as any`: nueva `toSlotRealization` que narrows por `kind`. En `morphology.ts`, `chooseRealization` se tipa con `InflectionSlot`/`AllomorphCondition` y la forma sale al helper `realizationForm` (narrows `SlotRealization`: `form`/`replace`/`ruleId`). En `syntax.ts`, el fallback `{} as any` pasa al nuevo `EngineLexemeLike` y `exceptions` se tipa como `GrammarException[]`. Tests: `grammarParser.test.ts` (4). `any` de `services/`: 52 → 45 (anotaciones). Validaciones: typecheck 0 · lint OK · build OK · vitest 832/832 (101 archivos).
 

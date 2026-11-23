@@ -4,6 +4,36 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto de `sqlStorage` + transacciones SQLite explícitas (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`; el siguiente
+cluster era `src/services/sqlStorage.ts` (5 anotaciones): el `Database` del plugin SQL viajaba como
+`Promise<any>`, las filas se leían con `as Row[]` y `ensureSchema`/`pruneOldBackups` aceptaban
+`db: any`.
+
+**Decisión:** `import type Database from '@tauri-apps/plugin-sql'` (se borra en compilación: el bundle
+web sigue sin resolver el plugin; el `import()` dinámico de `getDb` es el único acceso runtime) y
+`db.select<Row[]>(...)` / `db.select<BackupRow[]>(...)` / `db.select<{ id: number }[]>(...)` en los seis
+sitios, sin casts. Al tipar, `tsc` destapó que `Database` NO expone `transaction()`: el código
+anterior llamaba `db.transaction(...)` sobre un `any`, por lo que typecheck no lo detectaba y en
+runtime Tauri habría lanzado `db.transaction is not a function`. Nuevo `runInTransaction(db, work)`
+con `BEGIN TRANSACTION` / `COMMIT` / `ROLLBACK` explícitos (el rollback se intenta siempre y nunca
+reemplaza el error original).
+
+**Cambios (commit `b2ecfca`):**
+- `src/services/sqlStorage.ts`: 5 `any` → 0; `runInTransaction`; selects tipados.
+- Tests: `src/services/__tests__/sqlStorageTransaction.test.ts` (4: BEGIN/COMMIT en save/delete,
+  ROLLBACK y propagación del error original).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 836/836 (102 archivos) · audit:orphans 13
+(baseline). `any` de `services/`: 45 → 40. Pendiente por autorización: `git push` + CI con número de run.
+
+**Próximo bloque ejecutable (CLN/P1):** el mayor cluster restante es `normalize.ts` (19 `z.any()` +
+firmas `any`); le siguen `jsonWorker` (4), `grammarDb` (3), `ftsSearch` (2), `geminiService` (2),
+`sessionCache` (2), `aiProviderRegistry` (1), `aiProviders/base` (1), `audioService` (1) y `prompts`
+(1). El flujo de auditoría muerto de `useWorkQueue` sigue como decisión de producto (cablear o borrar).
+Pendiente por autorización: `git push` + CI con número de run.
+
 ## [2026-11-22] Checkpoint: CLN — tipado estricto de la frontera `DeclarativeManifest` → `GrammarManifest` → motor (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`; el siguiente
