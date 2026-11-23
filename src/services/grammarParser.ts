@@ -1,5 +1,11 @@
 import { inductFromText } from './grammar/inductFromText';
-import type { GrammarManifest } from '../types';
+import type { DeclarativeManifest, StrategyType as DeclarativeStrategyType } from './grammar/declarativeFormat';
+import type {
+  GrammarManifest,
+  MorphosyntacticStrategy,
+  SlotRealization,
+  StrategyType,
+} from '../types';
 
 /**
  * Wrapper del nuevo pipeline de gramática.
@@ -33,7 +39,7 @@ export const parseGrammar = async (text: string): Promise<GrammarManifest> => {
  * Convierte DeclarativeManifest a GrammarManifest (formato legacy).
  * Esto es un puente temporal hasta que la UI adopte DeclarativeManifest.
  */
-export function convertToLegacy(manifest: import('../services/grammar/declarativeFormat').DeclarativeManifest): GrammarManifest {
+export function convertToLegacy(manifest: DeclarativeManifest): GrammarManifest {
   return {
     meta: {
       author: 'AI Importer',
@@ -52,39 +58,47 @@ export function convertToLegacy(manifest: import('../services/grammar/declarativ
       name: r.name,
       description: r.description || '',
     })),
-    strategies: manifest.strategies.map(s => ({
-      id: s.id,
-      name: s.name,
-      type: mapStrategyType(s.type) as any,
-      appliesTo: s.appliesToCategories || s.appliesTo || [],
-      affixRule: s.affixRule ? {
-        position: s.affixRule.position as 'prefix' | 'suffix' | 'infix' | 'circumfix',
-        form: s.affixRule.form,
-      } : undefined,
-      particleRule: s.particleRule ? {
-        marker: s.particleRule.marker,
-        relativePosition: s.particleRule.relativePosition as 'before' | 'after',
-      } : undefined,
-      toneRule: s.toneRule ? {
-        description: s.toneRule.description,
-        pattern: s.toneRule.pattern,
-      } : undefined,
-      transformationRule: s.transformationRule ? {
-        pattern: s.transformationRule.pattern,
-        replacement: s.transformationRule.replacement,
-      } : undefined,
-    })),
+    strategies: manifest.strategies.map(s => {
+      const strategy: MorphosyntacticStrategy = {
+        id: s.id,
+        name: s.name,
+        type: mapStrategyType(s.type),
+        appliesTo: s.appliesToCategories || s.appliesTo || [],
+      };
+
+      if (s.affixRule) {
+        strategy.affixRule = {
+          position: s.affixRule.position as 'prefix' | 'suffix' | 'infix' | 'circumfix',
+          form: s.affixRule.form,
+        };
+      }
+      if (s.particleRule) {
+        strategy.particleRule = {
+          marker: s.particleRule.marker,
+          relativePosition: s.particleRule.relativePosition as 'before' | 'after',
+        };
+      }
+      if (s.toneRule) {
+        strategy.toneRule = {
+          description: s.toneRule.description,
+          pattern: s.toneRule.pattern,
+        };
+      }
+      if (s.transformationRule) {
+        strategy.transformationRule = {
+          pattern: s.transformationRule.pattern,
+          replacement: s.transformationRule.replacement,
+        };
+      }
+
+      return strategy;
+    }),
     paradigms: manifest.paradigms.map(p => ({
       category: p.category,
       slots: p.slots.map(s => ({
         feature: s.feature,
         order: s.order,
-        realization: {
-          kind: s.realization.kind as any,
-          form: s.realization.form,
-          when: s.realization.when,
-          position: s.realization.position as any,
-        },
+        realization: toSlotRealization(s.realization),
       })),
     })),
     mutationRules: manifest.mutationRules.map(r => ({
@@ -109,20 +123,55 @@ export function convertToLegacy(manifest: import('../services/grammar/declarativ
 }
 
 /**
- * Mapea StrategyType del motor a StrategyType legacy de types.ts
+ * Puente entre el `StrategyType` del formato declarativo (que incluye
+ * `suppletion` y se expresa en clave de catálogo) y el `StrategyType` del
+ * manifiesto canónico de `types.ts`.
+ *
+ * El motor de realización (`morphology.ts`) solo entiende los tipos del
+ * manifiesto canónico; `suppletion` no tiene realización morfológica propia, así
+ * que se agrupa en `affix` (la UI lo muestra como una estrategia de marcaje más).
  */
-function mapStrategyType(type: string): string {
-  const map: Record<string, string> = {
-    'affix': 'suffix',
-    'clitic': 'clitic',
-    'particle': 'particle',
-    'tone': 'tone_change',
-    'mutation': 'root_internal_mutation_apophony',
-    'position': 'positional',
-    'auxiliary': 'auxiliary_periphrastic',
-    'suppletion': 'suppletion',
-  };
-  return map[type] || type;
+const STRATEGY_TYPE_MAP: Record<DeclarativeStrategyType, StrategyType> = {
+  position: 'position',
+  affix: 'affix',
+  clitic: 'clitic',
+  tone: 'tone',
+  mutation: 'mutation',
+  particle: 'particle',
+  auxiliary: 'auxiliary',
+  suppletion: 'affix',
+};
+
+function mapStrategyType(type: DeclarativeStrategyType): StrategyType {
+  return STRATEGY_TYPE_MAP[type] ?? 'affix';
+}
+
+/**
+ * Convierte la realización declarativa (campos `form`/`position` opcionales,
+ * `kind` en un conjunto más amplio) en el `SlotRealization` canónico. El switch
+ * narrows `kind` por miembro, así que cada rama construye exactamente la forma
+ * que el miembro de la unión exige: `position` solo se adjunta en `affix` y cae
+ * a `suffix` cuando el campo viene vacío (el motor lo trata por defecto).
+ */
+function toSlotRealization(
+  realization: DeclarativeManifest['paradigms'][number]['slots'][number]['realization'],
+): SlotRealization {
+  switch (realization.kind) {
+    case 'affix':
+      return {
+        kind: 'affix',
+        position: realization.position ?? 'suffix',
+        form: realization.form,
+      };
+    case 'mutation':
+      return { kind: 'mutation', ruleId: realization.form };
+    case 'tone':
+      return { kind: 'tone', ruleId: realization.form };
+    case 'stem':
+      return { kind: 'stem', replace: realization.form };
+    case 'particle':
+      return { kind: 'particle', form: realization.form };
+  }
 }
 
 export { isAiAvailable } from './geminiService';

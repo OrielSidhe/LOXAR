@@ -2,6 +2,17 @@ import type { GrammarManifest, LexiconEntry, MorphemeSegment, SyntaxCanvas } fro
 
 export type SurfaceFormSource = 'rule' | 'suppletion' | 'particle';
 
+/**
+ * Relaxed view of the engine's `SyntaxNode.lexeme`. The AST walker tolerates
+ * nodes whose lexeme is missing or only partially populated (defensive guard
+ * B2), so the reader accepts the optional shape instead of assuming the full
+ * `{ root, category }` pair.
+ */
+export interface EngineLexemeLike {
+  root?: string;
+  category?: string;
+}
+
 export interface SurfaceForm {
   form: string;
   source: SurfaceFormSource;

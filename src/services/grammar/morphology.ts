@@ -1,4 +1,12 @@
-import type { GrammarManifest, LexiconEntry, MorphemeSegment, MutationRule } from '../../types';
+import type {
+  AllomorphCondition,
+  GrammarManifest,
+  InflectionSlot,
+  LexiconEntry,
+  MorphemeSegment,
+  MutationRule,
+  SlotRealization,
+} from '../../types';
 import type { SurfaceForm } from './engineTypes';
 
 const VOWELS = 'aeiouáéíóúüAEIOUÁÉÍÓÚÜ';
@@ -47,9 +55,31 @@ const applyMutation = (form: string, ruleId: string, rules: MutationRule[]): str
   catch { return form; }
 };
 
-const chooseRealization = (slot: any, ctx: { preceding: string; isFirst: boolean }) => {
-  const alts = slot.allomorphs || [];
-  const hit = alts.find((a: any) => evalWhen(a.when, ctx));
+/**
+ * Reads the surface form out of a `SlotRealization` union. `form` only exists on
+ * the `affix`/`stem`/`particle` members, so a direct `realization.form` access
+ * would be a compile error on the narrowed union; the switch keeps the access
+ * legal per member.
+ */
+const realizationForm = (realization: SlotRealization): string => {
+  switch (realization.kind) {
+    case 'affix':
+    case 'particle':
+      return realization.form;
+    case 'stem':
+      return realization.replace;
+    case 'mutation':
+    case 'tone':
+      return realization.ruleId;
+  }
+};
+
+const chooseRealization = (
+  slot: InflectionSlot,
+  ctx: { preceding: string; isFirst: boolean },
+): SlotRealization => {
+  const alts: AllomorphCondition[] = slot.allomorphs ?? [];
+  const hit = alts.find((a) => evalWhen(a.when, ctx));
   return hit ? hit.realization : slot.realization;
 };
 
@@ -76,7 +106,7 @@ export const realizeLexeme = (
   const freeMorphemes: string[] = [];
   slots.forEach((slot, idx) => {
     const real = chooseRealization(slot, { preceding: form.slice(-1), isFirst: idx === 0 });
-    const affixForm = real.form ?? real.realization ?? '';
+    const affixForm = realizationForm(real);
     switch (real.kind) {
       case 'affix':
         form = applyAffix(form, real.position, affixForm);

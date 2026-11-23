@@ -1,4 +1,5 @@
 import type {
+  GrammarException,
   GrammarManifest,
   LexiconEntry,
   SyntaxNode as CanvasNode,
@@ -7,6 +8,7 @@ import type {
 import type {
   ClauseFeatures,
   ClauseAST,
+  EngineLexemeLike,
   RealizeClauseResult,
   SyntaxNode,
   VerbNode,
@@ -168,7 +170,7 @@ const buildAstCanvas = (
     if (visited.has(nodeId)) return null;
     visited.add(nodeId);
 
-    const lex = node.lexeme ?? ({} as any);
+    const lex: EngineLexemeLike = node.lexeme ?? {};
     const category = CAT_MAP[lex.category ?? ''] || 'sustantivo';
     const entry: LexiconEntry = {
       ID: nodeId, Raíz: lex.root ?? '', Léxema: [lex.root ?? ''],
@@ -306,7 +308,7 @@ export const realizeClause = (
     typologySelected: true,
     nodes,
     connections,
-    exceptions: [] as any[],
+    exceptions: [] as GrammarException[],
     lastPreviewResult: sentence,
   };
   return { sentence, canvas };
