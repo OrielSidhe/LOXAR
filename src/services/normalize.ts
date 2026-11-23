@@ -140,6 +140,9 @@ export const InflectionProfileSchema = z.object({
 const LexiconDataSchema = z.object({
   entries: z.array(z.any()).default([]),
   profile: GenerativeProfileSchema.default(getDefaultProfile),
+  // Las factories devuelven tipos canónicos con campos opcionales
+  // (`guideLines?`, `preview?`), pero Zod `.default()` exige esos campos
+  // presentes en la salida; el cast salva esa diferencia estructural known-good.
   neography: NeographyProfileSchema.default(getDefaultNeographyProfile as any),
   inflection: InflectionProfileSchema.default(getDefaultInflectionProfile),
   grammar: GrammarManifestSchema.default(getDefaultGrammarManifest as any),
@@ -157,25 +160,46 @@ const reindexLexicon = (lexicon: NewLexiconEntry[]): LexiconEntry[] => {
   return lexicon.map((entry, index) => ({ ...entry, ID: (index + 1).toString() } as LexiconEntry));
 };
 
-const normalizeEntry = (entry: any): NewLexiconEntry => ({
+/**
+ * Forma tolerante de una entrada persistida: acepta las variantes históricas
+ * de campo (Raíz/raiz, Léxema/lexema, Categoría/Función/Categoria/categoria,
+ * Significado/significado) que esta normalización ya reconoce. Todos los
+ * campos son opcionales porque los datos legacy pueden estar incompletos.
+ */
+type LegacyEntryInput = {
+  Raíz?: string;
+  raiz?: string;
+  Léxema?: string | string[];
+  lexema?: string | string[];
+  Categoría?: string;
+  Función?: string;
+  Categoria?: string;
+  categoria?: string;
+  Significado?: string | string[];
+  significado?: string | string[];
+  extraData?: Record<string, unknown>;
+  externalID?: string;
+};
+
+/** Normaliza un campo heredado a arreglo, conservando el comportamiento previo. */
+const toLegacyStringArray = (value: string | string[] | undefined): string[] =>
+  Array.isArray(value) ? value : value ? [value] : [];
+
+const normalizeEntry = (entry: LegacyEntryInput): NewLexiconEntry => ({
   Raíz: entry.Raíz || entry.raiz || '',
-  Léxema: Array.isArray(entry.Léxema)
-    ? entry.Léxema
-    : (entry.Léxema || entry.lexema ? [entry.Léxema || entry.lexema] : []),
+  Léxema: toLegacyStringArray(entry.Léxema || entry.lexema),
   Categoría: resolveLexicalCategory(entry.Categoría || entry.Función || entry.Categoria || entry.categoria),
-  Significado: Array.isArray(entry.Significado)
-    ? entry.Significado
-    : (entry.Significado || entry.significado ? [entry.Significado || entry.significado] : []),
+  Significado: toLegacyStringArray(entry.Significado || entry.significado),
   extraData: entry.extraData || {},
   externalID: entry.externalID,
 });
 
 // ── Public normalization API ─────────────────────────────────────────────────
-export const normalizeGrammarManifest = (grammar?: any): GrammarManifest =>
+export const normalizeGrammarManifest = (grammar?: unknown): GrammarManifest =>
   GrammarManifestSchema.parse(grammar ?? {}) as GrammarManifest;
 
 export const normalizeLexiconData = (
-  data: any,
+  data: unknown,
   fallbackName: string,
   fallbackLanguage: string,
 ): LexiconData => {
