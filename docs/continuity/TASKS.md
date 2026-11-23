@@ -4,6 +4,43 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-22] Checkpoint: CLN — tipado estricto de `grammarDb` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`; el mayor
+cluster restante era `src/services/grammarDb.ts` (8 anotaciones): el `Database` del plugin SQL
+viajaba como `Promise<any>`, las filas como `Record<string, any>` y las columnas JSON se leían con
+`JSON.parse(...) as any`.
+
+**Decisión:** `import type Database from '@tauri-apps/plugin-sql'` (se borra en compilación: el
+bundle web sigue sin resolver el plugin; el `import()` dinámico de `getDb` es el único acceso
+runtime) y `db.select<XRow[]>(...)` con un tipo de fila por tabla (`FunctionRow`, `ClauseTypeRow`,
+`BlockRow`, `FillerRow`, `TemplateRow`, `CountRow`). Las columnas JSON pasan por guards nuevos y
+exportados: `isPragmaticBlockId`, `isPragmaticClauseTypeId`, `isGrammaticalFunctionCategory`,
+`isPragmaticBlockRef`, `isPragmaticClauseType`, `parseStringArray`, `parseBlockIds`,
+`parseClauseTypeIds`, `parseBlockRefs`, `parseTemplates`. `isPragmaticClauseType` NO restringe el
+id a la unión sembrada: `saveClauseType` persiste tipos de usuario con ids arbitrarios (el test de
+`grammarPragmaticPanel` lo ejercita); valida la forma. `parseTemplates` rellena con `[]` las
+tipologías faltantes. Fuera el `as any` de `getTemplates` (el `find` sobre `SEED_CLAUSE_TYPES` ya
+devuelve el tipo canónico).
+
+**Cambios (commit `48bcad5`):**
+- `src/services/grammarDb.ts`: 8 anotaciones `any` → 0 (quedan 2 menciones en comentarios).
+- `src/services/__tests__/grammarDbSerialization.test.ts` (nuevo, 12 tests).
+
+**Verificación:** typecheck 0 · lint OK (`check:esc`) · build OK · vitest 828/828 (100 archivos) ·
+audit:orphans 13 (baseline). `any` (anotaciones) de `services/`: 42 → 32. Cambio de tipos
+solamente: no hay comportamiento nuevo que testear. Hallazgo: `isPragmaticClauseTypeId` no puede
+gobernar el id de `PragmaticClauseType` (los tipos de usuario tienen ids arbitrarios). Pendiente por
+autorización: `git push` + CI con número de run.
+
+**Próximo bloque ejecutable (CLN/P1):** los `any` que quedan en `services/` (`sqlStorage` 5,
+`normalize` 5, `jsonWorker` 4, `grammarParser` 3, `sessionCache` 2, `grammar/syntax` 2,
+`grammar/morphology` 2, `geminiService` 2, `ftsSearch` 2, `prompts` 1, `audioService` 1,
+`aiProviderRegistry` 1) y el flujo de auditoría muerto de `useWorkQueue` (decisión de producto:
+cablear o borrar). Frentes no-CLN pendientes: D2, destino de los 13 huérfanos y `git push` + CI
+(requiere autorización).
+
+---
 ## [2026-11-22] Checkpoint: CLN — tipado estricto del árbol AST editable (P1 God Component)
 
 **Rama:** `master`. **Motivo:** el frente documentado eran los `any` de `services/`; el mayor

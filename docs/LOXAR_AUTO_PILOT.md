@@ -17,8 +17,8 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `8a56728` (tipado estricto del árbol AST
-  editable, P1 God Component); 64 commits locales sin push (requiere autorización)
+- Git inicializado y con commits; último commit de código `48bcad5` (tipado estricto de
+  `grammarDb`, P1 God Component); 67 commits locales sin push (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -249,6 +249,25 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — tipado estricto de `grammarDb` (P1, 2026-11-22, commit `48bcad5`).** El frente
+documentado eran los `any` de `services/`; el mayor cluster restante era `grammarDb.ts` (8): el
+`Database` del plugin SQL viajaba como `Promise<any>`, las filas como `Record<string, any>` y las
+columnas JSON se leían con `JSON.parse(...) as any`. `import type Database` (se borra en
+compilación: el bundle web sigue sin resolver el plugin; el `import()` dinámico de `getDb` es el
+único acceso runtime) + `db.select<XRow[]>` con un tipo de fila por tabla + guards exportados
+(`parseStringArray`, `parseBlockIds`, `parseClauseTypeIds`, `parseBlockRefs`, `parseTemplates`,
+`isPragmaticClauseType`). Fuera el `as any` de `getTemplates`. Tests:
+`grammarDbSerialization.test.ts` (12). `any` de `services/`: 42 → 32. Validaciones: typecheck 0 ·
+lint OK · build OK · vitest 828/828 (100 archivos) · audit:orphans 13.
+
+**[ ] CLN — frente siguiente del God Component (P1).** Los `any` que quedan en `services/`
+(`sqlStorage` 5, `normalize` 5, `jsonWorker` 4, `grammarParser` 3, `sessionCache` 2,
+`grammar/syntax` 2, `grammar/morphology` 2, `geminiService` 2, `ftsSearch` 2, `prompts` 1,
+`audioService` 1, `aiProviderRegistry` 1) y el flujo de auditoría muerto de `useWorkQueue`
+(decisión de producto: cablear o borrar). `App.tsx` queda en 651 líneas y su `return` ya solo
+contiene capas (`AppWelcomeLayer`, `AppOverlayLayers`, `AppHeaderLayer`, `AppBodyLayer`,
+`AppFloatingLayers`).
 
 **[x] CLN — tipado estricto del árbol AST editable (P1, 2026-11-22, commit `8a56728`).** El
 frente documentado eran los `any` de `services/`; el mayor cluster era `ast-view.ts` (17) más
