@@ -4577,3 +4577,25 @@ audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con n�
 `aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts` (requieren schemas dedicados con
 cuidado de no romper la tolerancia legacy). El flujo de auditoría muerto de `useWorkQueue`
 sigue como decisión de producto. Pendiente por autorización: `git push` + CI con número de run.
+## [2026-11-23] Checkpoint: CLN — tipado estricto de `sessionCache` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el checkpoint anterior dejaba como frente accionable los `any` de
+`services/`; `sessionCache.ts` era el cluster chico siguiente (2 anotaciones en bloques `catch`).
+
+**Decisión:** los dos `catch (e: any)` pasan a `catch (e: unknown)` y usan `getErrorMessage` de
+`src/utils/entryEditorModel.ts` para detectar `not found`/`forbidden` (lectura) y
+`forbidden`/`permission` (escritura). Se rethrow el error original cuando no aplica el fallback.
+El cambio además cubre errores lanzados como string, que antes no tenían `.message`.
+
+**Cambios (commit `0b380e9`):**
+- `src/services/sessionCache.ts`: 2 `any` → `unknown`; import de `getErrorMessage`.
+- `src/services/__tests__/sessionCache.test.ts`: 3 tests nuevos (rethrow de error inesperado,
+  string lanzado como mensaje, silencio ante `permission denied` y rethrow de `disk full`).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 841/841 (103 archivos) ·
+audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`jsonWorker` 4,
+`geminiService` 2, `ftsSearch` 2, `prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los
+19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` sigue como decisión
+de producto. Pendiente por autorización: `git push` + CI con número de run.
