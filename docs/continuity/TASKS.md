@@ -4652,3 +4652,16 @@ siguen siendo decisiones de producto. Pendiente por autorización: `git push` + 
 **Validaciones:** typecheck 0 · lint OK · build OK · vitest 853/853 (106 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
 
 **Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
+## [2026-11-25] Checkpoint: CLN — tipado estricto de `prompts` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente accionable del checkpoint anterior era el `any` restante en `services/`; `prompts.ts` era el primero de la lista (`prompts` 1, `audioService` 1, `aiProviderRegistry` 1).
+
+**Decisión:** `buildCompleteEntryPrompt` recibe el tipo canónico `EntryEditorFormPayload` (exportado por `src/utils/entryEditorModel.ts`), el mismo que ya usaban `completeEntry`, `useAiHandlers` y `EntryEditor`; se importa como tipo para no añadir dependencia runtime. La firma es el único cambio de código: el cuerpo ya serializaba el payload con `JSON.stringify`, así que no hay variación de comportamiento. Se añade `src/services/__tests__/prompts.test.ts` (6 tests) para fijar la serialización del payload tipado y las instrucciones por modo, que hasta ahora no tenían cobertura.
+
+**Cambios (commit `82da775`):**
+- `src/services/prompts.ts`: 1 `any` → 0 (`partialEntry: EntryEditorFormPayload`).
+- `src/services/__tests__/prompts.test.ts` (nuevo, 6 tests): payload y perfil serializados, modo generativo por defecto, afijos derivacionales, muestra etimológica, combinación de modos y esquema de raíz/léxema.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 859/859 (107 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
