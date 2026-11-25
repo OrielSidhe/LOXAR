@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 859/859 (107 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 861/861 (107 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `82da775` (tipado estricto de `prompts`: 0 `any` en el módulo y 6 tests de los builders; antes `eecee83` de `geminiService`, `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
-  explícitas, P1 God Component); 85 commits locales sin push
+- Git inicializado y con commits; último commit de código `9719ff8` (tipado estricto de `audioService` y `aiProviderRegistry`: 0 `any` reales en `services/`; antes `82da775` de `prompts`, `eecee83` de `geminiService`, `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
+  explícitas, P1 God Component); 86 commits locales sin push
   (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
@@ -251,6 +251,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — tipado estricto de `audioService` y `aiProviderRegistry` (P1, 2026-11-25, commit `9719ff8`).** Los dos `any` reales restantes de `services/` pasan a 0: `LegacyAudioWindow` tipa el prefijo `webkitAudioContext` sin perder el fallback, y `unsupportedEndpointStyle(style: never)` conserva el valor inválido del mensaje de error mientras mantiene exhaustivo el switch. Tests: `audioService.test.ts` (+1, fallback legacy) y `aiProviderRegistry.test.ts` (+1, diagnóstico con estilo manipulado). Validaciones: typecheck 0, lint OK, build OK, vitest 861/861 (107 archivos), audit:orphans 13 (baseline).
+
 **[x] CLN — tipado estricto de `prompts` (P1, 2026-11-25, commit `82da775`).** El único `any` de `src/services/prompts.ts` pasa a `EntryEditorFormPayload`, el tipo canónico que ya consumían `completeEntry`, `useAiHandlers` y `EntryEditor`. Sin cambio de comportamiento. Tests nuevos: `prompts.test.ts` (6): serialización del payload y del perfil, modo por defecto, afijos derivacionales, muestra etimológica, combinación de modos y esquema de raíz/léxema. Validaciones: typecheck 0, lint OK, build OK, vitest 859/859 (107 archivos), audit:orphans 13 (baseline).
 
 **[x] CLN — tipado estricto de `geminiService` (P1, 2026-11-24, commit `eecee83`).** Los 2 `any` del archivo pasan a 0: `callAi(fallbackResult: unknown)` conserva la serialización del fallback y el lector tolerante de raíz/léxema sale al módulo puro `src/utils/aiResponseModel.ts` (`getNormalizedProp`, guard de registro y normalización accent-insensitive; mismo comportamiento para arreglos y valores falsy). Tests nuevos: `aiResponseModel.test.ts` (5). Validaciones: typecheck 0, lint OK, build OK, vitest 853/853 (106 archivos), audit:orphans 13 (baseline).
@@ -277,12 +279,7 @@ audit:orphans 13. Próximo frente: `jsonWorker` (4 `any`), `geminiService` (2), 
 
 **[x] CLN — tipado estricto de la frontera `DeclarativeManifest` → `GrammarManifest` → motor (P1, 2026-11-22, commit `edf2239`).** El frente documentado eran los `any` de `services/`; el siguiente cluster era la cadena de conversión de gramática. `grammarParser.convertToLegacy` tenía un `mapStrategyType` que devolvía claves de catálogo (`suffix`, `tone_change`, `positional`, `auxiliary_periphrastic`) incompatibles con el `StrategyType` canónico y lo salvaba con `as any`: ahora `STRATEGY_TYPE_MAP` (`suppletion` → `affix`). La realización declarativa pasaba con `kind`/`position` en `as any`: nueva `toSlotRealization` que narrows por `kind`. En `morphology.ts`, `chooseRealization` se tipa con `InflectionSlot`/`AllomorphCondition` y la forma sale al helper `realizationForm` (narrows `SlotRealization`: `form`/`replace`/`ruleId`). En `syntax.ts`, el fallback `{} as any` pasa al nuevo `EngineLexemeLike` y `exceptions` se tipa como `GrammarException[]`. Tests: `grammarParser.test.ts` (4). `any` de `services/`: 52 → 45 (anotaciones). Validaciones: typecheck 0 · lint OK · build OK · vitest 832/832 (101 archivos).
 
-**[ ] CLN — frente siguiente del God Component (P1).** El mayor cluster restante es `normalize.ts`
-(19 `z.any()` de schemas anidados; las tres firmas `any` ya se tiparon en `f2021da` y los 2 `as any`
-de `.default()` están justificados). Le siguen `prompts` (1),
-`audioService` (1) y `aiProviderRegistry` (1). `sessionCache` (`0b380e9`), `jsonWorker` (`5ec1da7`), `ftsSearch` (`8fb648f`) y `geminiService` (`eecee83`)
-quedaron en 0 `any`. El flujo de auditoría muerto de `useWorkQueue` sigue como decisión de producto
-(cablear o borrar).
+**[ ] CLN — frente siguiente del God Component (P1).** El frente restante en `services/` es `normalize.ts` (19 `z.any()` de tolerancia legacy y 2 `.default(... as any)` justificados: no tocar sin alterar el parseo en runtime). `prompts`, `audioService` y `aiProviderRegistry` quedaron en 0 `any` (`82da775`, `9719ff8`), al igual que `sessionCache`, `jsonWorker`, `ftsSearch` y `geminiService`. El flujo de auditoría muerto de `useWorkQueue` sigue como decisión de producto (cablear o borrar). Pendiente por autorización: `git push` + CI con número de run.
 
 **[x] CLN — tipado estricto de `grammarDb` (P1, 2026-11-22, commit `48bcad5`).** El frente
 documentado eran los `any` de `services/`; el mayor cluster restante era `grammarDb.ts` (8): el

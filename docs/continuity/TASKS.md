@@ -1,5 +1,5 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-11-22 
+**Última actualización:** 2026-11-25
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
@@ -4665,3 +4665,17 @@ siguen siendo decisiones de producto. Pendiente por autorización: `git push` + 
 **Validaciones:** typecheck 0 · lint OK · build OK · vitest 859/859 (107 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
 
 **Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
+## [2026-11-25] Checkpoint: CLN — tipado estricto de `audioService` y `aiProviderRegistry` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente accionable del checkpoint anterior eran los dos `any` reales restantes en `services/` (`audioService` 1, `aiProviderRegistry` 1), después de cerrar `prompts` en `82da775`.
+
+**Decisión:** en `audioService.ts` el prefijo legacy `webkitAudioContext` pasa de `(window as any)` al tipo local `LegacyAudioWindow = Window & { webkitAudioContext?: typeof AudioContext }`; el constructor conserva la precedencia de `window.AudioContext` y el fallback. En `aiProviderRegistry.ts` el `default` del switch ya no relee el valor con `(config as any)`: el mensaje sale de `unsupportedEndpointStyle(style: never)`, que mantiene el switch exhaustivo (si se añade un `ProviderEndpointStyle` sin caso, `tsc` falla) y conserva el valor inválido del config persistido vía `String(style)`. Sin cambio de comportamiento en las rutas válidas.
+
+**Cambios (commit `9719ff8`):**
+- `src/services/audioService.ts`: 1 `any` → 0; tipo `LegacyAudioWindow`.
+- `src/services/aiProviderRegistry.ts`: 1 `any` → 0; helper `unsupportedEndpointStyle(style: never)`.
+- Tests: `audioService.test.ts` (+1: fallback a `webkitAudioContext` cuando no hay `AudioContext`) y `aiProviderRegistry.test.ts` (+1: el mensaje nombra el estilo no soportado de un config manipulado).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 861/861 (107 archivos) · audit:orphans 13 (baseline). `any` (anotaciones) de `services/`: solo los 19 `z.any()` y 2 `.default(... as any)` justificados de `normalize.ts`. Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** `normalize.ts` (19 `z.any()` de tolerancia legacy y 2 `.default(... as any)` justificados: no tocar sin cambiar el parseo en runtime). El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
