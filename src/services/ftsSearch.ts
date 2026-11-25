@@ -8,12 +8,16 @@
  */
 import type { LexiconData, LexiconEntry } from '../types';
 import { normalizeText } from '../services/geminiService';
+import { isTauri } from './sqlStorage';
 
 export interface SearchResult {
   entry: LexiconEntry;
   score: number;
   matches: string[];
 }
+
+/** Fila devuelta por la consulta FTS5: JSON del léxico y rank de bm25. */
+type FtsRow = { data: string; rank: number };
 
 function tokenize(text: string): string[] {
   return text
@@ -49,17 +53,17 @@ function searchInMemory(data: LexiconData, query: string): SearchResult[] {
 }
 
 async function searchWithFts5(lexiconName: string, query: string): Promise<SearchResult[]> {
-  const db = await import('@tauri-apps/plugin-sql').then((mod: any) =>
+  const db = await import('@tauri-apps/plugin-sql').then((mod) =>
     mod.default.load('sqlite:loxar.db'),
   );
 
-  const rows = (await db.select(
+  const rows = await db.select<FtsRow[]>(
     `SELECT data, bm25(lexicon_fts) AS rank
      FROM lexicon_fts
      WHERE lexicon_fts MATCH $1
      ORDER BY rank`,
     [query],
-  )) as { data: string; rank: number }[];
+  );
 
   if (!rows.length) return [];
 
@@ -91,7 +95,7 @@ async function searchWithFts5(lexiconName: string, query: string): Promise<Searc
 export async function searchLexicon(data: LexiconData, query: string, lexiconName?: string): Promise<SearchResult[]> {
   if (!query.trim()) return [];
 
-  if (lexiconName && typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__) {
+  if (lexiconName && isTauri()) {
     try {
       return await searchWithFts5(lexiconName, query);
     } catch {
