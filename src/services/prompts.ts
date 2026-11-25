@@ -4,6 +4,7 @@
 // (previously multiple modes were only joined as text: `${modes.join(', ')}`).
 
 import { GenerativeProfile, GenerationMode, LexiconEntry, MissingWord, NewLexiconEntry } from '../types';
+import type { EntryEditorFormPayload } from '../utils/entryEditorModel';
 
 /** Distinct instruction block per generation mode. This is what makes
  *  combining modes meaningful instead of cosmetic. */
@@ -52,7 +53,7 @@ export const buildRootLexemePrompt = (
     return `Genera una raíz y léxema para "${significado}" (${categoria}). ${modeInstructions} Toma en cuenta la fonología: ${JSON.stringify(profile)}. Responde SOLO JSON con el siguiente esquema estricto: {"raiz": "...", "lexema": "..."}.`;
 };
 
-export const buildCompleteEntryPrompt = (partialEntry: any, profile: GenerativeProfile): string =>
+export const buildCompleteEntryPrompt = (partialEntry: EntryEditorFormPayload, profile: GenerativeProfile): string =>
     `Completa esta entrada de léxico: ${JSON.stringify(partialEntry)}. Basado en este perfil: ${JSON.stringify(profile)}. Devuelve un JSON válido.`;
 
 export const buildConlangAgentPrompt = (message: string): string =>
