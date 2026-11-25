@@ -4679,3 +4679,18 @@ siguen siendo decisiones de producto. Pendiente por autorización: `git push` + 
 **Validaciones:** typecheck 0 · lint OK · build OK · vitest 861/861 (107 archivos) · audit:orphans 13 (baseline). `any` (anotaciones) de `services/`: solo los 19 `z.any()` y 2 `.default(... as any)` justificados de `normalize.ts`. Pendiente por autorización: `git push` + CI con número de run.
 
 **Proximo bloque ejecutable (CLN/P1):** `normalize.ts` (19 `z.any()` de tolerancia legacy y 2 `.default(... as any)` justificados: no tocar sin cambiar el parseo en runtime). El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
+## [2026-11-25] Checkpoint: CLN — errores de IA acotados en Ollama (GAUNTLET v3.9 X1)
+
+**Rama:** `master`. **Motivo:** el frente documentado (`normalize.ts`) exige cambiar el parseo en runtime y queda fuera de un cambio atómico; se cerró en cambio la divergencia verificada del criterio X1: el adaptador Ollama no truncaba el cuerpo del error y su `testConnection` no tenía timeout, a diferencia de los adaptadores OpenAI-compatible.
+
+**Decisión:** nuevo helper puro `truncateErrorBody` (2000 caracteres + marcador) en `src/services/aiProviders/base.ts`, reutilizado por `openAIAdapter.ts` (sustituye su copia local) y `ollamaAdapter.ts` (tanto en `complete` como en `testConnection`). `testConnection` crea un `AbortController` con `requestTimeoutMs` (180 s por defecto), pasa el `signal` a `fetch` y limpia el temporizador en `finally`. Sin cambios en las rutas de éxito ni en la firma pública de los adapters.
+
+**Cambios (commit `ab925ad`):**
+- `src/services/aiProviders/base.ts`: `MAX_ERROR_BODY_LENGTH` + `truncateErrorBody`.
+- `src/services/aiProviders/openAIAdapter.ts`: usa el helper compartido.
+- `src/services/aiProviders/ollamaAdapter.ts`: cuerpo acotado en errores HTTP y timeout en `testConnection`.
+- `src/services/aiProviders/__tests__/aiProviders.test.ts` (+4): error 400 con cuerpo largo, timeout con signal abortado, error 500 acotado en testConnection y tests del helper.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 865/865 (107 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** `normalize.ts` (19 `z.any()` de tolerancia legacy y 2 `.default(... as any)` justificados: no tocar sin alterar el parseo en runtime). El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
