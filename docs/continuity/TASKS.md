@@ -4694,3 +4694,23 @@ siguen siendo decisiones de producto. Pendiente por autorización: `git push` + 
 **Validaciones:** typecheck 0 · lint OK · build OK · vitest 865/865 (107 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
 
 **Proximo bloque ejecutable (CLN/P1):** `normalize.ts` (19 `z.any()` de tolerancia legacy y 2 `.default(... as any)` justificados: no tocar sin alterar el parseo en runtime). El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
+
+## [2026-11-25] Checkpoint: CI — Node 24.15.0 fijado (jsdom 30 / undici 8)
+
+**Rama:** `master`. **Motivo:** el fallo rojo de CI (`44774484978`, 3 suites jsdom) no era del
+código: `jsdom@30.1.3` exige `^22.22.2 || ^24.15.0 || >=26.0.0` y su dependencia transitiva
+`undici@8.12.3` declara `>=22.19.0`, mientras el workflow corría Node 20.
+
+**Decisión:** fijar `node-version: 24.15.0` en `.github/workflows/ci.yml` y declarar
+`engines.node >=24.15.0` en `package.json`. No se tocó ningún test ni código de aplicación.
+
+**Verificación reproducida en local:** con Node 20.20.2 fallan exactamente las 3 suites
+(`appNavigationBar`, `appProjectBootstrapLayer`, `importJobBanner`) en
+`undici/lib/interceptor/decompress.js:78`; con Node 24.15.0 pasan typecheck, lint, build y
+vitest 865/865 (107 archivos).
+
+**Cambios (commit `d1a8e8e`):** `.github/workflows/ci.yml` y `package.json`.
+
+**Pendiente por autorización:** `git push` + CI con número de run; FASE D (demo del usuario) y
+FASE R del gauntlet v3.14. Frente técnico siguiente: `normalize.ts` (19 `z.any()` de tolerancia
+legacy y 2 `.default(... as any)` justificados: no tocar sin alterar el parseo en runtime).

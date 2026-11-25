@@ -14,6 +14,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Repo limpio, build/typecheck/lint verdes; vitest 865/865 (107 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
+- CI fijada a Node 24.15.0 (`d1a8e8e`): verificado en local contra el fallo previo de Node 20 (`undici@8.12.3` en 3 suites jsdom); typecheck/lint/build y vitest 865/865 en verde.
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
@@ -250,6 +251,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CI — Node 24.15.0 fijado (2026-11-25, commit `d1a8e8e`).** El fallo rojo de CI era de entorno: `jsdom@30.1.3` exige Node `^22.22.2 || ^24.15.0 || >=26.0.0` y `undici@8.12.3` declara `>=22.19.0`, pero el workflow usaba Node 20. Reproducido con Node 20.20.2 (3 suites jsdom caen en `undici/.../decompress.js:78`) y verificado con Node 24.15.0: typecheck 0, lint OK, build OK, vitest 865/865 (107 archivos). Se declara además `engines.node >=24.15.0`. Sin cambios en tests ni código de aplicación.
 
 **[x] CLN — errores de IA acotados en Ollama (GAUNTLET v3.9 X1, 2026-11-25, commit `ab925ad`).** Nuevo `truncateErrorBody` en `base.ts` (2000 caracteres + marcador) reutilizado por `openAIAdapter` y `ollamaAdapter`; `testConnection` de Ollama pasa a usar `AbortController` con `requestTimeoutMs` y limpia el temporizador en `finally`. Tests: `aiProviders.test.ts` (+4). Validaciones: typecheck 0, lint OK, build OK, vitest 865/865 (107 archivos), audit:orphans 13 (baseline).
 
