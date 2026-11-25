@@ -1,8 +1,7 @@
 import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult, ReasoningEffort } from './base';
-import { sanitizeCredential } from './base';
+import { sanitizeCredential, truncateErrorBody } from './base';
 
 const DEFAULT_TIMEOUT = 30_000;
-const MAX_ERROR_BODY = 2000;
 
 /** Error info extracted from an HTTP error response */
 export interface HttpErrorInfo {
@@ -82,7 +81,7 @@ async function extractErrorInfo(response: Response, normalizedBaseURL: string, u
   let body = '';
   try {
     const text = await response.text();
-    body = text.length > MAX_ERROR_BODY ? text.slice(0, MAX_ERROR_BODY) + '... (truncated)' : text;
+    body = truncateErrorBody(text);
   } catch {
     body = '(unable to read response body)';
   }

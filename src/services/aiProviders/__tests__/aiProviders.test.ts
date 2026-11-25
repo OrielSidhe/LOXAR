@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AIProviderConfig } from '../base';
-import { sanitizeCredential, getProviderKeyPrefix, looksLikeWrongProvider, PROVIDER_KEY_PREFIXES } from '../base';
+import { sanitizeCredential, getProviderKeyPrefix, looksLikeWrongProvider, PROVIDER_KEY_PREFIXES, truncateErrorBody, MAX_ERROR_BODY_LENGTH } from '../base';
 import { createGeminiProvider, invalidateGeminiCache, __setGeminiFactory, __clearGeminiFactory } from '../geminiAdapter';
 import { createOpenAICompatibleProvider } from '../openAIAdapter';
 import { createOllamaProvider } from '../ollamaAdapter';
@@ -236,6 +236,58 @@ describe('createOllamaProvider', () => {
     const result = await provider.testConnection();
     expect(result.success).toBe(true);
     expect(result.details).toBe('Ollama is reachable.');
+  });
+
+  it('complete reports status, endpoint and a bounded error body', async () => {
+    const longBody = 'x'.repeat(MAX_ERROR_BODY_LENGTH + 300);
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(longBody, { status: 400 }));
+    const provider = createOllamaProvider(baseConfig);
+
+    let message = '';
+    try {
+      await provider.complete([{ role: 'user', content: 'hi' }]);
+    } catch (error: unknown) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    expect(message).toContain('HTTP 400');
+    expect(message).toContain('http://localhost:11434/api/generate');
+    expect(message).toContain('... (truncated)');
+    expect(message).not.toContain(longBody);
+  });
+
+  it('testConnection bounds the wait and reports a timeout', async () => {
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      expect(init.signal).toBeInstanceOf(AbortSignal);
+      return new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => reject(new Error('The operation was aborted.')), { once: true });
+      });
+    });
+    const provider = createOllamaProvider({ ...baseConfig, requestTimeoutMs: 5 });
+
+    const result = await provider.testConnection();
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/aborted/i);
+  });
+
+  it('testConnection surfaces a bounded body on HTTP failure', async () => {
+    const longBody = 'y'.repeat(MAX_ERROR_BODY_LENGTH + 100);
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(longBody, { status: 500 }));
+    const provider = createOllamaProvider(baseConfig);
+
+    const result = await provider.testConnection();
+    expect(result.success).toBe(false);
+    expect(result.details).toContain('HTTP 500');
+    expect(result.details).toContain('... (truncated)');
+    expect(result.details?.length).toBeLessThan(MAX_ERROR_BODY_LENGTH + 100);
+  });
+});
+
+describe('truncateErrorBody', () => {
+  it('keeps short bodies intact and truncates long ones', () => {
+    expect(truncateErrorBody('short')).toBe('short');
+    const truncated = truncateErrorBody('z'.repeat(MAX_ERROR_BODY_LENGTH + 1));
+    expect(truncated).toHaveLength(MAX_ERROR_BODY_LENGTH + '... (truncated)'.length);
+    expect(truncated.endsWith('... (truncated)')).toBe(true);
   });
 });
 

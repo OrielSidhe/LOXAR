@@ -54,6 +54,16 @@ export function sanitizeCredential(value: string): string {
     .replace(WRAPPING_QUOTES, '');
 }
 
+/** Maximum length of an HTTP error body included in a user-visible provider error. */
+export const MAX_ERROR_BODY_LENGTH = 2000;
+
+/** Keep provider error bodies bounded so a failed request cannot flood the UI. */
+export function truncateErrorBody(text: string): string {
+  return text.length > MAX_ERROR_BODY_LENGTH
+    ? `${text.slice(0, MAX_ERROR_BODY_LENGTH)}... (truncated)`
+    : text;
+}
+
 /**
  * Expected key prefix per known provider id, used for live validation in
  * AiSettingsModal. Returns `undefined` for providers without a known prefix.

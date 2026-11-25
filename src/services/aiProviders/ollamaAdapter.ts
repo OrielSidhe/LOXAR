@@ -1,5 +1,5 @@
 import type { AIProvider, AIProviderConfig, ChatMessage, ProviderRequestOptions, TestConnectionResult } from './base';
-import { sanitizeCredential } from './base';
+import { sanitizeCredential, truncateErrorBody } from './base';
 
 const DEFAULT_TIMEOUT = 180_000;
 
@@ -49,7 +49,7 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error(`HTTP ${response.status} (${response.statusText}) on endpoint ${url}\nBody: ${text}`);
+        throw new Error(`HTTP ${response.status} (${response.statusText}) on endpoint ${url}\nBody: ${truncateErrorBody(text)}`);
       }
 
       const data = await response.json();
@@ -65,15 +65,27 @@ export function createOllamaProvider(config: AIProviderConfig): AIProvider {
   };
 
   const testConnection = async (): Promise<TestConnectionResult> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), defaultTimeout);
     try {
-      const result = await fetch(`${sanitizedBaseURL}/api/tags`, { method: 'GET' });
+      const result = await fetch(`${sanitizedBaseURL}/api/tags`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
       if (!result.ok) {
-        return { success: false, error: 'Connection failed', details: `HTTP ${result.status}` };
+        const text = await result.text();
+        return {
+          success: false,
+          error: 'Connection failed',
+          details: `HTTP ${result.status}\nBody: ${truncateErrorBody(text)}`,
+        };
       }
       return { success: true, details: 'Ollama is reachable.' };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       return { success: false, error: message, details: message };
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
