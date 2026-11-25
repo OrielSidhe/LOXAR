@@ -3,6 +3,9 @@
  * Synthesizes abstract, clean sounds without requiring external assets.
  */
 
+/** Legacy WebKit prefix, still present in older Safari builds. */
+type LegacyAudioWindow = Window & { webkitAudioContext?: typeof AudioContext };
+
 class AudioService {
     private ctx: AudioContext | null = null;
     private masterGain: GainNode | null = null;
@@ -11,7 +14,7 @@ class AudioService {
     constructor() {
         if (typeof window === 'undefined') return;
         try {
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            const AudioContextClass = window.AudioContext || (window as LegacyAudioWindow).webkitAudioContext;
             if (AudioContextClass) {
                 this.ctx = new AudioContextClass();
                 this.masterGain = this.ctx.createGain();

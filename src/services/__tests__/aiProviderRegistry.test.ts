@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { AISettings as GenericAISettings } from '../aiProviderRegistry';
+import type { AISettings as GenericAISettings, AIProviderConfig } from '../aiProviderRegistry';
 import {
   PRESET_PROVIDERS,
   DEFAULT_PROVIDERS,
+  getProvider,
   migrateLegacyToGeneric,
   getActiveProviderConfig,
   loadGenericAISettings,
@@ -356,5 +357,23 @@ describe('Phase X: reasoningEffort in registry config round-trip', () => {
     PRESET_PROVIDERS.forEach(p => {
       expect(p.reasoningEffort).toBe('off');
     });
+  });
+});
+
+describe('buildProvider endpoint style validation', () => {
+  it('throws a diagnostic naming the unsupported style from hand-edited config', () => {
+    // The union excludes this value, but persisted config can be hand-edited.
+    const config = {
+      id: 'unsupported-style-test',
+      name: 'Bad',
+      baseURL: 'https://example.com',
+      apiKey: '',
+      authHeader: 'Authorization',
+      endpointStyle: 'bogus-style',
+      defaultModel: 'm1',
+      models: [],
+    } as unknown as AIProviderConfig;
+
+    expect(() => getProvider(config)).toThrow('Unsupported provider endpoint style: bogus-style');
   });
 });

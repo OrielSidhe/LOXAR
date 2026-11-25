@@ -86,6 +86,16 @@ const installWindow = (ctx: unknown) => {
   });
 };
 
+const installLegacyWindow = (ctx: unknown) => {
+  const LegacyAudioContext = vi.fn(() => ctx);
+  Object.defineProperty(globalThis, 'window', {
+    value: { webkitAudioContext: LegacyAudioContext },
+    writable: true,
+    configurable: true,
+  });
+  return LegacyAudioContext;
+};
+
 const importService = async () => {
   const mod = await import('../../services/audioService');
   return mod.audioService;
@@ -136,6 +146,17 @@ describe('audioService scheduling', () => {
     for (const call of calls) {
       expect(call.time).toBeGreaterThanOrEqual(0);
     }
+  });
+
+  it('falls back to webkitAudioContext when AudioContext is unavailable', async () => {
+    const { ctx, calls } = buildContext();
+    const LegacyAudioContext = installLegacyWindow(ctx);
+
+    const audioService = await importService();
+
+    expect(LegacyAudioContext).toHaveBeenCalledTimes(1);
+    expect(() => audioService.playClick()).not.toThrow();
+    expect(calls.length).toBeGreaterThan(0);
   });
 
   it('playStartup still schedules forward in time once the context is running', async () => {

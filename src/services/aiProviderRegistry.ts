@@ -180,6 +180,15 @@ export function getActiveProviderConfig(config: AISettings): AIProviderConfig | 
 
 const registry = new Map<string, AIProvider>();
 
+/**
+ * Keeps the switch exhaustive: once every ProviderEndpointStyle is handled,
+ * `config.endpointStyle` narrows to `never` in the default branch. Widening
+ * through `String` preserves the offending value from hand-edited config.
+ */
+function unsupportedEndpointStyle(style: never): string {
+  return `Unsupported provider endpoint style: ${String(style)}`;
+}
+
 function buildProvider(config: AIProviderConfig): AIProvider {
   switch (config.endpointStyle) {
     case 'gemini':
@@ -192,7 +201,7 @@ function buildProvider(config: AIProviderConfig): AIProvider {
     case 'custom':
       return createOpenAICompatibleProvider(config);
     default:
-      throw new Error(`Unsupported provider endpoint style: ${(config as any).endpointStyle}`);
+      throw new Error(unsupportedEndpointStyle(config.endpointStyle));
   }
 }
 
