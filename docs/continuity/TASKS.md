@@ -4599,3 +4599,28 @@ audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con n�
 `geminiService` 2, `ftsSearch` 2, `prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los
 19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` sigue como decisión
 de producto. Pendiente por autorización: `git push` + CI con número de run.
+## [2026-11-24] Checkpoint: CLN — tipado estricto de `jsonWorker` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el árbol de trabajo traía un cambio a medias de una sesión previa
+(`jsonWorker.ts` tipado + test nuevo) sin checkpoint ni commit. Se verificó el árbol completo
+antes de cerrarlo, sin descartar ni sobrescribir el trabajo existente.
+
+**Decisión:** las 4 anotaciones `any` de `jsonWorker.ts` pasan a 0. Nuevos `JsonWorkerMessage` y
+`PendingTask`, tipado de `MessageEvent`/`ErrorEvent` en los callbacks del worker y guard de `id`
+no numérico. El genérico de `parseJsonAsync` pasa a `unknown` por defecto; los dos casts de
+`resolve` quedan localizados y justificados (JSON sin forma garantizada devuelto por el worker).
+Fix funcional real: `stringifyJsonAsync` ahora reenvía `space` al script del worker, que antes lo
+ignoraba; con Worker disponible la salida no coincidía con el fallback nativo.
+
+**Cambios (commit `5ec1da7`):**
+- `src/services/jsonWorker.ts`: 4 `any` → 0; `space` propagado al worker.
+- `src/services/__tests__/jsonWorker.test.ts` (nuevo, 3 tests): fallback sin Worker,
+  resolución por id con `space`, rechazo de errores e ignorado de respuestas tardías.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 844/844 (104 archivos) ·
+audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`geminiService` 2,
+`ftsSearch` 2, `prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de
+`normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos
+siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.

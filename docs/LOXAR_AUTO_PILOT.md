@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 841/841 (103 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 844/844 (104 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `0b380e9` (tipado estricto de `sessionCache`: 2 `catch unknown` con `getErrorMessage`; antes `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
-  explícitas, P1 God Component); 77 commits locales sin push
+- Git inicializado y con commits; último commit de código `5ec1da7` (tipado estricto de `jsonWorker`: 0 `any` y `space` propagado al worker; antes `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
+  explícitas, P1 God Component); 79 commits locales sin push
   (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
@@ -251,6 +251,12 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 
 ## Próxima tarea activa
 
+**[x] CLN — tipado estricto de `jsonWorker` (P1, 2026-11-24, commit `5ec1da7`).** Se cerró el
+trabajo a medias del árbol: 4 `any` → 0, callbacks del worker tipados (`MessageEvent`, `ErrorEvent`),
+guard de `id` y genérico por defecto `unknown`. Fix funcional: `space` se reenvía al worker, antes
+ignorado (salida distinta frente al fallback nativo). Tests: `jsonWorker.test.ts` (3). Validaciones:
+typecheck 0, lint OK, build OK, vitest 844/844 (104 archivos), audit:orphans 13.
+
 **[x] CLN — tipado estricto de `sessionCache` (P1, 2026-11-23, commit `0b380e9`).** Los dos
 `catch (e: any)` pasan a `catch (e: unknown)` y usan `getErrorMessage` de `entryEditorModel.ts`
 para clasificar `not found`/`forbidden` al leer y `forbidden`/`permission` al escribir; el error se
@@ -266,9 +272,9 @@ audit:orphans 13. Próximo frente: `jsonWorker` (4 `any`), `geminiService` (2), 
 
 **[ ] CLN — frente siguiente del God Component (P1).** El mayor cluster restante es `normalize.ts`
 (19 `z.any()` de schemas anidados; las tres firmas `any` ya se tiparon en `f2021da` y los 2 `as any`
-de `.default()` están justificados). Le siguen `jsonWorker` (4), `geminiService` (2), `ftsSearch`
-(2), `prompts` (1), `audioService` (1) y `aiProviderRegistry` (1). `sessionCache` quedó en 0 `any`
-(`0b380e9`). El flujo de auditoría muerto de `useWorkQueue` sigue como decisión de producto
+de `.default()` están justificados). Le siguen `geminiService` (2), `ftsSearch` (2), `prompts` (1),
+`audioService` (1) y `aiProviderRegistry` (1). `sessionCache` (`0b380e9`) y `jsonWorker` (`5ec1da7`)
+quedaron en 0 `any`. El flujo de auditoría muerto de `useWorkQueue` sigue como decisión de producto
 (cablear o borrar).
 
 **[x] CLN — tipado estricto de `grammarDb` (P1, 2026-11-22, commit `48bcad5`).** El frente
