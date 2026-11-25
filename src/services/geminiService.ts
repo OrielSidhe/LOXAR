@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { LexiconEntry, MissingWord, NewLexiconEntry, GenerativeProfile, GenerationMode, GrammarManifest } from '../types';
 import type { EntryEditorFormPayload } from '../utils/entryEditorModel';
+import { getNormalizedProp } from '../utils/aiResponseModel';
 import { FlexibleGrammar } from '../types/grammar-flexible';
 import {
     buildModeInstructions, buildRootLexemePrompt, buildCompleteEntryPrompt, buildConlangAgentPrompt,
@@ -372,7 +373,7 @@ export const normalizeText = (text: string): string => {
     return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 };
 
-export const callAi = async (prompt: string, fallbackResult: any = null, signal?: AbortSignal): Promise<string> => {
+export const callAi = async (prompt: string, fallbackResult: unknown = null, signal?: AbortSignal): Promise<string> => {
     const config = await loadAIConfig();
     const providerConfig = getActiveProviderConfig(config);
     if (!providerConfig) throw new Error('No hay ningún proveedor configurado.');
@@ -489,24 +490,9 @@ export const generateRootAndLexeme = async (
     const responseText = await callAi(prompt, { raiz: '', lexema: '' });
     const parsed = parseJsonSafely(responseText, { raiz: '', lexema: '' });
 
-    const getProp = (obj: any, keys: string[]): string => {
-        for (const key of keys) {
-            const normalizedKey = key.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-            for (const objKey in obj) {
-                const normalizedObjKey = objKey.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-                if (normalizedKey === normalizedObjKey) {
-                    const val = obj[objKey];
-                    if (Array.isArray(val)) return val.join(', ');
-                    return String(val || '');
-                }
-            }
-        }
-        return '';
-    };
-
     return {
-        raiz: getProp(parsed, ['raiz', 'raiz', 'root']),
-        lexema: getProp(parsed, ['lexema', 'lexema', 'lexeme'])
+        raiz: getNormalizedProp(parsed, ['raiz', 'raiz', 'root']),
+        lexema: getNormalizedProp(parsed, ['lexema', 'lexema', 'lexeme'])
     };
 };
 
