@@ -4624,3 +4624,16 @@ audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con n�
 `ftsSearch` 2, `prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de
 `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos
 siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
+## [2026-11-24] Checkpoint: CLN — tipado estricto de `ftsSearch` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente accionable del checkpoint anterior eran los `any` restantes de `services/`; `ftsSearch.ts` concentraba 2 en la frontera de búsqueda FTS5.
+
+**Decisión:** el módulo `@tauri-apps/plugin-sql` se importa dinámicamente con inferencia de tipos (sin `(mod: any)`), la fila FTS5 se declara como `FtsRow` y `db.select<FtsRow[]>()` reemplaza el cast posterior al `select` (el plugin tipa `select<T>(): Promise<T>`, verificado en `dist-js/index.d.ts:166`). El chequeo inline de `window.__TAURI_INTERNALS__` se sustituye por el guard exportado `isTauri` de `sqlStorage.ts`, ya usado por `grammarDb.ts`: además de `__TAURI_INTERNALS__` reconoce `__TAURI__` y centraliza el acceso a `window`. El fallback a búsqueda en memoria y el parseo en runtime quedan intactos.
+
+**Cambios (commit `8fb648f`):**
+- `src/services/ftsSearch.ts`: 2 `any` → 0.
+- `src/services/__tests__/ftsSearch.test.ts` (nuevo, 4 tests): consulta vacía, scoring y descarte, búsqueda en notas de `extraData`, short-circuit sin nombre de léxico con bridge de Tauri simulado.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 848/848 (105 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`geminiService` 2, `prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
