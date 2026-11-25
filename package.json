@@ -4,6 +4,9 @@
   "type": "module",
   "version": "1.0.0",
   "description": "An application to manage and expand a conlang, with AI-powered word generation to suggest new vocabulary consistent with the language's structure.",
+  "engines": {
+    "node": ">=24.15.0"
+  },
   "author": "Victor Sidhe",
   "main": "dist-electron/main.js",
   "scripts": {
