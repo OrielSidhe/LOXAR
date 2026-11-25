@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 848/848 (105 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 853/853 (106 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `8fb648f` (tipado estricto de `ftsSearch`: 0 `any` y guard `isTauri` reutilizado; antes `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
-  explícitas, P1 God Component); 81 commits locales sin push
+- Git inicializado y con commits; último commit de código `eecee83` (tipado estricto de `geminiService`: 0 `any` y helper puro `aiResponseModel` con tests; antes `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
+  explícitas, P1 God Component); 82 commits locales sin push
   (requiere autorización)
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
@@ -250,6 +250,9 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] CLN — tipado estricto de `geminiService` (P1, 2026-11-24, commit `eecee83`).** Los 2 `any` del archivo pasan a 0: `callAi(fallbackResult: unknown)` conserva la serialización del fallback y el lector tolerante de raíz/léxema sale al módulo puro `src/utils/aiResponseModel.ts` (`getNormalizedProp`, guard de registro y normalización accent-insensitive; mismo comportamiento para arreglos y valores falsy). Tests nuevos: `aiResponseModel.test.ts` (5). Validaciones: typecheck 0, lint OK, build OK, vitest 853/853 (106 archivos), audit:orphans 13 (baseline).
+
 **[x] CLN — tipado estricto de `ftsSearch` (P1, 2026-11-24, commit `8fb648f`).** Las 2 anotaciones `any` de `src/services/ftsSearch.ts` pasan a 0: importación dinámica de `@tauri-apps/plugin-sql` con inferencia de tipos, fila `FtsRow` tipada en `db.select<FtsRow[]>()` y guard `isTauri` reutilizado desde `sqlStorage.ts` en lugar del chequeo inline de `window.__TAURI_INTERNALS__`. Sin cambios en el parseo ni en el fallback a búsqueda en memoria. Tests: `ftsSearch.test.ts` (4). Validaciones: typecheck 0, lint OK, build OK, vitest 848/848 (105 archivos), audit:orphans 13.
 
 
@@ -274,8 +277,8 @@ audit:orphans 13. Próximo frente: `jsonWorker` (4 `any`), `geminiService` (2), 
 
 **[ ] CLN — frente siguiente del God Component (P1).** El mayor cluster restante es `normalize.ts`
 (19 `z.any()` de schemas anidados; las tres firmas `any` ya se tiparon en `f2021da` y los 2 `as any`
-de `.default()` están justificados). Le siguen `geminiService` (2), `prompts` (1),
-`audioService` (1) y `aiProviderRegistry` (1). `sessionCache` (`0b380e9`), `jsonWorker` (`5ec1da7`) y `ftsSearch` (`8fb648f`)
+de `.default()` están justificados). Le siguen `prompts` (1),
+`audioService` (1) y `aiProviderRegistry` (1). `sessionCache` (`0b380e9`), `jsonWorker` (`5ec1da7`), `ftsSearch` (`8fb648f`) y `geminiService` (`eecee83`)
 quedaron en 0 `any`. El flujo de auditoría muerto de `useWorkQueue` sigue como decisión de producto
 (cablear o borrar).
 

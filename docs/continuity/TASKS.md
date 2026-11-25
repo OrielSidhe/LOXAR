@@ -4637,3 +4637,18 @@ siguen siendo decisiones de producto. Pendiente por autorización: `git push` + 
 **Validaciones:** typecheck 0 · lint OK · build OK · vitest 848/848 (105 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
 
 **Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`geminiService` 2, `prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
+
+## [2026-11-24] Checkpoint: CLN — tipado estricto de `geminiService` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** el frente accionable del checkpoint anterior eran los `any` restantes de `services/`; `geminiService.ts` concentraba 2 en la frontera de IA.
+
+**Decisión:** `callAi` tipa el fallback como `unknown` (solo se serializa con `JSON.stringify` en la ruta de error). El lector local `getProp(obj: any)` se reemplaza por `getNormalizedProp` en el módulo puro `src/utils/aiResponseModel.ts`: guard `isStringKeyedRecord` sobre `unknown`, `Object.keys` sin casts y `normalizeResponseKey` para correspondencia accent/case-insensitive. Se conservan la unión de arreglos con `, ` y el comportamiento legacy `String(val || '')`. Cambio atómico en un solo archivo de servicio más su modelo y tests.
+
+**Cambios (commit `eecee83`):**
+- `src/services/geminiService.ts`: 2 `any` → 0; `getProp` eliminado en favor del helper tipado.
+- `src/utils/aiResponseModel.ts` (nuevo): `getNormalizedProp`, `normalizeResponseKey`.
+- `src/utils/__tests__/aiResponseModel.test.ts` (nuevo, 5 tests): acentos/case, arreglos, falsy, entradas inválidas y normalización.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 853/853 (106 archivos) · audit:orphans 13 (baseline). Pendiente por autorización: `git push` + CI con número de run.
+
+**Proximo bloque ejecutable (CLN/P1):** los `any` restantes de `services/` (`prompts` 1, `audioService` 1, `aiProviderRegistry` 1) y los 19 `z.any()` de `normalize.ts`. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Pendiente por autorización: `git push` + CI con número de run.
