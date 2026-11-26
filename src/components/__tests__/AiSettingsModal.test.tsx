@@ -11,6 +11,11 @@ import type { AISettings, AIProviderConfig } from '../../services/aiProviderRegi
 
 const loadAIConfig = vi.fn();
 const saveAIConfig = vi.fn();
+const discoverModelsMock = vi.fn();
+
+vi.mock('../../services/modelDiscovery', () => ({
+  discoverModels: (...args: unknown[]) => discoverModelsMock(...args),
+}));
 
 vi.mock('../../services/geminiService', () => ({
   loadAIConfig: (...args: unknown[]) => loadAIConfig(...args),

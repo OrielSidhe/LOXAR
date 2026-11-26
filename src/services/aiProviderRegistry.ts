@@ -81,6 +81,17 @@ export function buildNousPreset(userTag: string): AIProviderConfig {
 }
 
 export const PRESET_PROVIDERS: AIProviderConfig[] = [
+  {
+    id: 'gemini-ai-studio',
+    name: 'Google AI Studio',
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta',
+    apiKey: '',
+    authHeader: 'x-goog-api-key',
+    endpointStyle: 'gemini',
+    defaultModel: 'gemini-3.8-flash',
+    models: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+    reasoningEffort: 'off',
+  },
   buildNousPreset(NOUS_DEFAULT_USER_TAG),
   {
     id: 'openai',

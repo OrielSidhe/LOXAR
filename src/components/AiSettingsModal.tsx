@@ -6,6 +6,7 @@ import SparkleIcon from './icons/SparkleIcon';
 import InfoIcon from './icons/InfoIcon';
 import { testAiConnection, loadAIConfig, saveAIConfig, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
 import { PRESET_PROVIDERS, DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle, type ReasoningEffort, getProviderKeyPrefix } from '../services/aiProviderRegistry';
+import { discoverModels } from '../services/modelDiscovery';
 import EyeIcon from './icons/EyeIcon';
 import EyeOffIcon from './icons/EyeOffIcon';
 
@@ -67,6 +68,9 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [showApiKey, setShowApiKey] = useState(false);
     const [extraBodyDraft, setExtraBodyDraft] = useState('{}');
     const [extraBodyError, setExtraBodyError] = useState<string | null>(null);
+    const [discoveredModels, setDiscoveredModels] = useState<string[]>([]);
+    const [discovering, setDiscovering] = useState(false);
+    const [discoveryError, setDiscoveryError] = useState<string | null>(null);
 
     const refreshDebug = () => setDebugEntries([...getDebugLog()]);
 
@@ -130,6 +134,9 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setExtraBodyError(null);
         setIsCreating(creating);
         setTestResult({ status: 'idle', message: '' });
+        setDiscoveredModels([]);
+        setDiscoveryError(null);
+        setDiscovering(false);
     };
 
     const startCreateProvider = () => {
@@ -157,6 +164,45 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setIsCreating(false);
         setExtraBodyDraft('{}');
         setExtraBodyError(null);
+        setDiscoveredModels([]);
+        setDiscoveryError(null);
+        setDiscovering(false);
+    };
+
+    const handleDiscoverModels = async () => {
+        if (!editingProvider || discovering) return;
+        setDiscovering(true);
+        setDiscoveryError(null);
+        const result = await discoverModels({
+            id: editingProvider.id || 'form-preview',
+            name: editingProvider.name,
+            baseURL: editingProvider.baseURL,
+            apiKey: editingProvider.apiKey,
+            authHeader: editingProvider.authHeader,
+            endpointStyle: editingProvider.endpointStyle,
+            defaultModel: editingProvider.defaultModel,
+            models: editingProvider.models,
+            reasoningEffort: editingProvider.reasoningEffort,
+            extraBody: editingProvider.extraBody,
+            requestTimeoutMs: editingProvider.requestTimeoutMs,
+        });
+        setDiscovering(false);
+        if (result.error) {
+            setDiscoveryError(result.error);
+            return;
+        }
+        setDiscoveredModels(result.models);
+        if (result.models.length) {
+            setEditingProvider(current => {
+                if (!current) return current;
+                const keep = current.defaultModel && result.models.includes(current.defaultModel);
+                return {
+                    ...current,
+                    models: result.models,
+                    defaultModel: keep ? current.defaultModel : result.models[0],
+                };
+            });
+        }
     };
 
     const saveEditingProvider = () => {
@@ -367,13 +413,21 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             </div>
                             <div className="space-y-2">
                                 <label htmlFor="form-provider-model" className="block text-sm font-medium text-text-secondary">Modelo</label>
-                                <input id="form-provider-model" aria-label="Modelo" type="text" value={editingProvider.defaultModel}
+                                <input id="form-provider-model" aria-label="Modelo" type="text" value={editingProvider.defaultModel} list="form-provider-discovered-models"
                                     onChange={e => updateEditingProvider({ defaultModel: e.target.value })}
                                     className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                                <datalist id="form-provider-discovered-models">
+                                    {discoveredModels.map(model => <option key={model} value={model} />)}
+                                </datalist>
+                                <button type="button" onClick={() => void handleDiscoverModels()} disabled={discovering || !editingProvider.baseURL.trim()}
+                                    className="text-xs px-3 py-1 rounded-md border border-accent text-accent hover:bg-accent/10 transition-colors disabled:opacity-50">
+                                    {discovering ? 'Obteniendo modelos…' : 'Obtener modelos'}
+                                </button>
+                                {discoveryError && <p className="text-xs text-danger" role="alert">{discoveryError}</p>}
                             </div>
                             <div className="space-y-2">
                                 <label htmlFor="form-provider-models" className="block text-sm font-medium text-text-secondary">Modelos (separados por coma)</label>
-                                <input id="form-provider-models" aria-label="Modelos" type="text" value={editingProvider.models.join(', ')}
+                                <input id="form-provider-models" aria-label="Modelos" type="text" value={editingProvider.models.join(', ')} list="form-provider-discovered-models"
                                     onChange={e => updateEditingProvider({ models: e.target.value.split(',').map(m => m.trim()).filter(Boolean) })}
                                     className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
                             </div>

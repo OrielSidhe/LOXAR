@@ -103,6 +103,15 @@ describe('FASE E: presets y persistencia de extraBody', () => {
     expect(groq!.models).toContain('openai/gpt-oss-120b');
   });
 
+  it('includes the Google AI Studio preset with the free Gemini model list', () => {
+    const studio = PRESET_PROVIDERS.find(p => p.id === 'gemini-ai-studio');
+    expect(studio?.baseURL).toBe('https://generativelanguage.googleapis.com/v1beta');
+    expect(studio?.authHeader).toBe('x-goog-api-key');
+    expect(studio?.endpointStyle).toBe('gemini');
+    expect(studio?.models).toEqual(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite']);
+    expect(studio?.defaultModel).toBe('gemini-3.8-flash');
+  });
+
   it('includes free OpenAI-compatible presets for Cloudflare, NVIDIA and local Ollama', () => {
     const cloudflare = PRESET_PROVIDERS.find(p => p.id === 'cloudflare');
     const nvidia = PRESET_PROVIDERS.find(p => p.id === 'nvidia');
