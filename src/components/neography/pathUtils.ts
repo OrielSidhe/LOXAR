@@ -1,4 +1,5 @@
 import { getStroke } from 'perfect-freehand';
+import type { StrokeOptions } from 'perfect-freehand';
 
 export interface Point {
     x: number;
@@ -6,44 +7,42 @@ export interface Point {
     pressure?: number;
 }
 
-// Function to convert point array to SVG path data using perfect-freehand
-export const getSvgPathFromStroke = (stroke: number[][]): string => {
+/** Construye el path SVG cerrado (M ... Q ... Z) a partir de los puntos del contorno. */
+export const getSvgPathFromStroke = (stroke: readonly number[][]): string => {
     if (!stroke.length) return "";
 
-    const d = (stroke as any).reduce(
-        (acc: any, [x0, y0]: any, i: any, arr: any) => {
-            const [x1, y1] = arr[(i + 1) % arr.length];
-            acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
-            return acc;
-        },
-        ["M", ...stroke[0], "Q"]
-    );
+    const commands: (string | number)[] = ["M", ...stroke[0], "Q"];
+    stroke.forEach(([x0, y0], i, arr) => {
+        const [x1, y1] = arr[(i + 1) % arr.length];
+        commands.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+    });
 
-    d.push("Z");
-    return d.join(" ");
+    commands.push("Z");
+    return commands.join(" ");
 };
 
 // Main function to get the smooth path from input points
-export const getFreehandPath = (points: Point[], options: any = {}): string => {
+export const getFreehandPath = (points: Point[], options: StrokeOptions = {}): string => {
     if (points.length < 2) return '';
 
     // Convert our Point objects to [x, y, pressure] array expected by perfect-freehand
     const inputPoints = points.map(p => [p.x, p.y, p.pressure || 0.5]);
 
-    const strokeOptions = {
+    const identityEasing = (t: number): number => t;
+    const strokeOptions: StrokeOptions = {
         size: 8,
         thinning: 0.5,
         smoothing: 0.5,
         streamline: 0.5,
-        easing: (t: any) => t,
+        easing: identityEasing,
         start: {
             taper: 0,
-            easing: (t: any) => t,
+            easing: identityEasing,
             cap: true
         },
         end: {
             taper: 0,
-            easing: (t: any) => t,
+            easing: identityEasing,
             cap: true
         },
         ...options
