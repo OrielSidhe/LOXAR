@@ -7,6 +7,7 @@ import InfoIcon from './icons/InfoIcon';
 import { testAiConnection, loadAIConfig, saveAIConfig, DEFAULT_GEMINI_MODEL, DEFAULT_OLLAMA_MODEL, APP_NAME, APP_VERSION, getDebugLog, clearDebugLog } from '../services/geminiService';
 import { PRESET_PROVIDERS, DEFAULT_PROVIDERS, type AIProviderConfig, type ProviderEndpointStyle, type ReasoningEffort, getProviderKeyPrefix } from '../services/aiProviderRegistry';
 import { discoverModels } from '../services/modelDiscovery';
+import { buildTestProviderConfig, classifyConnectionError, hintFromTestResult } from '../services/connectionTestHints';
 import EyeIcon from './icons/EyeIcon';
 import EyeOffIcon from './icons/EyeOffIcon';
 
@@ -104,10 +105,11 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 setTestResult({ status: 'success', message: 'Conexion exitosa.' });
                 refreshDebug();
             } else {
+                const hint = hintFromTestResult(result);
                 setTestResult({
                     status: 'error',
-                    message: result.error || 'La prueba fallo.',
-                    details: result.details,
+                    message: hint.hint,
+                    details: [result.error, result.details].filter(Boolean).join('\n'),
                 });
                 refreshDebug();
             }
@@ -115,7 +117,41 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             const error = e instanceof Error ? e : new Error('Error desconocido');
             setTestResult({
                 status: 'error',
-                message: `Error: ${error.message}`,
+                message: classifyConnectionError(error.message).hint,
+                details: error.stack,
+            });
+        } finally {
+            setIsTesting(false);
+        }
+    };
+
+    /**
+     * FASE T: probe the *form* configuration without saving it. The config is a
+     * fresh copy, so `providers` and the draft itself are never mutated; the
+     * per-provider reasoning policy is applied only to this probe.
+     */
+    const handleTestForm = async () => {
+        if (!editingProvider || isTesting || extraBodyError) return;
+        setIsTesting(true);
+        setTestResult({ status: 'idle', message: '' });
+        try {
+            const result = await testAiConnection({ providerConfig: buildTestProviderConfig(editingProvider) });
+            if (result.success) {
+                setTestResult({ status: 'success', message: 'Conexión exitosa (configuración del formulario, sin guardar).' });
+            } else {
+                const hint = hintFromTestResult(result);
+                setTestResult({
+                    status: 'error',
+                    message: hint.hint,
+                    details: [result.error, result.details].filter(Boolean).join('\n'),
+                });
+            }
+            refreshDebug();
+        } catch (e: unknown) {
+            const error = e instanceof Error ? e : new Error('Error desconocido');
+            setTestResult({
+                status: 'error',
+                message: classifyConnectionError(error.message).hint,
                 details: error.stack,
             });
         } finally {
@@ -460,14 +496,22 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                     }}
                                     className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
                             </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button onClick={closeForm} className="px-4 py-2 text-text-secondary hover:text-white transition-colors">
-                                    Cancelar edición
+                            <div className="flex justify-between items-center gap-3 pt-2">
+                                <button type="button" onClick={() => void handleTestForm()}
+                                    title="Prueba la configuración actual del formulario sin guardarla"
+                                    disabled={isTesting || Boolean(extraBodyError) || !editingProvider.baseURL.trim() || !editingProvider.defaultModel.trim()}
+                                    className="px-4 py-2 bg-background border border-accent text-accent rounded-md hover:bg-accent/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                                    {isTesting ? 'Probando…' : 'Probar sin guardar'}
                                 </button>
-                                <button onClick={saveEditingProvider} disabled={Boolean(extraBodyError) || !editingProvider.name.trim()}
-                                    className="px-6 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent-hover transition-colors shadow-glow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                                    Guardar proveedor
-                                </button>
+                                <div className="flex gap-3">
+                                    <button onClick={closeForm} className="px-4 py-2 text-text-secondary hover:text-white transition-colors">
+                                        Cancelar edición
+                                    </button>
+                                    <button onClick={saveEditingProvider} disabled={Boolean(extraBodyError) || !editingProvider.name.trim()}
+                                        className="px-6 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent-hover transition-colors shadow-glow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                                        Guardar proveedor
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -574,7 +618,7 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     <div className="pt-4 border-t border-border-dark flex flex-col gap-3">
                         <button
                             onClick={handleTest}
-                            disabled={isTesting || !activeProvider}
+                            disabled={isTesting || !activeProvider || Boolean(editingProvider)}
                             className="w-full py-2 bg-background border border-accent text-accent rounded-md font-medium hover:bg-accent/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isTesting ? (
