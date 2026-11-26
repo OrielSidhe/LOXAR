@@ -21,8 +21,6 @@ import {
 import {
   createGeminiProvider,
   invalidateGeminiCache,
-  __setGeminiFactory,
-  __clearGeminiFactory,
 } from '../aiProviders/geminiAdapter';
 
 // ─── localStorage mock ─────────────────────────────────────────────────────────
@@ -264,159 +262,79 @@ describe('C2: extraBody passthrough through completeWithProvider', () => {
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// C3: Gemini cache invalidation when credentials change
+// C3: Gemini provider rebuilt on credential change (REST)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-describe('C3: Gemini cache invalidation on credential change', () => {
+describe('C3: Gemini provider rebuilt on credential change', () => {
+  const originalFetch = globalThis.fetch;
+  const sentKeys: string[] = [];
+
+  const stubGeminiFetch = (): void => {
+    globalThis.fetch = vi.fn().mockImplementation((_url: string, init: RequestInit) => {
+      sentKeys.push((init.headers as Record<string, string>)['x-goog-api-key'] ?? '');
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => '{}',
+        json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] }),
+      });
+    });
+  };
+
+  beforeEach(() => {
+    sentKeys.length = 0;
+    stubGeminiFetch();
+  });
+
   afterEach(() => {
-    __clearGeminiFactory();
+    globalThis.fetch = originalFetch;
     invalidateGeminiCache();
     invalidateProviderCache();
   });
 
-  // ── 3.1: First call caches instance, change of config → new provider ──
-  it('C3.1: first call cachea, change of config, second call does not reuse cached instance', async () => {
-    const apiKeyCalls: string[] = [];
-    __setGeminiFactory(({ apiKey }) => {
-      apiKeyCalls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    // First call — creates provider with key-A and triggers lazy instance
-    const configA = makeGeminiConfig('key-aaa');
-    const providerA = getProvider(configA);
+  it('C3.1: a config change produces a fresh provider with the new key', async () => {
+    const providerA = getProvider(makeGeminiConfig('key-aaa'));
     await providerA.complete([{ role: 'user', content: 'hi' }]);
-    expect(apiKeyCalls).toHaveLength(1);
-    expect(apiKeyCalls[0]).toBe('key-aaa');
-
-    // New config with different apiKey — must create a fresh provider
-    const configB = makeGeminiConfig('key-bbb');
-    const providerB = getProvider(configB);
-    expect(providerB).not.toBe(providerA); // different instance
+    const providerB = getProvider(makeGeminiConfig('key-bbb'));
+    expect(providerB).not.toBe(providerA);
     expect(providerB.config.apiKey).toBe('key-bbb');
     await providerB.complete([{ role: 'user', content: 'hi' }]);
-    expect(apiKeyCalls).toHaveLength(2);
-    expect(apiKeyCalls[1]).toBe('key-bbb');
+    expect(sentKeys).toEqual(['key-aaa', 'key-bbb']);
   });
 
-  // ── 3.2: invalidateProviderCache('gemini') clears and forces rebuild ──
-  it('C3.2: invalidateProviderCache("gemini") clears cache, forcing a new provider', async () => {
-    const apiKeyCalls: string[] = [];
-    // Inject a mock factory so complete() never hits the real GoogleGenAI client
-    // (no network / API key required — keeps this test green in CI without credentials).
-    __setGeminiFactory(({ apiKey }) => {
-      apiKeyCalls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    // Prime the cache
-    const config = makeGeminiConfig('key-original');
-    const provider1 = getProvider(config);
+  it('C3.2: invalidateProviderCache("gemini") forces a rebuild', async () => {
+    const provider1 = getProvider(makeGeminiConfig('key-original'));
     await provider1.complete([{ role: 'user', content: 'hi' }]);
-    expect(apiKeyCalls).toHaveLength(1);
-    expect(apiKeyCalls[0]).toBe('key-original');
-
-    // Invalidate the gemini cache. NOTE: invalidateProviderCache('gemini') also
-    // calls invalidateGeminiCache(), which nulls the injected factory — re-inject
-    // it so the rebuilt provider stays mocked (no real GoogleGenAI / API key).
     invalidateProviderCache('gemini');
-    __setGeminiFactory(({ apiKey }) => {
-      apiKeyCalls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    // New config with a different key — must create a fresh provider
-    const config2 = makeGeminiConfig('key-replaced');
-    const provider2 = getProvider(config2);
+    const provider2 = getProvider(makeGeminiConfig('key-replaced'));
     expect(provider2).not.toBe(provider1);
     await provider2.complete([{ role: 'user', content: 'hi' }]);
-    expect(apiKeyCalls).toHaveLength(2);
-    expect(apiKeyCalls[1]).toBe('key-replaced');
+    expect(sentKeys).toEqual(['key-original', 'key-replaced']);
   });
 
-  // ── 3.3: invalidateProviderCache() (no arg) clears entire registry ──
   it('C3.3: invalidateProviderCache() with no arg clears all providers', async () => {
-    const apiKeyCalls: string[] = [];
-    __setGeminiFactory(({ apiKey }) => {
-      apiKeyCalls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    const config = makeGeminiConfig('key-one');
-    const provider1 = getProvider(config);
+    const provider1 = getProvider(makeGeminiConfig('key-one'));
     await provider1.complete([{ role: 'user', content: 'hi' }]);
-    expect(apiKeyCalls).toHaveLength(1);
-    expect(apiKeyCalls[0]).toBe('key-one');
-
-    // Full cache clear. invalidateProviderCache() also nulls the injected
-    // gemini factory — re-inject it so the rebuilt provider stays mocked.
     invalidateProviderCache();
-    __setGeminiFactory(({ apiKey }) => {
-      apiKeyCalls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    const config2 = makeGeminiConfig('key-two');
-    const provider2 = getProvider(config2);
+    const provider2 = getProvider(makeGeminiConfig('key-two'));
     expect(provider2).not.toBe(provider1);
     await provider2.complete([{ role: 'user', content: 'hi' }]);
-    expect(apiKeyCalls).toHaveLength(2);
-    expect(apiKeyCalls[1]).toBe('key-two');
+    expect(sentKeys).toEqual(['key-one', 'key-two']);
   });
 
-  // ── 3.4: Sanitized key is what reaches the GoogleGenAI constructor ──
-  it('C3.4: dirty apiKey (wraping quotes + whitespace) is sanitized before factory call', async () => {
-    const apiKeyCalls: string[] = [];
-    __setGeminiFactory(({ apiKey }) => {
-      apiKeyCalls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    // Dirty key with leading/trailing whitespace and a wrapping double-quote
+  it('C3.4: dirty apiKey is sanitized before it reaches the request header', async () => {
     const dirtyKey = '  AIzaSy123"  ';
     const provider = createGeminiProvider(makeGeminiConfig(dirtyKey));
-    // Provider config has the sanitized key
     expect(provider.config.apiKey).toBe('AIzaSy123');
-
-    // When complete() triggers lazy instantiation, the factory receives the
-    // already-sanitized key (no quotes, no whitespace).
     await provider.complete([{ role: 'user', content: 'hi' }]);
-    expect(apiKeyCalls).toHaveLength(1);
-    expect(apiKeyCalls[0]).toBe('AIzaSy123');
+    expect(sentKeys).toEqual(['AIzaSy123']);
   });
 
-  // ── 3.5: invalidateGeminiCache is a safe no-op (backward compat) ──
   it('C3.5: invalidateGeminiCache is a safe no-op', () => {
     expect(() => invalidateGeminiCache()).not.toThrow();
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
 // C4: Integration — save/load + wrong-provider warning workflow
 // ═══════════════════════════════════════════════════════════════════════════════
 

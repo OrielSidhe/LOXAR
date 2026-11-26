@@ -1,14 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { AIProviderConfig } from '../base';
 import { sanitizeCredential, getProviderKeyPrefix, looksLikeWrongProvider, PROVIDER_KEY_PREFIXES, truncateErrorBody, MAX_ERROR_BODY_LENGTH } from '../base';
-import { createGeminiProvider, invalidateGeminiCache, __setGeminiFactory, __clearGeminiFactory } from '../geminiAdapter';
+import { createGeminiProvider, invalidateGeminiCache } from '../geminiAdapter';
 import { createOpenAICompatibleProvider } from '../openAIAdapter';
 import { createOllamaProvider } from '../ollamaAdapter';
-
-// No top-level mock for @google/genai — the Gemini adapter tests below use
-// vi.doMock + dynamic import so that require('@google/genai') inside the
-// adapter's getInstance() picks up the mock. Top-level vi.mock with
-// conditional-export packages like @google/genai can be unreliable.
 
 // ---------------------------------------------------------------------------
 // sanitizeCredential
@@ -292,97 +287,104 @@ describe('truncateErrorBody', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Gemini adapter: cache isolation (no module-level instance leak)
+// Gemini adapter: REST generateContent
 // ---------------------------------------------------------------------------
-describe('createGeminiProvider — cache isolation', () => {
-  const makeConfig = (apiKey: string): AIProviderConfig => ({
-    id: 'gemini', name: 'Gemini', baseURL: 'https://x', apiKey,
-    authHeader: 'x-goog-api-key', endpointStyle: 'gemini',
-    defaultModel: 'gemini-2.5-flash', models: [],
+describe('createGeminiProvider — REST generateContent', () => {
+  const originalFetch = globalThis.fetch;
+  const makeConfig = (apiKey: string, extraBody?: Record<string, unknown>): AIProviderConfig => ({
+    id: 'gemini',
+    name: 'Gemini',
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta',
+    apiKey,
+    authHeader: 'x-goog-api-key',
+    endpointStyle: 'gemini',
+    defaultModel: 'gemini-2.5-flash',
+    models: [],
+    ...(extraBody ? { extraBody } : {}),
   });
+
+  const stub = (body: unknown, ok = true, status = 200): void => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok,
+      status,
+      statusText: ok ? 'OK' : 'Error',
+      text: async () => (typeof body === 'string' ? body : JSON.stringify(body)),
+      json: async () => body,
+    });
+  };
+
   afterEach(() => {
-    __clearGeminiFactory();
-    invalidateGeminiCache();
+    globalThis.fetch = originalFetch;
   });
 
-  it('creates a new instance for each different apiKey (no module-level cache leak)', async () => {
-    const calls: string[] = [];
-    __setGeminiFactory(({ apiKey }) => {
-      calls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    const providerA = createGeminiProvider(makeConfig('key-aaa'));
-    await providerA.complete([{ role: 'user', content: 'hi' }]);
-
-    const providerB = createGeminiProvider(makeConfig('key-bbb'));
-    await providerB.complete([{ role: 'user', content: 'hi' }]);
-
-    expect(calls).toHaveLength(2);
-    expect(calls[0]).toBe('key-aaa');
-    expect(calls[1]).toBe('key-bbb');
+  it('POSTs to /v1beta/models/{model}:generateContent with x-goog-api-key and maps roles', async () => {
+    stub({ candidates: [{ content: { parts: [{ text: '  OK  ' }] } }] });
+    const provider = createGeminiProvider(makeConfig('AIza-key'));
+    const result = await provider.complete([
+      { role: 'system', content: 'Be brief' },
+      { role: 'user', content: 'hi' },
+      { role: 'assistant', content: 'hello' },
+      { role: 'user', content: 'again' },
+    ]);
+    expect(result).toBe('OK');
+    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent');
+    expect(init.method).toBe('POST');
+    expect((init.headers as Record<string, string>)['x-goog-api-key']).toBe('AIza-key');
+    const sent = JSON.parse(init.body as string) as {
+      contents: Array<{ role: string }>;
+      systemInstruction: { parts: Array<{ text: string }> };
+    };
+    expect(sent.contents.map(entry => entry.role)).toEqual(['user', 'model', 'user']);
+    expect(sent.systemInstruction.parts[0].text).toBe('Be brief');
   });
 
-  it('sanitizes apiKey before passing to GoogleGenAI constructor', async () => {
-    const calls: string[] = [];
-    __setGeminiFactory(({ apiKey }) => {
-      calls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
-
-    const provider = createGeminiProvider(makeConfig('key-aaa'));
+  it('merges extraBody into the request body, not into contents', async () => {
+    stub({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
+    const provider = createGeminiProvider(makeConfig('AIza-key', { tags: ['user=loxar'] }));
     await provider.complete([{ role: 'user', content: 'hi' }]);
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toBe('key-aaa');
+    const [, init] = vi.mocked(globalThis.fetch).mock.calls[0] as [string, RequestInit];
+    const sent = JSON.parse(init.body as string) as { tags: string[]; contents: unknown[] };
+    expect(sent.tags).toEqual(['user=loxar']);
+    expect(Array.isArray(sent.contents)).toBe(true);
   });
 
-  it('sanitizes apiKey with trailing quote before passing to factory', async () => {
-    const calls: string[] = [];
-    __setGeminiFactory(({ apiKey }) => {
-      calls.push(apiKey);
-      return {
-        models: {
-          generateContent: vi.fn().mockResolvedValue({ text: 'OK' }),
-        },
-      };
-    });
+  it('does not duplicate the version segment when the base already ends in /v1beta', async () => {
+    stub({ candidates: [{ content: { parts: [{ text: 'ok' }] } }] });
+    const provider = createGeminiProvider(makeConfig('AIza-key'));
+    await provider.complete([{ role: 'user', content: 'hi' }], { model: 'gemini-3.8-flash' });
+    const [url] = vi.mocked(globalThis.fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent');
+    expect(url).not.toContain('/v1beta/v1beta');
+  });
 
-    const dirtyKey = 'key-aaa' + String.fromCharCode(34); // key-aaa"
-    const provider = createGeminiProvider({
-      ...makeConfig(dirtyKey),
-      apiKey: dirtyKey,
-    });
-    await provider.complete([{ role: 'user', content: 'hi' }]);
-
-    expect(calls[0]).toBe('key-aaa');
+  it('surfaces a bounded HTTP error message', async () => {
+    stub('x'.repeat(5000), false, 401);
+    const provider = createGeminiProvider(makeConfig('bad-key'));
+    await expect(provider.complete([{ role: 'user', content: 'hi' }])).rejects.toThrow(/HTTP 401/);
+    try {
+      await provider.complete([{ role: 'user', content: 'hi' }]);
+    } catch (error) {
+      expect((error as Error).message.length).toBeLessThan(3000);
+    }
   });
 
   it('returns sanitized config in provider.config', () => {
     const provider = createGeminiProvider({
-      id: 'gemini', name: 'Gemini', baseURL: '  https://x/  ', apiKey: 'key-aaa"',
-      authHeader: 'x-goog-api-key', endpointStyle: 'gemini',
-      defaultModel: '  gemini-2.5-flash', models: [],
+      ...makeConfig('AIza-key"'),
+      baseURL: '  https://x/  ',
+      defaultModel: '  gemini-2.5-flash',
     });
-    expect(provider.config.apiKey).toBe('key-aaa');
+    expect(provider.config.apiKey).toBe('AIza-key');
     expect(provider.config.baseURL).toBe('https://x/');
     expect(provider.config.defaultModel).toBe('gemini-2.5-flash');
   });
 
-  it('invalidateGeminiCache is a safe no-op (instances are per-provider)', () => {
+  it('invalidateGeminiCache is a safe no-op (REST adapter is stateless)', () => {
     expect(() => invalidateGeminiCache()).not.toThrow();
   });
 });
 
-// ---------------------------------------------------------------------------
 // Phase X: HTTP 400 body surfacing
 // ---------------------------------------------------------------------------
 describe('Phase X: HTTP 400 body surfacing', () => {
