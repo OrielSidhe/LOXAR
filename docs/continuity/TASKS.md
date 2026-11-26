@@ -4,6 +4,27 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-26 06:00] Checkpoint: verificación beta y cierre formal de FASE T
+
+**Rama:** `master`. **Estado al arrancar:** árbol sucio con el checkpoint documental de la sesión
+05:12 (checkpoint Dropdown + cierre R-T) sin commitear; se verificó y se cerró con `0f70970`,
+sin tocar el trabajo del cron paralelo.
+
+**Decisión:** el gauntlet v3.13 no tiene bloque de código pendiente accionable: FASE D exige una
+demo con credenciales del usuario y FASE R es el reporte final. En lugar de inventar código se
+corrigió la inconsistencia documental: R-E/R-M/R-G seguían marcadas ⚠️ «sin push» aunque el push
+`86f3e42..d6e653d` las incluye y la CI `45808270226` (`success`, attempt 1, head `d6e653d`) las
+cubre. Se actualizó el `Estado actual` del AUTO_PILOT a la verdad del árbol.
+
+**Verificación ejecutada:** typecheck 0 · lint OK · build OK · vitest 918/918 (114 archivos) ·
+audit:orphans 13 (baseline) · `npm run test:gui -- --workers=1 --reporter=line` 8/8 en 2.0 min
+con dev server caliente. Sin señal de cuota: `tencent/hy4-flash:free` responde, sin cambio de modelo.
+
+**Pendiente:** FASE D (demo del usuario: añadir proveedor real, editar sin perder `extraBody`,
+probar con error inducido, obtener modelos), FASE R (reporte final) y el push de los commits
+documentales locales. El push requiere autorización; el de FASE T ya está verificado.
+
+---
 ## [2026-11-26 05:12] Checkpoint: Dropdown — cierre real y tipado estricto
 
 **Rama:** `master`. **Commit:** `d6e653d`. **Motivo:** otro cron ejecutaba FASE T sobre

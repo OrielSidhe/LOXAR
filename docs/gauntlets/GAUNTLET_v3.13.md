@@ -253,9 +253,9 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 | Persistencia de `extraBody`/`requestTimeoutMs` | round-trip save/load en `aiProviderRegistry.test.ts` | 🟢 |
 | Merge en adapter | `aiProviders.test.ts` 38/38 (preexistente, re-verificado) | 🟢 |
 | typecheck / lint / build / vitest | 0 / OK / OK / 883/883 (111 archivos) | 🟢 |
-| Push + CI verde de FASE E | commit local `fd60cc9`, sin push por diseño del supervisor | ⚠️ |
+| Push + CI verde de FASE E | push `86f3e42..d6e653d` (incluye `fd60cc9`); CI `45808270226` `success` attempt 1 | 🟢 |
 
-**FASE E INCOMPLETA** — falta push + CI verde con número de run.
+**FASE E TERMINADA** — cubierta por el push de FASE T y CI `45808270226`.
 
 ### R-M — FASE M
 
@@ -265,9 +265,9 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 | Botón «Obtener modelos» + datalist cableados | `src/components/AiSettingsModal.tsx:172-203`, `:422-433` | 🟢 |
 | Preset Google AI Studio con 3 modelos | `src/services/aiProviderRegistry.ts:85-93` | 🟢 |
 | typecheck / lint / build / vitest | 0 / OK / OK / 894/894 (112 archivos) | 🟢 |
-| Push + CI verde de FASE M | commit local `4443f88`, sin push por diseño del supervisor | ⚠️ |
+| Push + CI verde de FASE M | push `86f3e42..d6e653d` (incluye `4443f88`); CI `45808270226` `success` attempt 1 | 🟢 |
 
-**FASE M INCOMPLETA** — falta push + CI verde con número de run.
+**FASE M TERMINADA** — cubierta por el push de FASE T y CI `45808270226`.
 
 ### R-G — FASE G
 
@@ -278,9 +278,9 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 | `extraBody` mergeado en el body, no en `contents` | `geminiAdapter.ts:48` (`{ ...extraBody, contents }`) + test dedicado | 🟢 |
 | Tests con `fetch` mockeado adaptados | `aiProviders.test.ts` (6 Gemini) + `aiProviderPhaseC.test.ts` C3 (5) | 🟢 |
 | typecheck / lint / build / vitest / huérfanos | 0 / OK / OK / 895/895 (112 archivos) / 13 (baseline) | 🟢 |
-| Push + CI verde de FASE G | commit local `7701fc8`, sin push por diseño del supervisor | ⚠️ |
+| Push + CI verde de FASE G | push `86f3e42..d6e653d` (incluye `7701fc8`); CI `45808270226` `success` attempt 1 | 🟢 |
 
-**FASE G INCOMPLETA** — falta push + CI verde con número de run.
+**FASE G TERMINADA** — cubierta por el push de FASE T y CI `45808270226`.
 
 ### R-T — FASE T
 

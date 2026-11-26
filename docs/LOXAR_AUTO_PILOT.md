@@ -11,11 +11,11 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 895/895 (112 archivos) y `npm run test:gui`
-  (6 specs / 8 tests): 8/8 en 3.4 min con 1 worker (en paralelo sigue
+- Repo limpio, build/typecheck/lint verdes; vitest 918/918 (114 archivos) y `npm run test:gui`
+  (6 specs / 8 tests): 8/8 en 2.0 min con 1 worker (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
-- Gauntlet v3.13: FASE U (`86f3e42`), E (`fd60cc9`), M (`4443f88`) y G (`7701fc8`) cerradas en local; FASE T siguiente; CI `45788851335` success (attempt 2, head `86f3e42`).
-- Últimos bloques CLN/P1: `3429a8d` (InflectionView 7 `any` -> 0) y `6b54cb3` (ToolsTab 5 `any` -> 0 + test de contrato).
+- Gauntlet v3.13: FASE U, E, M, G y T cerradas; push `86f3e42..d6e653d` verificado, CI `45808270226` success (attempt 1, head `d6e653d`). FASE D (demo del usuario) y R final pendientes.
+- Últimos bloques: `d6e653d` (Dropdown cierra al elegir opción, teclado y 0 `any`), `11ae2c9` (FASE T: probar sin guardar + hints), `3429a8d` y `6b54cb3` (CLN/P1).
 - CI fijada a Node 24.15.0 (`d1a8e8e`): verificado en local contra el fallo previo de Node 20 (`undici@8.12.3` en 3 suites jsdom); typecheck/lint/build y vitest 865/865 en verde.
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
