@@ -11,10 +11,10 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 883/883 (111 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 895/895 (112 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 3.4 min con 1 worker (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
-- Gauntlet v3.13: FASE U (`86f3e42`) y FASE E (`fd60cc9`) cerradas en local; FASE M siguiente; CI `45788851335` en curso.
+- Gauntlet v3.13: FASE U (`86f3e42`), E (`fd60cc9`), M (`4443f88`) y G (`7701fc8`) cerradas en local; FASE T siguiente; CI `45788851335` en curso (pre-M).
 - Últimos bloques CLN/P1: `3429a8d` (InflectionView 7 `any` -> 0) y `6b54cb3` (ToolsTab 5 `any` -> 0 + test de contrato).
 - CI fijada a Node 24.15.0 (`d1a8e8e`): verificado en local contra el fallo previo de Node 20 (`undici@8.12.3` en 3 suites jsdom); typecheck/lint/build y vitest 865/865 en verde.
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
@@ -254,6 +254,8 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+**[x] v3.13 M+G — model discovery y geminiAdapter a REST (2026-11-26, commits `4443f88`, `7701fc8`).** FASE M añade `GET {base}/v1beta/models` con timeout/abort, normalización de respuestas OpenAI/Gemini, botón «Obtener modelos» con `datalist` en el formulario y preset Google AI Studio (3 modelos). FASE G elimina `require('@google/genai')`: el adaptador usa fetch REST, mapea `system`/`assistant` a `systemInstruction`/`model`, mergea `extraBody` en el body y acota errores HTTP; los tests de fábrica se sustituyeron por `fetch` mockeado. Validaciones: typecheck 0, lint OK, build OK, vitest 895/895 (112 archivos), audit:orphans 13. Push + CI pendientes.
+
 **[x] CLN — tipado estricto de `InflectionView` y `ToolsTab` (P1, 2026-11-26, commits `3429a8d`, `6b54cb3`).** `InflectionView` pasa de 7 `any` a 0 con uniones derivadas del dominio (proceso paralelo); `ToolsTab` pasa de 5 `any` a 0 usando `React.ComponentProps` de sus hijos y un test de contrato (2 tests). Validaciones sobre el arbol combinado: typecheck 0, lint OK, build OK, vitest 875/875 (110 archivos), GUI 8/8 con 1 worker, audit:orphans 13 (baseline). No se hizo push por diseno del skill.
 
 

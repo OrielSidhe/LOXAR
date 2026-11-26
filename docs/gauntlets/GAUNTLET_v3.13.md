@@ -131,10 +131,10 @@ Botón «Obtener modelos» = `GET {baseUrl}/v1/models`, filtrado/ordenado, llena
 `x-goog-api-key`).
 
 **Checklist FASE M**
-- [ ] Servicio de discovery con manejo de errores HTTP/timeout y normalización de `{data:[{id}]}`.
-- [ ] Botón y picker cableados al formulario (y al proveedor activo).
-- [ ] Presets Google AI Studio con modelos indicados.
-- [ ] Tests con `fetch` mockeado (éxito, vacío, 401/429).
+- [x]Servicio de discovery con manejo de errores HTTP/timeout y normalización de `{data:[{id}]}`.
+- [x]Botón y picker cableados al formulario (y al proveedor activo).
+- [x]Presets Google AI Studio con modelos indicados.
+- [x]Tests con `fetch` mockeado (éxito, vacío, 401/429).
 - [ ] Commit + push + CI verde con número de run.
 
 ---
@@ -150,11 +150,11 @@ Tres bugs confirmados en `b0c22a7`:
 Con tests con `fetch` mockeado.
 
 **Checklist FASE G**
-- [ ] `generateContent` REST con `contents: [{role:'user'|'model', parts:[{text}]}]`.
-- [ ] `systemInstruction` derivado de mensajes `system`.
-- [ ] `extraBody` mergeado en el body del request, no en `contents`.
-- [ ] Sin `require` en el adapter; factory de test eliminada o adaptada.
-- [ ] Tests con `fetch` mockeado para roles, extraBody, errores y abort.
+- [x]`generateContent` REST con `contents: [{role:'user'|'model', parts:[{text}]}]`.
+- [x]`systemInstruction` derivado de mensajes `system`.
+- [x]`extraBody` mergeado en el body del request, no en `contents`.
+- [x]Sin `require` en el adapter; factory de test eliminada o adaptada.
+- [x]Tests con `fetch` mockeado para roles, extraBody, errores y abort.
 - [ ] Commit + push + CI verde con número de run.
 
 ---
@@ -256,6 +256,31 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 | Push + CI verde de FASE E | commit local `fd60cc9`, sin push por diseño del supervisor | ⚠️ |
 
 **FASE E INCOMPLETA** — falta push + CI verde con número de run.
+
+### R-M — FASE M
+
+| Afirmación | Evidencia | Veredicto |
+|---|---|---|
+| Servicio de discovery con timeout/errores y normalización | `src/services/modelDiscovery.ts:14-103`; `modelDiscovery.test.ts` (6 tests) | 🟢 |
+| Botón «Obtener modelos» + datalist cableados | `src/components/AiSettingsModal.tsx:172-203`, `:422-433` | 🟢 |
+| Preset Google AI Studio con 3 modelos | `src/services/aiProviderRegistry.ts:85-93` | 🟢 |
+| typecheck / lint / build / vitest | 0 / OK / OK / 894/894 (112 archivos) | 🟢 |
+| Push + CI verde de FASE M | commit local `4443f88`, sin push por diseño del supervisor | ⚠️ |
+
+**FASE M INCOMPLETA** — falta push + CI verde con número de run.
+
+### R-G — FASE G
+
+| Afirmación | Evidencia | Veredicto |
+|---|---|---|
+| REST `generateContent` sin `require` | `src/services/aiProviders/geminiAdapter.ts:17-46`, `:83-137` | 🟢 |
+| Roles mapeados + `systemInstruction` | `mapGeminiMessages` (`geminiAdapter.ts:34-54`); `aiProviders.test.ts` | 🟢 |
+| `extraBody` mergeado en el body, no en `contents` | `geminiAdapter.ts:48` (`{ ...extraBody, contents }`) + test dedicado | 🟢 |
+| Tests con `fetch` mockeado adaptados | `aiProviders.test.ts` (6 Gemini) + `aiProviderPhaseC.test.ts` C3 (5) | 🟢 |
+| typecheck / lint / build / vitest / huérfanos | 0 / OK / OK / 895/895 (112 archivos) / 13 (baseline) | 🟢 |
+| Push + CI verde de FASE G | commit local `7701fc8`, sin push por diseño del supervisor | ⚠️ |
+
+**FASE G INCOMPLETA** — falta push + CI verde con número de run.
 
 ---
 ## PROTOCOLO DE REPORTE

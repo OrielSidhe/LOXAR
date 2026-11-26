@@ -4832,3 +4832,40 @@ señal de cuota.
 **Próximo bloque ejecutable:** FASE M (model discovery: `GET {baseUrl}/v1/models`, picker
 en el formulario y presets Google AI Studio). Push + CI verde de `fd60cc9`, FASE D (demo
 del usuario) y FASE R siguen pendientes. El push requiere autorización explícita.
+
+## [2026-11-26] Checkpoint: v3.13 FASE M + G (proveedores)
+
+**Rama:** `master`. **Motivo:** la FASE M quedó implementada en el árbol de trabajo por una sesión
+anterior sin commit (typecheck 0, vitest 894/894); se cerró con `4443f88` y este turno avanzó el
+siguiente bloque atómico del gauntlet, FASE G (`7701fc8`). Ningún cron paralelo tocó estos
+archivos durante la corrida.
+
+**Decisión M:** `src/services/modelDiscovery.ts` expone `buildModelsUrl`, `normalizeModelIds`,
+`describeHttpError` y `discoverModels`; `GET {base}/v1beta/models` (o `/v1/models`) con timeout,
+señal de aborto y errores convertidos en pistas accionables en vez de excepciones. El formulario de
+`AiSettingsModal` cablea el botón «Obtener modelos» a un `datalist` compartido por «Modelo» y
+«Modelos», preservando el `defaultModel` si sigue vigente. Preset `gemini-ai-studio` con
+`gemini-3.8-flash`, `3.6-flash` y `3.5-flash-lite`. Tests: `modelDiscovery.test.ts` (6).
+
+**Decisión G:** `geminiAdapter.ts` deja `require('@google/genai')` y usa `fetch` POST a
+`{base}/v1beta/models/{model}:generateContent` con `x-goog-api-key`. `mapGeminiMessages` mapea
+`assistant -> model` y deriva `systemInstruction` de los mensajes `system`; `extraBody` se mergea
+en el body (nunca dentro de `contents`); `generationConfig` recibe temperatura/maxTokens/stop;
+los errores HTTP se limitan con `truncateErrorBody`. Se eliminaron las fábricas de test
+`__setGeminiFactory`/`__clearGeminiFactory`: los tests de `aiProviders.test.ts` y el bloque C3 de
+`aiProviderPhaseC.test.ts` ahora verifican cabeceras y roles con `fetch` mockeado.
+`invalidateGeminiCache` se conserva como no-op por compatibilidad con `aiProviderRegistry.ts:291`.
+
+**Cambios (commits `4443f88`, `7701fc8`):**
+- `src/services/modelDiscovery.ts` + `__tests__/modelDiscovery.test.ts` (nuevos, 6 tests).
+- `src/components/AiSettingsModal.tsx` + su test; `src/services/aiProviderRegistry.ts` + su test.
+- `src/services/aiProviders/geminiAdapter.ts`; tests `aiProviders.test.ts` y
+  `aiProviderPhaseC.test.ts` adaptados.
+
+**Validaciones finales:** typecheck 0 · lint OK · build OK · vitest 895/895 (112 archivos) ·
+audit:orphans 13 (baseline). `origin/master` queda 4 commits atrás sin push por diseño del skill.
+Sin cambio de modelo: `tencent/hy4-flash:free` responde y no hay señal de cuota.
+
+**Próximo bloque ejecutable:** FASE T (botón «Probar» sin guardar + hints accionables y
+reasoning ON/OFF por proveedor). Push + CI verde de `4443f88`/`7701fc8`, FASE D (demo del
+usuario) y FASE R siguen pendientes. El push requiere autorización explícita.
