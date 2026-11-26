@@ -11,16 +11,17 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 865/865 (107 archivos) y `npm run test:gui`
+- Repo limpio, build/typecheck/lint verdes; vitest 867/867 (108 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - CI fijada a Node 24.15.0 (`d1a8e8e`): verificado en local contra el fallo previo de Node 20 (`undici@8.12.3` en 3 suites jsdom); typecheck/lint/build y vitest 865/865 en verde.
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `ab925ad` (errores de IA acotados en Ollama: cuerpo truncado a 2000 caracteres y timeout en `testConnection`, criterio X1 de v3.9 extendido al adaptador Ollama); antes `9719ff8` de `audioService` y `aiProviderRegistry` (0 `any` reales en `services/`), `82da775` de `prompts`, `eecee83` de `geminiService`, `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
-  explícitas, P1 God Component); 88 commits locales sin push
-  (requiere autorización)
+- Git inicializado y con commits; último commit de código `7446e54` (EntryEditorForm 0 `any` + test de contrato); antes `a3230ad` (export MD agrupado por categoría, v3.14 D2, ya en `origin/master`), `ab925ad` (errores de IA acotados en Ollama: cuerpo truncado a 2000 caracteres y timeout en `testConnection`, criterio X1 de v3.9 extendido al adaptador Ollama); antes `9719ff8` de `audioService` y `aiProviderRegistry` (0 `any` reales en `services/`), `82da775` de `prompts`, `eecee83` de `geminiService`, `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
+  explícitas, P1 God Component); 1 commit local sin push (`7446e54`), el resto publicado
+  por un proceso paralelo en `origin/master`; CI en curso run `45765573476` (no reportar verde
+  hasta confirmar). El push del commit local requiere autorización.
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -251,6 +252,14 @@ Cada elemento tiene criterio de aceptación binario: hecho o no hecho.
 ---
 
 ## Próxima tarea activa
+
+**[x] EX + CLN — export MD por categoría y tipado estricto de `EntryEditorForm` (2026-11-26,
+commits `a3230ad`, `7446e54`).** `a3230ad` (proceso paralelo) agrupa el export MD por
+categoría según v3.14 D2. `7446e54` elimina los 6 `any` de props de `EntryEditorForm` en favor
+de `LexiconEntry[]`, `GenerationMode[]`, `GenerationModeOption[]` y el callback tipado;
+test de contrato nuevo (2 tests). Validaciones sobre el árbol combinado: typecheck 0,
+lint OK, build OK, vitest 867/867 (108 archivos), audit:orphans 13 (baseline).
+CI del push paralelo en curso (run `45765573476`); `7446e54` queda local sin push.
 
 **[x] CI — Node 24.15.0 fijado (2026-11-25, commit `d1a8e8e`).** El fallo rojo de CI era de entorno: `jsdom@30.1.3` exige Node `^22.22.2 || ^24.15.0 || >=26.0.0` y `undici@8.12.3` declara `>=22.19.0`, pero el workflow usaba Node 20. Reproducido con Node 20.20.2 (3 suites jsdom caen en `undici/.../decompress.js:78`) y verificado con Node 24.15.0: typecheck 0, lint OK, build OK, vitest 865/865 (107 archivos). Se declara además `engines.node >=24.15.0`. Sin cambios en tests ni código de aplicación.
 

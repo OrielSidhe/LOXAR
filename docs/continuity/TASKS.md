@@ -4714,3 +4714,33 @@ vitest 865/865 (107 archivos).
 **Pendiente por autorización:** `git push` + CI con número de run; FASE D (demo del usuario) y
 FASE R del gauntlet v3.14. Frente técnico siguiente: `normalize.ts` (19 `z.any()` de tolerancia
 legacy y 2 `.default(... as any)` justificados: no tocar sin alterar el parseo en runtime).
+
+## [2026-11-26] Checkpoint: EX export MD + CLN tipado de EntryEditorForm
+
+**Rama:** `master`. **Motivo:** dos commits de código quedaron sin checkpoint: `a3230ad`
+(proceso paralelo: export MD agrupa entradas por categoría, spec v3.14 D2) y `7446e54`
+(supervisor cron: tipado estricto de `EntryEditorForm`). Se documentan juntos porque el
+supervisor verificó la suite completa sobre el árbol que incluye ambos.
+
+**Decisión:** en `EntryEditorForm.tsx` los 6 `any` de props pasan a los tipos canónicos ya
+usados aguas abajo: `duplicateSignificados`/`duplicateRaices`/`duplicateLexemas` a
+`LexiconEntry[]`, `generationModes` a `GenerationMode[]`, `onToggleGenerationMode` a
+`(mode: GenerationMode) => void` y `generationModeOptions` a `GenerationModeOption[]`.
+Sin cambio de comportamiento: los consumidores (`EntryDuplicateWarning`,
+`EntryEditorAiActions`, `EntryEditor`) ya usaban esos tipos. Test nuevo de contrato
+`entryEditorForm.test.tsx` (2 tests) fija el flujo de duplicados y modos sin casts.
+
+**Cambios (commits `a3230ad`, `7446e54`):**
+- `src/utils/lexiconExport.ts` + `lexiconExport.test.ts`: export MD agrupado por categoría.
+- `src/components/EntryEditorForm.tsx`: 6 `any` → 0.
+- `src/components/__tests__/entryEditorForm.test.tsx` (nuevo, 2 tests).
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 867/867 (108 archivos) ·
+audit:orphans 13 (baseline). `origin/master` fue actualizado por un proceso paralelo a
+`a3230ad` con CI en curso (run `45765573476`); `7446e54` queda local, sin push por diseño.
+Pendiente: FASE D (demo del usuario) y FASE R del gauntlet v3.14.
+
+**Próximo bloque ejecutable (CLN/P1):** `normalize.ts` (19 `z.any()` de tolerancia legacy y
+2 `.default(... as any)` justificados: no tocar sin alterar el parseo en runtime). El flujo de
+auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones
+de producto. Push de `7446e54` + CI con número de run pendiente de autorización.
