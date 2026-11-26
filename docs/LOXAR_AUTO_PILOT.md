@@ -11,14 +11,14 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 `SESSION_CACHE.json`.
 
 ## Estado actual
-- Repo limpio, build/typecheck/lint verdes; vitest 867/867 (108 archivos) y `npm run test:gui`
-  (6 specs / 8 tests): 8/8 en 51s con 1 worker y el dev server caliente (en paralelo sigue
+- Repo limpio, build/typecheck/lint verdes; vitest 873/873 (109 archivos) y `npm run test:gui`
+  (6 specs / 8 tests): 8/8 en 2.6 min con 1 worker (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
 - CI fijada a Node 24.15.0 (`d1a8e8e`): verificado en local contra el fallo previo de Node 20 (`undici@8.12.3` en 3 suites jsdom); typecheck/lint/build y vitest 865/865 en verde.
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
   R (reporte final) y `git push` + CI con número de run (requiere autorización)
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
-- Git inicializado y con commits; último commit de código `7446e54` (EntryEditorForm 0 `any` + test de contrato); antes `a3230ad` (export MD agrupado por categoría, v3.14 D2, ya en `origin/master`), `ab925ad` (errores de IA acotados en Ollama: cuerpo truncado a 2000 caracteres y timeout en `testConnection`, criterio X1 de v3.9 extendido al adaptador Ollama); antes `9719ff8` de `audioService` y `aiProviderRegistry` (0 `any` reales en `services/`), `82da775` de `prompts`, `eecee83` de `geminiService`, `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
+- Git inicializado y con commits; último commit de código `a3c3efc` (pathUtils 9 `any` → 0 + 6 tests); antes `e0ac5ec` (runtimeValidation 1 `any` → 0), `7446e54` (EntryEditorForm 0 `any` + test de contrato); antes `a3230ad` (export MD agrupado por categoría, v3.14 D2, ya en `origin/master`), `ab925ad` (errores de IA acotados en Ollama: cuerpo truncado a 2000 caracteres y timeout en `testConnection`, criterio X1 de v3.9 extendido al adaptador Ollama); antes `9719ff8` de `audioService` y `aiProviderRegistry` (0 `any` reales en `services/`), `82da775` de `prompts`, `eecee83` de `geminiService`, `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
   explícitas, P1 God Component); 1 commit local sin push (`7446e54`), el resto publicado
   por un proceso paralelo en `origin/master`; CI en curso run `45765573476` (no reportar verde
   hasta confirmar). El push del commit local requiere autorización.

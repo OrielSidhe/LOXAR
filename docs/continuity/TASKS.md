@@ -4758,3 +4758,16 @@ de producto. Push de `7446e54` + CI con número de run pendiente de autorizació
 **Validaciones:** typecheck 0 · lint OK · build OK · vitest 867/867 (108 archivos) · audit:orphans 13 (baseline). `origin/master` sigue 3 commits atrás (`7446e54`, `e8c3b9a`, `e0ac5ec`) sin push por diseño del skill. Sin cambio de modelo: `tencent/hy4-flash:free` responde y no hay señal de cuota.
 
 **Próximo bloque ejecutable (CLN/P1):** los `any` restantes fuera de `normalize.ts`: `GrammarPragmaticPanel.tsx` (9), `InflectionView.tsx` (7), `main.tsx` (6), `neography/pathUtils.ts` (6), `types.ts` (5), `ToolsTab.tsx` (5). `normalize.ts` (19 `z.any()` + 2 `.default(... as any)`) no es atómico. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Push + CI con número de run, FASE D (demo) y FASE R del gauntlet v3.14 siguen pendientes de autorización/del usuario.
+## [2026-11-26] Checkpoint: CLN — pathUtils (P1 God Component)
+
+**Rama:** `master`. **Motivo:** frente accionable del checkpoint anterior (`neography/pathUtils.ts`, 6 `any`); el supervisor en turno verifico antes el trabajo atomico concurrente de `runtimeValidation` (commit `e0ac5ec`, 867/867 + GUI 8/8) y cerro este bloque sobre un arbol limpio.
+
+**Decision:** `getSvgPathFromStroke` toma `readonly number[][]` y reduce con acumulador `(string | number)[]` tipado; `getFreehandPath` toma `StrokeOptions` de `perfect-freehand` (ya exportado por la libreria) y usa un `identityEasing: (t: number) => t` compartido por `easing`/`start.easing`/`end.easing`. Sin cambio de comportamiento: las opciones por defecto y la precedencia de `...options` se conservan. El config de fonologia de `runtimeValidation` ya habia sido tipado por el proceso paralelo en `e0ac5ec`; no se toco.
+
+**Cambios (commit `a3c3efc`):**
+- `src/components/neography/pathUtils.ts`: 9 `any` → 0.
+- `src/components/neography/__tests__/pathUtils.test.ts` (nuevo, 6 tests): contorno vacio, path cerrado con puntos medios, minimo de dos puntos, opciones por defecto/personalizadas, parser M/L y `smoothPath`.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 873/873 (109 archivos) · `npm run test:gui -- --workers=1 --reporter=line` 8/8 en 2.6 min · audit:orphans 13 (baseline). `origin/master` sigue atras sin push por diseno del skill. Sin cambio de modelo: `tencent/hy4-flash:free` responde y no hay senal de cuota.
+
+**Proximo bloque ejecutable (CLN/P1):** `GrammarPragmaticPanel.tsx` (9 `any` reales), `InflectionView.tsx` (7), `main.tsx` (6), `types.ts` (5), `ToolsTab.tsx` (5). `normalize.ts` (19 `z.any()` + 2 `.default(... as any)`) no es atomico. El flujo de auditoria muerto de `useWorkQueue` y el destino de los 13 huerfanos siguen siendo decisiones de producto. Push + CI con numero de run, FASE D (demo) y FASE R del gauntlet v3.14 siguen pendientes.
