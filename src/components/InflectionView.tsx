@@ -1,5 +1,5 @@
 import { useState, useMemo, memo, FC, JSX } from 'react';
-import { InflectionProfile, InflectionParadigm, InflectionRule } from '../types';
+import { InflectionProfile, InflectionParadigm, InflectionRule, PhonologicalRule } from '../types';
 import GitMergeIcon from './icons/GitMergeIcon';
 import XCircleIcon from './icons/XCircleIcon';
 import PlusIcon from './icons/PlusIcon';
@@ -18,6 +18,22 @@ interface InflectionViewProps {
 }
 
 type EditingState = { type: 'group'; id: string; currentName: string; } | null;
+
+// Derive the closed unions from the canonical domain type so the UI cannot
+// drift from the engine's accepted condition/action values.
+type ConditionalRule = Extract<InflectionRule, { type: 'conditional' }>;
+type ConditionType = ConditionalRule['conditionType'];
+type ActionType = ConditionalRule['actionType'];
+type NewRuleData = {
+    name: string;
+    type: 'simple' | 'conditional';
+    template: string;
+    conditionType: ConditionType;
+    conditionValue: string;
+    actionType: ActionType;
+    actionValue: string;
+};
+type NewPhonoRuleData = Omit<PhonologicalRule, 'id'>;
 
 const SimpleRuleEditor: FC<{ value: string; onChange: (newValue: string) => void }> = memo(({ value, onChange }) => {
     const [prefix, suffix] = useMemo(() => {
@@ -72,10 +88,10 @@ const InflectionView = ({ profile, onSave }: InflectionViewProps) => {
     const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
     const [editingState, setEditingState] = useState<EditingState>(null);
     const [editingRule, setEditingRule] = useState<InflectionRule | null>(null);
-    const [newRuleData, setNewRuleData] = useState({ name: '', type: 'simple', template: '[RAÍZ]', conditionType: 'endsWith', conditionValue: '', actionType: 'replaceEnding', actionValue: '' });
+    const [newRuleData, setNewRuleData] = useState<NewRuleData>({ name: '', type: 'simple', template: '[RAÍZ]', conditionType: 'endsWith', conditionValue: '', actionType: 'replaceEnding', actionValue: '' });
     const [newGroupName, setNewGroupName] = useState('');
 
-    const [newPhonoRule, setNewPhonoRule] = useState({ name: '', matchPattern: '', replacement: '', isRegex: false });
+    const [newPhonoRule, setNewPhonoRule] = useState<NewPhonoRuleData>({ name: '', matchPattern: '', replacement: '', isRegex: false });
     const [testString, setTestString] = useState('banana');
     const [showRegexHelp, setShowRegexHelp] = useState(false);
 
@@ -128,7 +144,7 @@ const InflectionView = ({ profile, onSave }: InflectionViewProps) => {
         if (newRuleData.type === 'simple' && newRuleData.template.trim()) {
             newRule = { id: `rule_${Date.now()}`, name: newRuleData.name.trim(), type: 'simple', template: newRuleData.template.trim() };
         } else if (newRuleData.type === 'conditional' && newRuleData.conditionValue.trim()) {
-            newRule = { id: `rule_${Date.now()}`, name: newRuleData.name.trim(), type: 'conditional', conditionType: newRuleData.conditionType as any, conditionValue: newRuleData.conditionValue.trim(), actionType: newRuleData.actionType as any, actionValue: newRuleData.actionValue.trim() };
+            newRule = { id: `rule_${Date.now()}`, name: newRuleData.name.trim(), type: 'conditional', conditionType: newRuleData.conditionType, conditionValue: newRuleData.conditionValue.trim(), actionType: newRuleData.actionType, actionValue: newRuleData.actionValue.trim() };
         }
         if (newRule && selectedGroup) {
             handleUpdateGroup(selectedGroupId, { rules: [...selectedGroup.rules, newRule] });
@@ -144,7 +160,7 @@ const InflectionView = ({ profile, onSave }: InflectionViewProps) => {
 
     const handleAddPhonoRule = () => {
         if (!newPhonoRule.name.trim() || !newPhonoRule.matchPattern.trim()) return;
-        const rule: any = {
+        const rule: PhonologicalRule = {
             id: `phono_${Date.now()}`,
             name: newPhonoRule.name.trim(),
             matchPattern: newPhonoRule.matchPattern,
@@ -164,8 +180,8 @@ const InflectionView = ({ profile, onSave }: InflectionViewProps) => {
             return <RenderTemplate template={rule.template} />;
         }
         if (rule.type === 'conditional') {
-            const condMap: any = { endsWith: 'termina con', startsWith: 'empieza con', contains: 'contiene' };
-            const actMap: any = { replaceEnding: 'reemplazar final por', addSuffix: 'añadir sufijo', addPrefix: 'añadir prefijo' };
+            const condMap: Record<ConditionType, string> = { endsWith: 'termina con', startsWith: 'empieza con', contains: 'contiene' };
+            const actMap: Record<ActionType, string> = { replaceEnding: 'reemplazar final por', addSuffix: 'añadir sufijo', addPrefix: 'añadir prefijo' };
             return <span className="text-text-primary">Si {condMap[rule.conditionType]} <code className="font-mono bg-subtle px-1 rounded">{rule.conditionValue}</code>, {actMap[rule.actionType]} <code className="font-mono bg-subtle px-1 rounded">{rule.actionValue}</code></span>;
         }
         return '';
@@ -498,11 +514,11 @@ const RuleEditor: FC<{ rule: InflectionRule; onUpdate: (u: Partial<InflectionRul
             {rule.type === 'simple' ? <SimpleRuleEditor value={rule.template} onChange={template => onUpdate({ template })} />
                 : <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                        <select value={rule.conditionType} onChange={e => onUpdate({ conditionType: e.target.value as any })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="endsWith">Si termina con</option><option value="startsWith">Si empieza con</option><option value="contains">Si contiene</option></select>
+                        <select value={rule.conditionType} onChange={e => onUpdate({ conditionType: e.target.value as ConditionType })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="endsWith">Si termina con</option><option value="startsWith">Si empieza con</option><option value="contains">Si contiene</option></select>
                         <input type="text" placeholder="Valor..." value={rule.conditionValue} onChange={e => onUpdate({ conditionValue: e.target.value })} className="w-full bg-surface border-subtle rounded py-1 px-2" />
                     </div>
                     <div>
-                        <select value={rule.actionType} onChange={e => onUpdate({ actionType: e.target.value as any })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="replaceEnding">Reemplazar final</option><option value="addSuffix">Añadir sufijo</option><option value="addPrefix">Añadir prefijo</option></select>
+                        <select value={rule.actionType} onChange={e => onUpdate({ actionType: e.target.value as ActionType })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="replaceEnding">Reemplazar final</option><option value="addSuffix">Añadir sufijo</option><option value="addPrefix">Añadir prefijo</option></select>
                         <input type="text" placeholder="Valor..." value={rule.actionValue} onChange={e => onUpdate({ actionValue: e.target.value })} className="w-full bg-surface border-subtle rounded py-1 px-2" />
                     </div>
                 </div>}
@@ -515,21 +531,21 @@ const RuleEditor: FC<{ rule: InflectionRule; onUpdate: (u: Partial<InflectionRul
 ));
 RuleEditor.displayName = 'RuleEditor';
 
-const RuleCreator: FC<{ data: any; setData: (d: any) => void; onAdd: () => void; }> = memo(({ data, setData, onAdd }) => (
+const RuleCreator: FC<{ data: NewRuleData; setData: (d: NewRuleData) => void; onAdd: () => void; }> = memo(({ data, setData, onAdd }) => (
     <div className="p-2 bg-background rounded-md">
         <h4 className="text-md font-semibold text-text-secondary mb-2">Añadir Nueva Regla</h4>
         <div className="flex items-center gap-2 mb-2">
             <input type="text" placeholder="Nombre (ej: Plural)" value={data.name} onChange={e => setData({ ...data, name: e.target.value })} className="flex-grow bg-surface border-subtle rounded py-1 px-2 text-sm" />
-            <select value={data.type} onChange={e => setData({ ...data, type: e.target.value })} className="bg-surface border-subtle rounded py-1 px-2 text-sm"><option value="simple">Simple</option><option value="conditional">Condicional</option></select>
+            <select value={data.type} onChange={e => setData({ ...data, type: e.target.value as NewRuleData['type'] })} className="bg-surface border-subtle rounded py-1 px-2 text-sm"><option value="simple">Simple</option><option value="conditional">Condicional</option></select>
         </div>
         {data.type === 'simple' ? <SimpleRuleEditor value={data.template} onChange={template => setData({ ...data, template })} />
             : <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                    <select value={data.conditionType} onChange={e => setData({ ...data, conditionType: e.target.value })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="endsWith">Si termina con</option><option value="startsWith">Si empieza con</option><option value="contains">Si contiene</option></select>
+                    <select value={data.conditionType} onChange={e => setData({ ...data, conditionType: e.target.value as ConditionType })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="endsWith">Si termina con</option><option value="startsWith">Si empieza con</option><option value="contains">Si contiene</option></select>
                     <input type="text" placeholder="Valor..." value={data.conditionValue} onChange={e => setData({ ...data, conditionValue: e.target.value })} className="w-full bg-surface border-subtle rounded py-1 px-2" />
                 </div>
                 <div>
-                    <select value={data.actionType} onChange={e => setData({ ...data, actionType: e.target.value })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="replaceEnding">Reemplazar final</option><option value="addSuffix">Añadir sufijo</option><option value="addPrefix">Añadir prefijo</option></select>
+                    <select value={data.actionType} onChange={e => setData({ ...data, actionType: e.target.value as ActionType })} className="w-full bg-surface border-subtle rounded py-1 px-2 mb-1"><option value="replaceEnding">Reemplazar final</option><option value="addSuffix">Añadir sufijo</option><option value="addPrefix">Añadir prefijo</option></select>
                     <input type="text" placeholder="Valor..." value={data.actionValue} onChange={e => setData({ ...data, actionValue: e.target.value })} className="w-full bg-surface border-subtle rounded py-1 px-2" />
                 </div>
             </div>}
