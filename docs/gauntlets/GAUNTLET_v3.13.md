@@ -79,7 +79,7 @@ de la re-verificación. Commit + push + CI verde.
 - [x] Spec completa escrita con datos reales de HEAD.
 - [x] Re-verificación de los 15 puntos con evidencia file:line.
 - [x] Baseline typecheck / vitest / lint / build registrada.
-- [ ] Commit + push + CI verde con número de run.
+- [x] Commit `0aebf84` + push + CI verde: run `45785326733` (`success`, 7m8s, `headSha=0aebf84`).
 
 ---
 
@@ -223,11 +223,13 @@ fallar el propio trabajo:
 |---|---|---|
 | HEAD y divergencia reales | `b0c22a7`, `origin/master=a3230ad`, 9 commits ahead (`git log`, `git status -sb`) | 🟢 |
 | CI del tip remoto verde | run `45765573476` (`gh run list --limit 3`) | 🟢 |
-| 14 bugs re-verificados, ninguno pre-resuelto | tabla de re-verificación con `file:line` y `graft grep` | 🟢 |
+| 15 puntos re-verificados, ninguno pre-resuelto | tabla de re-verificación con `file:line` y `graft grep` | 🟢 |
 | Baseline verde | typecheck 0, vitest 875/875, lint 0, build 0 | 🟢 |
-| Commit + push + CI verde de la FASE 0 | pendiente; se completa con número de run | 🔴 |
+| Commit + push + CI verde de la FASE 0 | commit `0aebf84`, push confirmado (`a3230ad..0aebf84 master -> master`), run `45785326733` `success` con `headSha=0aebf84` | 🟢 |
 
-**FASE 0 INCOMPLETA — falta: commit + push + CI verde con número de run.**
+**FASE 0 TERMINADA** — commit `0aebf84`, push verificado, CI verde run
+`45785326733` (7m8s). El commit de cierre documental que registra este run se
+publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 
 ---
 
