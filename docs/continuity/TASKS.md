@@ -4744,3 +4744,17 @@ Pendiente: FASE D (demo del usuario) y FASE R del gauntlet v3.14.
 2 `.default(... as any)` justificados: no tocar sin alterar el parseo en runtime). El flujo de
 auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones
 de producto. Push de `7446e54` + CI con número de run pendiente de autorización.
+
+## [2026-11-26] Checkpoint: CLN — tipado estricto de `runtimeValidation` (P1 God Component)
+
+**Rama:** `master`. **Motivo:** frente accionable verificado por el supervisor cron sobre un árbol limpio y en verde (`git status` vacío, CI `45765573476` completada en success, `npm run typecheck` 0). `normalize.ts` sigue siendo el bloque documentado pero no es atómico (cambiaría el parseo en runtime), así que se cerró el único `as any` real de `src/validation/runtimeValidation.ts`.
+
+**Decisión:** el config de fonología del smoke-test se declara como `PhonologyConfig` (tipo canónico de `src/types.ts`) en lugar de un literal con `as any`. El `as any` existía solo porque el literal omitía el campo obligatorio `maxConsonantClusters`; se añade `maxConsonantClusters: 2`. Verificado que `validate()` no lee ese campo, así que no hay cambio de comportamiento. El mismo literal se tipa en el test (sin cast).
+
+**Cambios (commit `e0ac5ec`):**
+- `src/validation/runtimeValidation.ts`: 1 `any` → 0; import de `PhonologyConfig`, config extraído a `testPhonology: PhonologyConfig`.
+- `src/validation/__tests__/runtimeValidation.test.ts`: `as any` eliminado, campo obligatorio añadido.
+
+**Validaciones:** typecheck 0 · lint OK · build OK · vitest 867/867 (108 archivos) · audit:orphans 13 (baseline). `origin/master` sigue 3 commits atrás (`7446e54`, `e8c3b9a`, `e0ac5ec`) sin push por diseño del skill. Sin cambio de modelo: `tencent/hy4-flash:free` responde y no hay señal de cuota.
+
+**Próximo bloque ejecutable (CLN/P1):** los `any` restantes fuera de `normalize.ts`: `GrammarPragmaticPanel.tsx` (9), `InflectionView.tsx` (7), `main.tsx` (6), `neography/pathUtils.ts` (6), `types.ts` (5), `ToolsTab.tsx` (5). `normalize.ts` (19 `z.any()` + 2 `.default(... as any)`) no es atómico. El flujo de auditoría muerto de `useWorkQueue` y el destino de los 13 huérfanos siguen siendo decisiones de producto. Push + CI con número de run, FASE D (demo) y FASE R del gauntlet v3.14 siguen pendientes de autorización/del usuario.
