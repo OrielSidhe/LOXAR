@@ -1,4 +1,6 @@
 import React from 'react';
+import type { GenerationMode, LexiconEntry } from '../types';
+import type { GenerationModeOption } from '../utils/entryEditorModel';
 import Tooltip from './Tooltip';
 import SaveIcon from './icons/SaveIcon';
 import CancelIcon from './icons/CancelIcon';
@@ -24,7 +26,7 @@ export interface EntryEditorFormProps {
   significados: string[];
   onSignificadosChange: (vals: string[]) => void;
   significadoInputRef: React.Ref<HTMLDivElement>;
-  duplicateSignificados: any[];
+  duplicateSignificados: LexiconEntry[];
   isAddingCategory: boolean;
   newCategoryInput: string;
   onNewCategoryInputChange: (value: string) => void;
@@ -34,22 +36,22 @@ export interface EntryEditorFormProps {
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
   allCategories: string[];
   categoriaSelectRef: React.Ref<HTMLSelectElement>;
-  duplicateRaices: any[];
+  duplicateRaices: LexiconEntry[];
   raizInputRef: React.Ref<HTMLInputElement>;
-  duplicateLexemas: any[];
+  duplicateLexemas: LexiconEntry[];
   lexemaInputRef: React.Ref<HTMLInputElement>;
   showIPA: boolean;
   onToggleIPA: () => void;
   error: string | null;
-  generationModes: any[];
-  onToggleGenerationMode: (mode: any) => void;
+  generationModes: GenerationMode[];
+  onToggleGenerationMode: (mode: GenerationMode) => void;
   onAiGenerate: () => void;
   onAiComplete: () => void;
   isGenerating: boolean;
   isCompleting: boolean;
   isAiButtonDisabled: boolean;
   activeModeDescription: string;
-  generationModeOptions: { id: any; label: string; tip: string }[];
+  generationModeOptions: GenerationModeOption[];
 }
 
 const EntryEditorForm = ({
