@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import type { AISettings as GenericAISettings, AIProviderConfig } from '../aiProviderRegistry';
 import {
   PRESET_PROVIDERS,
+  NOUS_DEFAULT_USER_TAG,
+  buildNousPreset,
   DEFAULT_PROVIDERS,
   getProvider,
   migrateLegacyToGeneric,
@@ -35,15 +37,27 @@ describe('PRESET_PROVIDERS', () => {
   it('includes a NousResearch preset with the correct inference API base URL', () => {
     const nous = PRESET_PROVIDERS.find(p => p.id === 'nous');
     expect(nous).toBeDefined();
-    expect(nous!.baseURL).toBe('https://inference-api.nousresearch.com/v1');
+    expect(nous!.baseURL).toBe('https://api.nousresearch.com/v1');
     expect(nous!.endpointStyle).toBe('openai-chat');
   });
 
-  it('NousResearch preset includes poolside/laguna-s-2.1:free model', () => {
+  it('NousResearch preset uses stepfun/step-3.7-flash:free as default model', () => {
     const nous = PRESET_PROVIDERS.find(p => p.id === 'nous');
     expect(nous).toBeDefined();
-    expect(nous!.models).toContain('poolside/laguna-s-2.1:free');
-    expect(nous!.defaultModel).toBe('poolside/laguna-s-2.1:free');
+    expect(nous!.models).toContain('stepfun/step-3.7-flash:free');
+    expect(nous!.defaultModel).toBe('stepfun/step-3.7-flash:free');
+  });
+
+  it('Nous preset carries the required user tag in extraBody and keeps reasoning off', () => {
+    const nous = PRESET_PROVIDERS.find(p => p.id === 'nous');
+    expect(nous).toBeDefined();
+    expect(nous!.extraBody).toEqual({ tags: [`user=${NOUS_DEFAULT_USER_TAG}`] });
+    expect(nous!.reasoningEffort).toBe('off');
+  });
+
+  it('buildNousPreset replaces the UID and falls back on an empty tag', () => {
+    expect(buildNousPreset('uid-123').extraBody).toEqual({ tags: ['user=uid-123'] });
+    expect(buildNousPreset('   ').extraBody).toEqual({ tags: [`user=${NOUS_DEFAULT_USER_TAG}`] });
   });
 
   it('includes OpenAI and Groq presets', () => {
@@ -63,18 +77,54 @@ describe('PRESET_PROVIDERS', () => {
     expect(openrouter!.endpointStyle).toBe('openai-chat');
   });
 
-  it('NousResearch preset defaultModel is poolside/laguna-s-2.1:free', () => {
+  it('NousResearch preset keeps the legacy free model in its list', () => {
     const nous = PRESET_PROVIDERS.find(p => p.id === 'nous');
     expect(nous).toBeDefined();
     // The colon in "poolside/laguna-s-2.1:free" is a HuggingFace convention, not a "gemini:2.5" error.
-    expect(nous!.defaultModel).toBe('poolside/laguna-s-2.1:free');
+    expect(nous!.defaultModel).toBe('stepfun/step-3.7-flash:free');
+    expect(nous!.models).toContain('poolside/laguna-s-2.1:free');
   });
 
-  it('Gemini default provider uses dash not colon in model name (no "gemini:2.5" pattern)', () => {
+  it('Gemini default provider uses dash not colon in model name (no “gemini:2.5” pattern)', () => {
     const gemini = DEFAULT_PROVIDERS.find(p => p.id === 'gemini');
     expect(gemini).toBeDefined();
     expect(gemini!.defaultModel).toBe('gemini-2.5-flash');
     expect(gemini!.defaultModel).not.toMatch(/^gemini:/);
+  });
+});
+
+describe('FASE E: presets y persistencia de extraBody', () => {
+  beforeEach(() => mockLocalStorage.clear());
+
+  it('Groq preset defaults to the free gpt-oss-120b model', () => {
+    const groq = PRESET_PROVIDERS.find(p => p.id === 'groq');
+    expect(groq).toBeDefined();
+    expect(groq!.defaultModel).toBe('openai/gpt-oss-120b');
+    expect(groq!.models).toContain('openai/gpt-oss-120b');
+  });
+
+  it('includes free OpenAI-compatible presets for Cloudflare, NVIDIA and local Ollama', () => {
+    const cloudflare = PRESET_PROVIDERS.find(p => p.id === 'cloudflare');
+    const nvidia = PRESET_PROVIDERS.find(p => p.id === 'nvidia');
+    const ollama = PRESET_PROVIDERS.find(p => p.id === 'ollama-openai');
+    expect(cloudflare?.baseURL).toContain('/ai/v1');
+    expect(cloudflare?.endpointStyle).toBe('openai-chat');
+    expect(nvidia?.baseURL).toBe('https://integrate.api.nvidia.com/v1');
+    expect(nvidia?.endpointStyle).toBe('openai-chat');
+    expect(ollama?.baseURL).toBe('http://localhost:11434/v1');
+    expect(ollama?.apiKey).toBe('');
+    expect(ollama?.endpointStyle).toBe('openai-chat');
+  });
+
+  it('persists extraBody and requestTimeoutMs through save/load round-trip', async () => {
+    await saveGenericAISettings({
+      activeProviderId: 'nous',
+      providers: [{ ...buildNousPreset('uid-persist'), requestTimeoutMs: 45000 }],
+    });
+    const loaded = await loadGenericAISettings();
+    expect(loaded.activeProviderId).toBe('nous');
+    expect(loaded.providers[0].extraBody).toEqual({ tags: ['user=uid-persist'] });
+    expect(loaded.providers[0].requestTimeoutMs).toBe(45000);
   });
 });
 

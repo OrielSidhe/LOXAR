@@ -50,24 +50,38 @@ export const DEFAULT_PROVIDERS: AIProviderConfig[] = [
  * These are *templates* — applying a preset creates/updates a provider
  * entry but never overwrites an existing API key.
  */
-export const PRESET_PROVIDERS: AIProviderConfig[] = [
-  {
+/**
+ * Default Nous user tag. Nous rejects requests without `tags: ["user=<uid>"]`,
+ * so the preset ships a documented placeholder that the user replaces with
+ * their own UID in the provider form (FASE E, v3.13).
+ */
+export const NOUS_DEFAULT_USER_TAG = 'loxar';
+
+/** Build the Nous preset with a configurable user tag (required by Nous). */
+export function buildNousPreset(userTag: string): AIProviderConfig {
+  const tag = userTag.trim() || NOUS_DEFAULT_USER_TAG;
+  return {
     id: 'nous',
     name: 'NousResearch',
-    baseURL: 'https://inference-api.nousresearch.com/v1',
+    baseURL: 'https://api.nousresearch.com/v1',
     apiKey: '',
     authHeader: 'Authorization',
     endpointStyle: 'openai-chat',
-    defaultModel: 'poolside/laguna-s-2.1:free',
+    defaultModel: 'stepfun/step-3.7-flash:free',
     models: [
+      'stepfun/step-3.7-flash:free',
       'poolside/laguna-s-2.1:free',
-      'poolside/laguna-s-2.1',
-      'hermes-3-llama-3.1-405b',
-      'hermes-3-llama-3.1-70b',
-      'hermes-2-mixtral-8x7b',
+      'meituan/longcat-2.5-preview:free',
+      'upstage/solar-mini4:free',
+      'reflection/beam-1.0-501b-a23b:free',
     ],
+    extraBody: { tags: [`user=${tag}`] },
     reasoningEffort: 'off',
-  },
+  };
+}
+
+export const PRESET_PROVIDERS: AIProviderConfig[] = [
+  buildNousPreset(NOUS_DEFAULT_USER_TAG),
   {
     id: 'openai',
     name: 'OpenAI',
@@ -86,8 +100,8 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
     apiKey: '',
     authHeader: 'Authorization',
     endpointStyle: 'openai-chat',
-    defaultModel: 'llama-3.1-70b-versatile',
-    models: ['llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+    defaultModel: 'openai/gpt-oss-120b',
+    models: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant'],
     reasoningEffort: 'off',
   },
   {
@@ -116,6 +130,47 @@ export const PRESET_PROVIDERS: AIProviderConfig[] = [
       'google/gemini-2.5-flash',
       'google/gemini-2.5-pro',
     ],
+    reasoningEffort: 'off',
+  },
+  {
+    id: 'cloudflare',
+    name: 'Cloudflare Workers AI',
+    baseURL: 'https://api.cloudflare.com/client/v4/accounts/REPLACE_WITH_ACCOUNT_ID/ai/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: '@cf/meta/llama-3.1-8b-instruct',
+    models: [
+      '@cf/meta/llama-3.1-8b-instruct',
+      '@cf/mistral/mistral-7b-instruct-v0.2',
+      '@cf/qwen/qwen2.5-coder-32b-instruct',
+    ],
+    reasoningEffort: 'off',
+  },
+  {
+    id: 'nvidia',
+    name: 'NVIDIA NIM',
+    baseURL: 'https://integrate.api.nvidia.com/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'nvidia/llama-3.1-nemotron-70b-instruct',
+    models: [
+      'nvidia/llama-3.1-nemotron-70b-instruct',
+      'meta/llama-3.1-405b-instruct',
+      'qwen/qwen2.5-coder-32b-instruct',
+    ],
+    reasoningEffort: 'off',
+  },
+  {
+    id: 'ollama-openai',
+    name: 'Ollama (OpenAI-compatible)',
+    baseURL: 'http://localhost:11434/v1',
+    apiKey: '',
+    authHeader: 'Authorization',
+    endpointStyle: 'openai-chat',
+    defaultModel: 'llama3.1',
+    models: ['llama3.1', 'llama3.2', 'qwen2.5', 'mistral', 'phi3'],
     reasoningEffort: 'off',
   },
 ];
