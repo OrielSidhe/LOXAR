@@ -51,8 +51,8 @@ describe('runtimeValidation', () => {
     // Test phonology
     const phonologyResult = validate('ka', {
       inventory: { vowels: ['a', 'e', 'i', 'o', 'u'], consonants: ['k'] },
-      phonotactics: { syllableStructures: ['CV', 'CVC'] },
-    } as any);
+      phonotactics: { syllableStructures: ['CV', 'CVC'], maxConsonantClusters: 2 },
+    });
     assert(Array.isArray(phonologyResult), 'Phonology should return array');
   });
 });

@@ -2,7 +2,7 @@
 import { realizeLexeme } from '../services/grammar/morphology';
 import { realizeClause } from '../services/grammar/syntax';
 import { validate } from '../services/grammar/phonology';
-import type { GrammarManifest } from '../types';
+import type { GrammarManifest, PhonologyConfig } from '../types';
 
 /**
  * Validates that the grammar engine is working correctly by performing
@@ -56,15 +56,17 @@ export function validateGrammarEngine(): boolean {
     }
 
     // Test phonology: validate a simple CV syllable (should pass with default phonology)
-    const phonologyResult = validate('ka', {
+    const testPhonology: PhonologyConfig = {
       inventory: {
         vowels: ['a', 'e', 'i', 'o', 'u'],
         consonants: ['k'],
       },
       phonotactics: {
         syllableStructures: ['CV', 'CVC'],
+        maxConsonantClusters: 2,
       },
-    } as any);
+    };
+    const phonologyResult = validate('ka', testPhonology);
     if (!Array.isArray(phonologyResult)) {
       return false;
     }
