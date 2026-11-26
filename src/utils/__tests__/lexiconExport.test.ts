@@ -85,14 +85,24 @@ describe('lexiconExport: contenido por formato', () => {
     expect(txt).not.toContain('externalID');
   });
 
-  it('MD tiene cabecera markdown, tabla y escapa tuberías', () => {
+  it('MD tiene cabecera, secciones por categoría, tabla y escapa tuberías', () => {
     const md = buildMdContent({
       lexiconName: 'Quavanol',
       metadata: { conlangName: 'Quavanol', mainLanguage: 'Español' },
-      entries: [entry({ Significado: ['a|b'] })],
+      entries: [
+        entry({ Significado: ['a|b'] }),
+        entry({ ID: '2', Categoría: 'verbo', Léxema: ['telo'], Significado: ['ver'] }),
+        entry({ ID: '3', Categoría: '', Léxema: ['sin-cat'] }),
+      ],
     });
 
     expect(md).toContain('# Léxico: Quavanol');
+    expect(md).toContain('**Fecha de exportación:** ');
+    expect(md).toContain('**Entradas:** 3');
+    expect(md).toContain('## sustantivo');
+    expect(md).toContain('## verbo');
+    expect(md).toContain('## Sin categoría');
+    expect(md.indexOf('## sustantivo')).toBeLessThan(md.indexOf('## verbo'));
     expect(md).toContain('| # | Raíz | Léxema | Categoría | Significado | externalID |');
     expect(md).toContain('a\\|b');
   });

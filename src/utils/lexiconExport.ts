@@ -131,8 +131,9 @@ export const buildTxtContent = ({ lexiconName, metadata, entries }: LexiconExpor
 };
 
 /**
- * MD: el mismo contenido que TXT con una cabecera en markdown y una tabla
- * por entrada (una fila por lexema, que es la forma legible de leer un léxico).
+ * MD: cabecera markdown (nombre del léxico + fecha) y una sección por
+ * categoría con tabla de entradas completas. Orden de categorías = primera
+ * aparición en el léxico; las entradas sin categoría van a "Sin categoría".
  */
 export const buildMdContent = ({ lexiconName, metadata, entries }: LexiconExportTarget): string => {
   const lines: string[] = [
@@ -142,23 +143,33 @@ export const buildMdContent = ({ lexiconName, metadata, entries }: LexiconExport
   if (metadata?.mainLanguage) lines.push(`**Idioma principal:** ${metadata.mainLanguage}`);
   lines.push(`**Fecha de exportación:** ${exportDateStamp()}`);
   lines.push(`**Entradas:** ${entries.length}`);
-  lines.push('');
-  lines.push('| # | Raíz | Léxema | Categoría | Significado | externalID |');
-  lines.push('| --- | --- | --- | --- | --- | --- |');
 
-  entries.forEach((entry, index) => {
-    const cell = (value: string): string => value.replace(/\|/g, '\\|');
-    lines.push(
-      [
-        String(index + 1),
-        cell(single([entry.Raíz])),
-        cell(joinList(entry.Léxema).replace(/,/g, '; ')),
-        cell(entry.Categoría ?? ''),
-        cell(joinList(entry.Significado).replace(/,/g, '; ')),
-        cell(entry.externalID ?? ''),
-      ].join(' | '),
-    );
-  });
+  const byCategory = new Map<string, LexiconEntry[]>();
+  for (const entry of entries) {
+    const category = entry.Categoría?.trim() || 'Sin categoría';
+    const group = byCategory.get(category);
+    if (group) group.push(entry);
+    else byCategory.set(category, [entry]);
+  }
+
+  const cell = (value: string): string => value.replace(/\|/g, '\\|');
+  for (const [category, group] of byCategory) {
+    lines.push('', `## ${category}`, '');
+    lines.push('| # | Raíz | Léxema | Categoría | Significado | externalID |');
+    lines.push('| --- | --- | --- | --- | --- | --- |');
+    group.forEach((entry, index) => {
+      lines.push(
+        [
+          String(index + 1),
+          cell(single([entry.Raíz])),
+          cell(joinList(entry.Léxema).replace(/,/g, '; ')),
+          cell(entry.Categoría?.trim() || category),
+          cell(joinList(entry.Significado).replace(/,/g, '; ')),
+          cell(entry.externalID ?? ''),
+        ].join(' | '),
+      );
+    });
+  }
 
   return lines.join('\n');
 };
