@@ -4771,3 +4771,32 @@ de producto. Push de `7446e54` + CI con número de run pendiente de autorizació
 **Validaciones:** typecheck 0 · lint OK · build OK · vitest 873/873 (109 archivos) · `npm run test:gui -- --workers=1 --reporter=line` 8/8 en 2.6 min · audit:orphans 13 (baseline). `origin/master` sigue atras sin push por diseno del skill. Sin cambio de modelo: `tencent/hy4-flash:free` responde y no hay senal de cuota.
 
 **Proximo bloque ejecutable (CLN/P1):** `GrammarPragmaticPanel.tsx` (9 `any` reales), `InflectionView.tsx` (7), `main.tsx` (6), `types.ts` (5), `ToolsTab.tsx` (5). `normalize.ts` (19 `z.any()` + 2 `.default(... as any)`) no es atomico. El flujo de auditoria muerto de `useWorkQueue` y el destino de los 13 huerfanos siguen siendo decisiones de producto. Push + CI con numero de run, FASE D (demo) y FASE R del gauntlet v3.14 siguen pendientes.
+## [2026-11-26] Checkpoint: CLN — InflectionView + ToolsTab (P1 God Component)
+
+**Rama:** `master`. **Motivo:** dos bloques atomicos de tipado estricto quedaron sin checkpoint:
+`3429a8d` (proceso paralelo: `InflectionView.tsx`, 7 `any` -> 0 con uniones derivadas del dominio)
+y `6b54cb3` (supervisor cron: `ToolsTab.tsx`, 5 `any` -> 0 con tipos derivados de los componentes
+hijo). Se documentan juntos porque la verificacion final se ejecuto sobre el arbol combinado.
+
+**Decision:** en `ToolsTab.tsx` las props `suggestions`, `onAddManually`, `onGenerateAI` y
+`activeMetadata` toman sus tipos de `React.ComponentProps<typeof SuggestionsWorkbench>`, y `stats`
+de `React.ComponentProps<typeof ToolsDashboard>`. Sin cambio de comportamiento: los tipos son los
+mismos que ya consumian los hijos, asi que no hay drift posible al cambiar los contratos. Test nuevo
+`toolsTab.test.tsx` (2 tests, jsdom manual con hijos mockeados) fija el paso de `stats` y de
+sugerencias/metadatos. `InflectionView` fue tipado por el proceso concurrente; no se toco.
+
+**Cambios (commits `3429a8d`, `6b54cb3`):**
+- `src/components/InflectionView.tsx`: 7 `any` -> 0 (uniones del dominio).
+- `src/components/ToolsTab.tsx`: 5 `any` -> 0.
+- `src/components/__tests__/toolsTab.test.tsx` (nuevo, 2 tests).
+
+**Validaciones sobre el arbol combinado:** typecheck 0 · lint OK · build OK · vitest 875/875
+(110 archivos) · `npm run test:gui -- --workers=1 --reporter=line` 8/8 en 3.4 min ·
+audit:orphans 13 (baseline). `origin/master` sigue atras sin push por diseno del skill; el ultimo
+CI verificado es el run `45765573476` (success, head `a3230ad`). Sin cambio de modelo:
+`tencent/hy4-flash:free` responde y no hay senal de cuota.
+
+**Proximo bloque ejecutable (CLN/P1):** `GrammarPragmaticPanel.tsx` (9 `any` reales), `main.tsx` (6),
+`types.ts` (5). `normalize.ts` (19 `z.any()` + 2 `.default(... as any)`) no es atomico. El flujo de
+auditoria muerto de `useWorkQueue` y el destino de los 13 huerfanos siguen siendo decisiones de
+producto. Push + CI con numero de run, FASE D (demo) y FASE R del gauntlet v3.14 siguen pendientes.
