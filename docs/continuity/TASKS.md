@@ -21,8 +21,9 @@ audit:orphans 13 (baseline) · `npm run test:gui -- --workers=1 --reporter=line`
 con dev server caliente. Sin señal de cuota: `tencent/hy4-flash:free` responde, sin cambio de modelo.
 
 **Pendiente:** FASE D (demo del usuario: añadir proveedor real, editar sin perder `extraBody`,
-probar con error inducido, obtener modelos), FASE R (reporte final) y el push de los commits
-documentales locales. El push requiere autorización; el de FASE T ya está verificado.
+probar con error inducido, obtener modelos) y FASE R (reporte final). Push al día:
+`d6e653d..0d6f443`, CI run `45816750895` attempt 1 `success` (head `0d6f443`), 0 commits
+locales sin publicar.
 
 ---
 ## [2026-11-26 05:12] Checkpoint: Dropdown — cierre real y tipado estricto

@@ -17,13 +17,12 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Gauntlet v3.13: FASE U, E, M, G y T cerradas; push `86f3e42..d6e653d` verificado, CI `45808270226` success (attempt 1, head `d6e653d`). FASE D (demo del usuario) y R final pendientes.
 - Últimos bloques: `d6e653d` (Dropdown cierra al elegir opción, teclado y 0 `any`), `11ae2c9` (FASE T: probar sin guardar + hints), `3429a8d` y `6b54cb3` (CLN/P1).
 - CI fijada a Node 24.15.0 (`d1a8e8e`): verificado en local contra el fallo previo de Node 20 (`undici@8.12.3` en 3 suites jsdom); typecheck/lint/build y vitest 865/865 en verde.
-- Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
-  R (reporte final) y `git push` + CI con número de run (requiere autorización)
+- Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas y publicadas; pendientes D (demo del
+  usuario) y R (reporte final). Push al día: 0 commits locales sin publicar.
 - `tauri:build` funcionando (Vite + Tauri 2.11.1 alineados)
 - Git inicializado y con commits; último commit de código `a3c3efc` (pathUtils 9 `any` → 0 + 6 tests); antes `e0ac5ec` (runtimeValidation 1 `any` → 0), `7446e54` (EntryEditorForm 0 `any` + test de contrato); antes `a3230ad` (export MD agrupado por categoría, v3.14 D2, ya en `origin/master`), `ab925ad` (errores de IA acotados en Ollama: cuerpo truncado a 2000 caracteres y timeout en `testConnection`, criterio X1 de v3.9 extendido al adaptador Ollama); antes `9719ff8` de `audioService` y `aiProviderRegistry` (0 `any` reales en `services/`), `82da775` de `prompts`, `eecee83` de `geminiService`, `8fb648f` de `ftsSearch`, `5ec1da7` de `jsonWorker`, `0b380e9` de `sessionCache`, `f2021da` de `normalize` y `b2ecfca` de `sqlStorage` + transacciones SQLite
-  explícitas, P1 God Component); 1 commit local sin push (`7446e54`), el resto publicado
-  por un proceso paralelo en `origin/master`; CI en curso run `45765573476` (no reportar verde
-  hasta confirmar). El push del commit local requiere autorización.
+  explícitas, P1 God Component); todas publicadas en `origin/master`, sin commits locales sin
+  push. CI verde en el tip: run `45816750895` attempt 1 `success` (head `0d6f443`).
 - P1-2f fue revertido: `useProjectShell` se descartó porque generaba dependencias circulares con
   `App.tsx`; se mantienen los hooks ya estables (`useAppHandlers`, `useAiHandlers`,
   `useProjectOperations`, `useWorkQueue`, `useWidgetBridge`)
@@ -923,12 +922,10 @@ sigue derivándose de `morphologyToTypologyProfile` y `rulesCount` reutiliza `ge
 (91 archivos), audit:orphans 13, `npm run test:gui` 8/8 (1 worker, dev server caliente).
 Commit `f536f27`.
 
-**[ ] CLN — empujar el trabajo local y cerrar CI (BLOQUEADO: requiere autorización).**
-**Hay 44 commits locales** en `master` que no están en `origin` (`git rev-list --count
-origin/master..master`; el más reciente es `f536f27`). El Gauntlet v3.12 exige `push` + CI verde con número de run para cerrar la Fase J; el skill
-`loxar-progress-supervisor` prohíbe push automático. `gh auth` está activo y con scopes
-`repo`+`workflow`, así que el push es viable de inmediato si el usuario lo autoriza. Sin eso no
-hay número de run y la fase queda formalmente abierta.
+**[x] CLN — empujar el trabajo local y cerrar CI (2026-11-26).**
+Sin commits locales sin publicar (`git rev-list --count origin/master..master` = 0). Último push
+`d6e653d..0d6f443`; CI run `45816750895` attempt 1 `success` (head `0d6f443`). El requisito de
+push + CI de la Fase J del GAUNTLET v3.12 queda satisfecho; su demo sigue pendiente del usuario.
 
 **[ ] CLN — decidir destino de los 13 huérfanos de `src/`.** Inventario reproducible con
 `npm run audit:orphans` (creado en `aeea62a`; baseline después de `e26145c`). Ya borrados en
