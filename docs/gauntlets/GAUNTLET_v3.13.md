@@ -92,11 +92,11 @@ el formulario de verdad. Hoy `editingProvider` se setea pero nunca se muestra;
 borra esos campos). Editar ≠ activar: se edita sin cambiar el proveedor activo.
 
 **Checklist FASE U**
-- [ ] Render condicional del formulario para crear y editar.
-- [ ] `ProviderFormData` con `extraBody` y `requestTimeoutMs`.
-- [ ] `saveEditingProvider` cableado; `handleReasoningEffortChange` cableado.
-- [ ] Editar no modifica `activeProviderId`.
-- [ ] Tests del formulario (crear/editar/preservar campos) con mocks de storage.
+- [x] Render condicional del formulario para crear y editar.
+- [x] `ProviderFormData` con `extraBody` y `requestTimeoutMs`.
+- [x] `saveEditingProvider` cableado; `handleReasoningEffortChange` cableado.
+- [x] Editar no modifica `activeProviderId`.
+- [x] Tests del formulario (crear/editar/preservar campos) con mocks de storage.
 - [ ] Commit + push + CI verde con número de run.
 
 ---
@@ -115,10 +115,10 @@ Añadir también presets OpenAI-compatibles gratuitos: Groq (`gpt-oss-120b`),
 Cloudflare Workers AI, NVIDIA y Ollama localhost (sin key, offline).
 
 **Checklist FASE E**
-- [ ] `extraBody` y `requestTimeoutMs` sobreviven crear → editar → guardar → recargar.
-- [ ] Preset Nous con base/modelo/tags correctos y reasoning OFF.
-- [ ] Presets Groq (gpt-oss-120b), Cloudflare, NVIDIA y Ollama.
-- [ ] Tests de persistencia y de merge en adapter.
+- [x] `extraBody` y `requestTimeoutMs` sobreviven crear → editar → guardar → recargar.
+- [x] Preset Nous con base/modelo/tags correctos y reasoning OFF.
+- [x] Presets Groq (gpt-oss-120b), Cloudflare, NVIDIA y Ollama.
+- [x] Tests de persistencia y de merge en adapter.
 - [ ] Commit + push + CI verde con número de run.
 
 ---
@@ -233,6 +233,31 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 
 ---
 
+### R-U — FASE U
+
+| Afirmación | Evidencia | Veredicto |
+|---|---|---|
+| Formulario real de crear/editar proveedor | commit `86f3e42`, `AiSettingsModal.test.tsx` 3/3 | 🟢 |
+| `extraBody` y `requestTimeoutMs` sobreviven editar sin activar | test `edita sin perder extraBody ni timeout...` | 🟢 |
+| typecheck / vitest sobre el árbol de FASE U | typecheck 0, vitest 881/881 (111 archivos) | 🟢 |
+| Push + CI verde de FASE U | run `45788851335` `in_progress` al cierre de este turno | ⚠️ |
+
+**FASE U INCOMPLETA** — falta confirmar CI verde con número de run del push `86f3e42`.
+
+### R-E — FASE E
+
+| Afirmación | Evidencia | Veredicto |
+|---|---|---|
+| Preset Nous con base/modelo/tag y reasoning OFF | `aiProviderRegistry.ts` `buildNousPreset`, tests de registry | 🟢 |
+| Presets Groq/Cloudflare/NVIDIA/Ollama OpenAI-compatible | `PRESET_PROVIDERS`, test de ids/baseURL | 🟢 |
+| Persistencia de `extraBody`/`requestTimeoutMs` | round-trip save/load en `aiProviderRegistry.test.ts` | 🟢 |
+| Merge en adapter | `aiProviders.test.ts` 38/38 (preexistente, re-verificado) | 🟢 |
+| typecheck / lint / build / vitest | 0 / OK / OK / 883/883 (111 archivos) | 🟢 |
+| Push + CI verde de FASE E | commit local `fd60cc9`, sin push por diseño del supervisor | ⚠️ |
+
+**FASE E INCOMPLETA** — falta push + CI verde con número de run.
+
+---
 ## PROTOCOLO DE REPORTE
 
 - Evidencia `file:line`.

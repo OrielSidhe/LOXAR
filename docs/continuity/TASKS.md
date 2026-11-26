@@ -4800,3 +4800,35 @@ CI verificado es el run `45765573476` (success, head `a3230ad`). Sin cambio de m
 `types.ts` (5). `normalize.ts` (19 `z.any()` + 2 `.default(... as any)`) no es atomico. El flujo de
 auditoria muerto de `useWorkQueue` y el destino de los 13 huerfanos siguen siendo decisiones de
 producto. Push + CI con numero de run, FASE D (demo) y FASE R del gauntlet v3.14 siguen pendientes.
+
+## [2026-11-26] Checkpoint: v3.13 FASE U + E (providers)
+
+**Rama:** `master`. **Motivo:** FASE U quedó commiteada sin checkpoint y FASE E se cerró
+en este turno sobre un árbol limpio y verde. El supervisor detectó un cron paralelo
+editando `AiSettingsModal.tsx`/su test; no se tocó ese trabajo: se verificó y se
+cerró con `86f3e42`, y este turno eligió un bloque atómico distinto (registry de presets).
+
+**Decisión U:** el formulario de proveedor (crear/editar) por fin se renderiza;
+`ProviderFormData` incluye `extraBody` y `requestTimeoutMs`; `saveEditingProvider` y
+`handleReasoningEffortChange` dejaron de ser código muerto; editar no cambia el
+`activeProviderId`. Test jsdom manual (3 tests) con mocks de storage.
+
+**Decisión E:** preset Nous apunta a `https://api.nousresearch.com/v1`, usa
+`stepfun/step-3.7-flash:free` y lleva `extraBody.tags=['user=<uid>']` con `reasoningEffort`
+OFF. `buildNousPreset(userTag)` hace el UID configurable y `NOUS_DEFAULT_USER_TAG='loxar'`
+es el placeholder editable en el formulario. Groq pasa a `openai/gpt-oss-120b`; se añaden
+presets de Cloudflare Workers AI, NVIDIA NIM y Ollama OpenAI-compatible (sin key, local).
+Sin cambio de comportamiento en los adapters: el merge de `extraBody` ya existía.
+
+**Cambios (commits `86f3e42`, `fd60cc9`):**
+- `src/components/AiSettingsModal.tsx` + `__tests__/AiSettingsModal.test.tsx` (FASE U).
+- `src/services/aiProviderRegistry.ts` + `__tests__/aiProviderRegistry.test.ts` (FASE E).
+
+**Validaciones finales sobre el árbol combinado:** typecheck 0 · lint OK · build OK ·
+vitest 883/883 (111 archivos). `origin/master` = `86f3e42`; CI run `45788851335`
+(`in_progress` al cierre). Sin cambio de modelo: `tencent/hy4-flash:free` responde y no hay
+señal de cuota.
+
+**Próximo bloque ejecutable:** FASE M (model discovery: `GET {baseUrl}/v1/models`, picker
+en el formulario y presets Google AI Studio). Push + CI verde de `fd60cc9`, FASE D (demo
+del usuario) y FASE R siguen pendientes. El push requiere autorización explícita.
