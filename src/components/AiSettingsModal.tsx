@@ -35,7 +35,11 @@ interface ProviderFormData {
     defaultModel: string;
     models: string[];
     reasoningEffort: ReasoningEffort;
+    extraBody: Record<string, unknown>;
+    requestTimeoutMs: number;
 }
+
+const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
 
 const emptyProvider = (): ProviderFormData => ({
     id: '',
@@ -47,6 +51,8 @@ const emptyProvider = (): ProviderFormData => ({
     defaultModel: '',
     models: [],
     reasoningEffort: 'off',
+    extraBody: {},
+    requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
 });
 
 const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -59,6 +65,8 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [showDebug, setShowDebug] = useState(false);
     const [debugEntries, setDebugEntries] = useState<ReturnType<typeof getDebugLog>>([]);
     const [showApiKey, setShowApiKey] = useState(false);
+    const [extraBodyDraft, setExtraBodyDraft] = useState('{}');
+    const [extraBodyError, setExtraBodyError] = useState<string | null>(null);
 
     const refreshDebug = () => setDebugEntries([...getDebugLog()]);
 
@@ -99,11 +107,12 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 });
                 refreshDebug();
             }
-        } catch (e: any) {
+        } catch (e: unknown) {
+            const error = e instanceof Error ? e : new Error('Error desconocido');
             setTestResult({
                 status: 'error',
-                message: `Error: ${e.message}`,
-                details: e.stack,
+                message: `Error: ${error.message}`,
+                details: error.stack,
             });
         } finally {
             setIsTesting(false);
@@ -115,13 +124,20 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         refreshDebug();
     };
 
+    const openForm = (data: ProviderFormData, creating: boolean) => {
+        setEditingProvider(data);
+        setExtraBodyDraft(JSON.stringify(data.extraBody ?? {}, null, 2));
+        setExtraBodyError(null);
+        setIsCreating(creating);
+        setTestResult({ status: 'idle', message: '' });
+    };
+
     const startCreateProvider = () => {
-        setEditingProvider(emptyProvider());
-        setIsCreating(true);
+        openForm(emptyProvider(), true);
     };
 
     const startEditProvider = (provider: AIProviderConfig) => {
-        setEditingProvider({
+        openForm({
             id: provider.id,
             name: provider.name,
             baseURL: provider.baseURL,
@@ -131,21 +147,33 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             defaultModel: provider.defaultModel,
             models: provider.models,
             reasoningEffort: provider.reasoningEffort || 'off',
-        });
+            extraBody: provider.extraBody ?? {},
+            requestTimeoutMs: provider.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+        }, false);
+    };
+
+    const closeForm = () => {
+        setEditingProvider(null);
         setIsCreating(false);
+        setExtraBodyDraft('{}');
+        setExtraBodyError(null);
     };
 
     const saveEditingProvider = () => {
-        if (!editingProvider) return;
+        if (!editingProvider || extraBodyError) return;
+        const saved: AIProviderConfig = {
+            ...editingProvider,
+            id: editingProvider.id || `custom-${Date.now()}`,
+            extraBody: editingProvider.extraBody,
+            requestTimeoutMs: editingProvider.requestTimeoutMs,
+        };
         setProviders(prev => {
-            const exists = prev.find(p => p.id === editingProvider.id);
-            if (exists) {
-                return prev.map(p => p.id === editingProvider.id ? { ...editingProvider } : p);
-            }
-            return [...prev, { ...editingProvider, id: editingProvider.id || `custom-${Date.now()}` }];
+            const exists = prev.find(p => p.id === saved.id);
+            return exists
+                ? prev.map(p => p.id === saved.id ? saved : p)
+                : [...prev, saved];
         });
-        setEditingProvider(null);
-        setIsCreating(false);
+        closeForm();
     };
 
     const handleReasoningEffortChange = (value: ReasoningEffort) => {
@@ -205,6 +233,21 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const updateEditingProvider = (patch: Partial<ProviderFormData>) => {
         if (!editingProvider) return;
         setEditingProvider({ ...editingProvider, ...patch });
+    };
+
+    const updateExtraBodyDraft = (text: string) => {
+        setExtraBodyDraft(text);
+        try {
+            const parsed: unknown = JSON.parse(text);
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new Error('Debe ser un objeto JSON');
+            }
+            // JSON.parse returns an unshaped object; provider bodies accept arbitrary keys.
+            updateEditingProvider({ extraBody: parsed as Record<string, unknown> });
+            setExtraBodyError(null);
+        } catch (error) {
+            setExtraBodyError(error instanceof Error ? error.message : 'JSON inválido');
+        }
     };
 
     return (
@@ -269,8 +312,114 @@ const AiSettingsModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         </div>
                     </div>
 
+                    {/* Provider form (create / edit) */}
+                    {editingProvider && (
+                        <div className="space-y-4 animate-fade-in border border-accent/40 rounded-md p-4 bg-background/30" data-testid="provider-form">
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-sm font-semibold text-text-primary">
+                                    {isCreating ? 'Nuevo proveedor' : 'Editar proveedor'}
+                                </h3>
+                                <span className="text-xs text-text-secondary">Editar no cambia el proveedor activo</span>
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-name" className="block text-sm font-medium text-text-secondary">Nombre</label>
+                                <input id="form-provider-name" aria-label="Nombre" type="text" value={editingProvider.name}
+                                    onChange={e => updateEditingProvider({ name: e.target.value })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-baseurl" className="block text-sm font-medium text-text-secondary">Base URL</label>
+                                <input id="form-provider-baseurl" aria-label="Base URL" type="text" value={editingProvider.baseURL}
+                                    onChange={e => updateEditingProvider({ baseURL: e.target.value })}
+                                    placeholder="https://..."
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-endpoint" className="block text-sm font-medium text-text-secondary">Endpoint style</label>
+                                <select id="form-provider-endpoint" aria-label="Endpoint style" value={editingProvider.endpointStyle}
+                                    onChange={e => updateEditingProvider({ endpointStyle: e.target.value as ProviderEndpointStyle })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent">
+                                    {ENDPOINT_STYLES.map(style => (
+                                        <option key={style.value} value={style.value}>{style.label}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-authheader" className="block text-sm font-medium text-text-secondary">Auth header</label>
+                                <input id="form-provider-authheader" aria-label="Auth header" type="text" value={editingProvider.authHeader}
+                                    onChange={e => updateEditingProvider({ authHeader: e.target.value })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-apikey" className="block text-sm font-medium text-text-secondary">API Key</label>
+                                <div className="relative">
+                                    <input id="form-provider-apikey" aria-label="API Key" type={showApiKey ? 'text' : 'password'}
+                                        value={editingProvider.apiKey}
+                                        onChange={e => updateEditingProvider({ apiKey: e.target.value })}
+                                        placeholder="sk-..."
+                                        className="w-full bg-background border border-subtle rounded-md px-3 py-2 pr-10 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                                    <button type="button" onClick={() => setShowApiKey(v => !v)}
+                                        aria-label={showApiKey ? 'Ocultar API key' : 'Mostrar API key'}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary">
+                                        {showApiKey ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-model" className="block text-sm font-medium text-text-secondary">Modelo</label>
+                                <input id="form-provider-model" aria-label="Modelo" type="text" value={editingProvider.defaultModel}
+                                    onChange={e => updateEditingProvider({ defaultModel: e.target.value })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-models" className="block text-sm font-medium text-text-secondary">Modelos (separados por coma)</label>
+                                <input id="form-provider-models" aria-label="Modelos" type="text" value={editingProvider.models.join(', ')}
+                                    onChange={e => updateEditingProvider({ models: e.target.value.split(',').map(m => m.trim()).filter(Boolean) })}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-reasoning" className="block text-sm font-medium text-text-secondary">Reasoning effort</label>
+                                <select id="form-provider-reasoning" aria-label="Reasoning effort" value={editingProvider.reasoningEffort}
+                                    onChange={e => handleReasoningEffortChange(e.target.value as ReasoningEffort)}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent">
+                                    <option value="off">Off (no reasoning parameter sent)</option>
+                                    <option value="low">Low</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="high">High</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-extrabody" className="block text-sm font-medium text-text-secondary">extraBody (JSON)</label>
+                                <textarea id="form-provider-extrabody" aria-label="extraBody" rows={4} value={extraBodyDraft}
+                                    onChange={e => updateExtraBodyDraft(e.target.value)}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 font-mono text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                                {extraBodyError && (
+                                    <p className="text-xs text-danger" role="alert">JSON inválido: {extraBodyError}</p>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <label htmlFor="form-provider-timeout" className="block text-sm font-medium text-text-secondary">Timeout de petición (ms)</label>
+                                <input id="form-provider-timeout" aria-label="Timeout" type="number" min={1} value={editingProvider.requestTimeoutMs}
+                                    onChange={e => {
+                                        const value = Number(e.target.value);
+                                        updateEditingProvider({ requestTimeoutMs: Number.isFinite(value) && value > 0 ? value : DEFAULT_REQUEST_TIMEOUT_MS });
+                                    }}
+                                    className="w-full bg-background border border-subtle rounded-md px-3 py-2 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent" />
+                            </div>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button onClick={closeForm} className="px-4 py-2 text-text-secondary hover:text-white transition-colors">
+                                    Cancelar edición
+                                </button>
+                                <button onClick={saveEditingProvider} disabled={Boolean(extraBodyError) || !editingProvider.name.trim()}
+                                    className="px-6 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent-hover transition-colors shadow-glow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Guardar proveedor
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Active provider editor */}
-                    {activeProvider && (
+                    {activeProvider && !editingProvider && (
                         <div className="space-y-4 animate-fade-in">
                             <div className="space-y-2">
                                 <label className="block text-sm font-medium text-text-secondary">Nombre</label>
