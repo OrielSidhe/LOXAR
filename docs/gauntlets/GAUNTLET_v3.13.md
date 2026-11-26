@@ -176,11 +176,11 @@ Con thought ON/OFF según proveedor (OpenRouter free exige reasoning enabled;
 Nous lo rechaza).
 
 **Checklist FASE T**
-- [ ] «Probar» usa la configuración del formulario sin mutar `providers`.
-- [ ] Clasificación de errores y hints de la tabla.
-- [ ] Reasoning ON/OFF por proveedor en la prueba.
-- [ ] Tests de clasificación con respuestas HTTP simuladas.
-- [ ] Commit + push + CI verde con número de run.
+- [x] «Probar» usa la configuración del formulario sin mutar `providers` (`buildTestProviderConfig`, copia detachable).
+- [x] Clasificación de errores y hints de la tabla (`classifyConnectionError`: 400 tag / 401-403 / 404 / 429 / timeout).
+- [x] Reasoning ON/OFF por proveedor en la prueba (`resolveTestReasoning`: OpenRouter free → medium, Nous → off).
+- [x] Tests de clasificación con respuestas HTTP simuladas (`connectionTestHints.test.ts`, 21 tests).
+- [ ] Commit + push + CI verde con número de run (commit local `11ae2c9`; push requiere autorización).
 
 ---
 
@@ -281,6 +281,19 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 | Push + CI verde de FASE G | commit local `7701fc8`, sin push por diseño del supervisor | ⚠️ |
 
 **FASE G INCOMPLETA** — falta push + CI verde con número de run.
+
+### R-T — FASE T
+
+| Afirmación | Evidencia | Veredicto |
+|---|---|---|
+| «Probar» sobre config del form sin mutar `providers` | `buildTestProviderConfig` (`connectionTestHints.ts:136`), copia de `models`/`extraBody`; `handleTestForm` (`AiSettingsModal.tsx:133`) y botón `:500` | 🟢 |
+| Hints de la tabla (400 tag / 401 / 404 / 429 / timeout) | `classifyConnectionError` (`connectionTestHints.ts:62`), `hintFromTestResult` (`:111`); ambos caminos de test (`AiSettingsModal.tsx:108`, `:142`) | 🟢 |
+| Reasoning ON/OFF por proveedor en la prueba | `resolveTestReasoning` (`connectionTestHints.ts:121`): OpenRouter `:free` → `medium`, Nous → `off`, detecta también por nombre | 🟢 |
+| Tests con respuestas HTTP simuladas | `connectionTestHints.test.ts` (21 tests, 1 archivo) | 🟢 |
+| typecheck / lint / build / vitest / huérfanos | 0 / OK / OK / 918/918 (114 archivos) / 13 (baseline) | 🟢 |
+| Commit + push + CI verde de FASE T | commit local `11ae2c9`, sin push por diseño del supervisor | ⚠️ |
+
+**FASE T INCOMPLETA** — falta push + CI verde con número de run.
 
 ---
 ## PROTOCOLO DE REPORTE

@@ -1,7 +1,35 @@
 # Loxar Task Board – Estado Actual del Proyecto
-**Última actualización:** 2026-11-25
+**Última actualización:** 2026-11-26
 **Formato:** `- [ ] Pendiente` / `- [x] Hecho` / `- [~] En curso`  
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
+
+---
+## [2026-11-26 05:00] Checkpoint: v3.13 FASE T — probar conexión sin guardar + hints accionables
+
+**Rama:** `master`. **Commit local:** `11ae2c9` (sin push; el supervisor no hace push automático).
+**Motivo:** siguiente fase accionable del GAUNTLET v3.13 tras U/E/M/G; T-1 y T-2 estaban
+confirmados ausentes en la re-verificación de `b0c22a7`.
+
+**Cambios:**
+- `src/services/connectionTestHints.ts` (nuevo): `extractHttpStatus`, `classifyConnectionError`
+  (400 missing tag, 401/403, 404 → «Obtener modelos», 429, timeout/AbortError, missing key,
+  genérico), `hintFromTestResult`, `resolveTestReasoning` (OpenRouter free → `medium`, Nous → `off`,
+  por id o nombre) y `buildTestProviderConfig` (copia desacoplada, sin mutar el draft ni `providers`).
+- `src/components/AiSettingsModal.tsx`: botón «Probar sin guardar» en el formulario (`:500`),
+  `handleTestForm` (`:133`), hints aplicados también al test del proveedor activo (`:108`) y ese
+  botón deshabilitado mientras el formulario está abierto (`:621`).
+- `src/services/__tests__/connectionTestHints.test.ts` (nuevo, 21 tests con errores HTTP simulados).
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 918/918 (114 archivos) ·
+audit:orphans 13 (baseline). No se hizo push.
+
+**Nota de concurrencia:** otro agente creó y revirtió `src/utils/providerTestModel.ts` durante
+esta ejecución y después trabajó en `src/components/Dropdown.tsx`; sus archivos NO se incluyeron
+en el commit `11ae2c9` (se hizo `git add` solo de los tres archivos de FASE T).
+
+**Próximo bloque ejecutable:** push + CI verde de los commits locales (requiere autorización del
+dueño) y FASE D (checklist de demo runtime, la ejecuta el usuario). Quedan 13 huérfanos de `src/`
+por decisión de producto.
 
 ---
 ## [2026-11-22] Checkpoint: CLN — tipado estricto de `sqlStorage` + transacciones SQLite explícitas (P1 God Component)
