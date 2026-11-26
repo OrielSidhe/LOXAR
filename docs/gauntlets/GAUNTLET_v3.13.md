@@ -240,9 +240,9 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 | Formulario real de crear/editar proveedor | commit `86f3e42`, `AiSettingsModal.test.tsx` 3/3 | 🟢 |
 | `extraBody` y `requestTimeoutMs` sobreviven editar sin activar | test `edita sin perder extraBody ni timeout...` | 🟢 |
 | typecheck / vitest sobre el árbol de FASE U | typecheck 0, vitest 881/881 (111 archivos) | 🟢 |
-| Push + CI verde de FASE U | run `45788851335` `in_progress` al cierre de este turno | ⚠️ |
+| Push + CI verde de FASE U | run `45788851335` attempt 2 `success`, head `86f3e420` | 🟢 |
 
-**FASE U INCOMPLETA** — falta confirmar CI verde con número de run del push `86f3e42`.
+**FASE U TERMINADA** — push `86f3e42` verificado; CI run `45788851335` attempt 2 `success`.
 
 ### R-E — FASE E
 

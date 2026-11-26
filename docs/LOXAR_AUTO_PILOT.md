@@ -14,7 +14,7 @@ lee/actualiza en cada sesión son este archivo (Objetivo/Estado/Próxima tarea),
 - Repo limpio, build/typecheck/lint verdes; vitest 895/895 (112 archivos) y `npm run test:gui`
   (6 specs / 8 tests): 8/8 en 3.4 min con 1 worker (en paralelo sigue
   sensible a la contencion del chunk lazy del importador)
-- Gauntlet v3.13: FASE U (`86f3e42`), E (`fd60cc9`), M (`4443f88`) y G (`7701fc8`) cerradas en local; FASE T siguiente; CI `45788851335` en curso (pre-M).
+- Gauntlet v3.13: FASE U (`86f3e42`), E (`fd60cc9`), M (`4443f88`) y G (`7701fc8`) cerradas en local; FASE T siguiente; CI `45788851335` success (attempt 2, head `86f3e42`).
 - Últimos bloques CLN/P1: `3429a8d` (InflectionView 7 `any` -> 0) y `6b54cb3` (ToolsTab 5 `any` -> 0 + test de contrato).
 - CI fijada a Node 24.15.0 (`d1a8e8e`): verificado en local contra el fallo previo de Node 20 (`undici@8.12.3` en 3 suites jsdom); typecheck/lint/build y vitest 865/865 en verde.
 - Gauntlet v3.14: fases EX/CMP/NAV/FX/MY/FLU cerradas en local; pendiente D (demo del usuario),
