@@ -7,15 +7,18 @@ import SoundChangeWorkbench from './SoundChangeWorkbench';
 import { LexiconData, LexiconEntry } from '../types';
 import type { SoundChangeBatchResult } from '../services/soundChanger';
 
+type SuggestionsProps = React.ComponentProps<typeof SuggestionsWorkbench>;
+type DashboardProps = React.ComponentProps<typeof ToolsDashboard>;
+
 export interface ToolsTabProps {
   activeTab: string;
-  suggestions: any[];
+  suggestions: SuggestionsProps['suggestions'];
   suggestionListName: string;
   onCloseSuggestions: () => void;
-  onAddManually: (suggestion: any) => void;
-  onGenerateAI: (suggestion: any) => void;
+  onAddManually: SuggestionsProps['onAddManually'];
+  onGenerateAI: SuggestionsProps['onGenerateAI'];
   isLoadingAI: boolean;
-  activeMetadata: any;
+  activeMetadata: SuggestionsProps['activeMetadata'];
   activeToolView: string;
   onBackToToolDashboard: () => void;
   onOpenInterlinearGloss: () => void;
@@ -35,7 +38,7 @@ export interface ToolsTabProps {
   onOpenTranslator: () => void;
   onStartTour: () => void;
   lexicon: LexiconData;
-  stats: any;
+  stats: DashboardProps['stats'];
   disabled: boolean;
 }
 
