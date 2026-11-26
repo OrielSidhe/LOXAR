@@ -4,6 +4,24 @@
 **Los checkpoints** (## [fecha hora] Checkpoint: <descripción>) sirven como puntos de recuperación.
 
 ---
+## [2026-11-26 05:12] Checkpoint: Dropdown — cierre real y tipado estricto
+
+**Rama:** `master`. **Commit:** `d6e653d`. **Motivo:** otro cron ejecutaba FASE T sobre
+`AiSettingsModal.tsx`; se abandonó el bloque propio sin tocar ese archivo y se eligió un
+módulo distinto (`Dropdown.tsx`), con colisión resuelta sin reversiones ajenas.
+
+**Cambio:** `DropdownItem` usa `onClick: () => void` (0 `any` en el módulo); el wrapper del
+menú detiene la propagación para que elegir una opción no reabra el menú por el `onClick` del
+trigger; el trigger expone `role="button"`, `aria-expanded` y apertura con Enter/Espacio.
+Tests jsdom nuevos (`src/components/__tests__/Dropdown.test.tsx`, 2): selección cierra sin
+reabrir, clic fuera cierra, Enter abre.
+
+**Verificación:** typecheck 0 · lint OK · build OK · vitest 918/918 (114 archivos) sobre el
+árbol combinado con FASE T · CI `45808270226` `success` (attempt 1, head `d6e653d`). Push
+`86f3e42..d6e653d` verificado. Sin cambio de modelo: `tencent/hy4-flash:free` responde y no
+hay señal de cuota.
+
+---
 ## [2026-11-26 05:00] Checkpoint: v3.13 FASE T — probar conexión sin guardar + hints accionables
 
 **Rama:** `master`. **Commit local:** `11ae2c9` (sin push; el supervisor no hace push automático).

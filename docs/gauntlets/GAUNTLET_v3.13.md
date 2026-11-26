@@ -180,7 +180,7 @@ Nous lo rechaza).
 - [x] Clasificación de errores y hints de la tabla (`classifyConnectionError`: 400 tag / 401-403 / 404 / 429 / timeout).
 - [x] Reasoning ON/OFF por proveedor en la prueba (`resolveTestReasoning`: OpenRouter free → medium, Nous → off).
 - [x] Tests de clasificación con respuestas HTTP simuladas (`connectionTestHints.test.ts`, 21 tests).
-- [ ] Commit + push + CI verde con número de run (commit local `11ae2c9`; push requiere autorización).
+- [x] Commit + push + CI verde con número de run (commits `11ae2c9`/`d6e653d`, push `86f3e42..d6e653d`, CI `45808270226` success attempt 1).
 
 ---
 
@@ -291,9 +291,9 @@ publica a continuación; su propia CI se verifica antes de abrir la FASE U.
 | Reasoning ON/OFF por proveedor en la prueba | `resolveTestReasoning` (`connectionTestHints.ts:121`): OpenRouter `:free` → `medium`, Nous → `off`, detecta también por nombre | 🟢 |
 | Tests con respuestas HTTP simuladas | `connectionTestHints.test.ts` (21 tests, 1 archivo) | 🟢 |
 | typecheck / lint / build / vitest / huérfanos | 0 / OK / OK / 918/918 (114 archivos) / 13 (baseline) | 🟢 |
-| Commit + push + CI verde de FASE T | commit local `11ae2c9`, sin push por diseño del supervisor | ⚠️ |
+| Commit + push + CI verde de FASE T | push `86f3e42..d6e653d`; CI `45808270226` `success` (attempt 1, head `d6e653d`) | 🟢 |
 
-**FASE T INCOMPLETA** — falta push + CI verde con número de run.
+**FASE T TERMINADA** — checklist completa, push y CI `45808270226` verdes. FASE D (demo del usuario) sigue pendiente.
 
 ---
 ## PROTOCOLO DE REPORTE
