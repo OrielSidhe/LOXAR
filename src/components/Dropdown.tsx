@@ -8,7 +8,7 @@ interface DropdownProps {
 }
 
 interface HasOnClick {
-  onClick?: (...args: any[]) => void;
+  onClick?: () => void;
 }
 
 const Dropdown = ({ trigger, children, menuClasses = '' }: DropdownProps) => {
@@ -23,10 +23,10 @@ const Dropdown = ({ trigger, children, menuClasses = '' }: DropdownProps) => {
     if (isValidElement<HasOnClick>(child) && typeof child.props.onClick === 'function') {
       const originalOnClick = child.props.onClick;
       return cloneElement(child, {
-        onClick: (...args: any[]) => {
-          originalOnClick(...args);
-          setIsOpen(false); 
-        } 
+        onClick: () => {
+          originalOnClick();
+          setIsOpen(false);
+        }
       });
     }
     return child;
@@ -34,12 +34,25 @@ const Dropdown = ({ trigger, children, menuClasses = '' }: DropdownProps) => {
 
   return (
     <div className="relative inline-block text-left" ref={dropdownRef}>
-      <div onClick={toggleOpen} className="cursor-pointer">
+      <div
+        onClick={toggleOpen}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            toggleOpen();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-expanded={isOpen}
+        className="cursor-pointer"
+      >
         {trigger}
       </div>
 
       {isOpen && (
         <div
+          onClick={event => event.stopPropagation()}
           className={`absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-surface shadow-lg ring-1 ring-subtle focus:outline-none z-20 animate-fade-in-fast ${menuClasses}`}
           role="menu"
           aria-orientation="vertical"
